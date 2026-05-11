@@ -4690,9 +4690,14 @@ function PrintReportA4({ reportData, recommendations = "" }) {
       .print-logo-box img { max-width: 100%; max-height: 100%; object-fit: contain; }
       .print-simple-logo { color: #fff; font-size: 24px; font-weight: 300; direction: ltr; }
       .print-half-page { height: 123mm; }
-      .print-appendix-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4mm; align-items: start; }
+      .print-appendix-grid { display: grid; grid-template-columns: minmax(0, 1.65fr) minmax(0, 0.95fr); gap: 6mm; align-items: start; direction: rtl; }
       .print-appendix-block { min-height: auto !important; break-inside: auto !important; page-break-inside: auto !important; }
-      .print-appendix-card { border: 1px solid #E2D1BF; border-radius: 5mm; padding: 4mm; background: #FFFFFF; box-sizing: border-box; }
+      .print-appendix-card { border: 1px solid #E2D1BF; border-radius: 5mm; padding: 4mm; background: #FFFFFF; box-sizing: border-box; overflow: hidden; }
+      .print-appendix-page .print-page-header { margin-bottom: 5mm; }
+      .print-appendix-page .print-section-heading { font-size: 12.5px; margin-bottom: 3mm; }
+      .print-appendix-page .print-card-soft { border-radius: 5mm; background: linear-gradient(180deg, #FFFFFF 0%, #FCFBF8 100%); }
+      .print-appendix-grid > .print-appendix-card:first-child { min-height: 238mm; }
+      .print-appendix-grid > .print-appendix-card:nth-child(2) { min-height: 196mm; }
       .print-section28-summary-box { border: 1px solid #E2D1BF; border-radius: 4mm; background: #FCFBF8; padding: 3mm 4mm; margin-top: 2.5mm; }
       .print-section28-summary-label { color: #00215D; font-size: 9.2px; font-weight: 900; line-height: 1.35; margin-bottom: 1.5mm; }
       .print-section28-summary-value { color: #FF2756; font-size: 12px; font-weight: 900; direction: ltr; text-align: left; }
@@ -4702,9 +4707,9 @@ function PrintReportA4({ reportData, recommendations = "" }) {
       .print-section28-two-cols { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4mm; align-items: start; }
       .print-section28-side-card { background: #FFFFFF; border: 1px solid #EEE4D8; border-radius: 4mm; padding: 3.2mm; }
       .print-section28-side-title { color: #00215D; font-size: 10.5px; font-weight: 900; padding-bottom: 2mm; margin-bottom: 2mm; border-bottom: 1px solid #EEE4D8; }
-      .print-section28-line { display: grid; grid-template-columns: minmax(0, 1fr) 24mm; gap: 2.5mm; align-items: center; padding: 2.4mm 0; border-bottom: 1px solid #F0E6DA; }
-      .print-section28-line-label { color: #627D98; font-size: 8.6px; font-weight: 800; line-height: 1.35; }
-      .print-section28-line-value { color: #00215D; font-size: 9.5px; font-weight: 900; direction: ltr; text-align: left; white-space: nowrap; }
+      .print-section28-line { display: grid; grid-template-columns: minmax(0, 1fr) 20mm; gap: 2.5mm; align-items: center; padding: 2.2mm 0; border-bottom: 1px solid #F0E6DA; }
+      .print-section28-line-label { color: #627D98; font-size: 8.4px; font-weight: 800; line-height: 1.32; }
+      .print-section28-line-value { color: #00215D; font-size: 9.2px; font-weight: 900; direction: ltr; text-align: left; white-space: nowrap; }
       .print-section28-line-highlight { border: 1px solid #E2D1BF; border-radius: 4mm; padding: 2.5mm 3mm; margin-top: 2.5mm; background: linear-gradient(135deg, #FFF7E8 0%, #EEF2FA 100%); box-shadow: 0 1mm 3mm rgba(0,33,93,0.05); }
       .print-section28-line-highlight .print-section28-line-label { color: #00215D; font-weight: 900; }
       .print-section28-line-highlight .print-section28-line-value { color: #FF2756; }
@@ -5070,7 +5075,7 @@ function PrintReportA4({ reportData, recommendations = "" }) {
       </section>
 
       {shouldShowPensionAppendixPage ? (
-        <section className="print-a4-page">
+        <section className="print-a4-page print-appendix-page">
           <PrintHeader title="סעיף 28 וקצבה מוכרת" page={appendixPageNumber} />
           <div className="print-appendix-grid">
             <div className="print-appendix-card print-appendix-block">

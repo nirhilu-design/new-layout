@@ -4691,7 +4691,12 @@ function PrintReportA4({ reportData, recommendations = "" }) {
       .print-simple-logo { color: #fff; font-size: 24px; font-weight: 300; direction: ltr; }
       .print-half-page { height: 123mm; }
       .print-appendix-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4mm; align-items: start; }
-      .print-appendix-block { min-height: 215mm; }
+      .print-appendix-block { min-height: auto !important; break-inside: auto !important; page-break-inside: auto !important; }
+      .print-appendix-card { border: 1px solid #E2D1BF; border-radius: 5mm; padding: 4mm; background: #FFFFFF; box-sizing: border-box; }
+      .print-section28-summary-box { border: 1px solid #E2D1BF; border-radius: 4mm; background: #FCFBF8; padding: 3mm 4mm; margin-top: 2.5mm; }
+      .print-section28-summary-label { color: #00215D; font-size: 9.2px; font-weight: 900; line-height: 1.35; margin-bottom: 1.5mm; }
+      .print-section28-summary-value { color: #FF2756; font-size: 12px; font-weight: 900; direction: ltr; text-align: left; }
+      .print-section28-compact-title { color: #00215D; font-size: 10.5px; font-weight: 900; margin: 0 0 2mm; padding-bottom: 1.5mm; border-bottom: 1px solid #EEE4D8; }
       .print-mini-row { display: grid; grid-template-columns: minmax(0, 1fr) 32mm; gap: 2mm; padding: 1.7mm 0; border-bottom: 1px solid #EEE4D8; font-size: 9px; align-items: center; }
       .print-mini-value { color: #00215D; font-weight: 900; direction: ltr; text-align: left; white-space: nowrap; }
       .print-section28-two-cols { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4mm; align-items: start; }
@@ -5068,11 +5073,11 @@ function PrintReportA4({ reportData, recommendations = "" }) {
         <section className="print-a4-page">
           <PrintHeader title="סעיף 28 וקצבה מוכרת" page={appendixPageNumber} />
           <div className="print-appendix-grid">
-            <div className="print-card print-appendix-block">
+            <div className="print-appendix-card print-appendix-block">
               <h3 className="print-section-heading">קיטום על פי סעיף 28</h3>
               <Section28PrintSummary />
             </div>
-            <div className="print-card print-appendix-block">
+            <div className="print-appendix-card print-appendix-block">
               <h3 className="print-section-heading">צבירה מוכרת / קצבה מוכרת</h3>
               <RecognizedPensionPrintSummary />
             </div>

@@ -4694,6 +4694,18 @@ function PrintReportA4({ reportData, recommendations = "" }) {
       .print-appendix-block { min-height: 215mm; }
       .print-mini-row { display: grid; grid-template-columns: minmax(0, 1fr) 32mm; gap: 2mm; padding: 1.7mm 0; border-bottom: 1px solid #EEE4D8; font-size: 9px; align-items: center; }
       .print-mini-value { color: #00215D; font-weight: 900; direction: ltr; text-align: left; white-space: nowrap; }
+      .print-section28-two-cols { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4mm; align-items: start; }
+      .print-section28-side-card { background: #FFFFFF; border: 1px solid #EEE4D8; border-radius: 4mm; padding: 3.2mm; }
+      .print-section28-side-title { color: #00215D; font-size: 10.5px; font-weight: 900; padding-bottom: 2mm; margin-bottom: 2mm; border-bottom: 1px solid #EEE4D8; }
+      .print-section28-line { display: grid; grid-template-columns: minmax(0, 1fr) 24mm; gap: 2.5mm; align-items: center; padding: 2.4mm 0; border-bottom: 1px solid #F0E6DA; }
+      .print-section28-line-label { color: #627D98; font-size: 8.6px; font-weight: 800; line-height: 1.35; }
+      .print-section28-line-value { color: #00215D; font-size: 9.5px; font-weight: 900; direction: ltr; text-align: left; white-space: nowrap; }
+      .print-section28-line-highlight { border: 1px solid #E2D1BF; border-radius: 4mm; padding: 2.5mm 3mm; margin-top: 2.5mm; background: linear-gradient(135deg, #FFF7E8 0%, #EEF2FA 100%); box-shadow: 0 1mm 3mm rgba(0,33,93,0.05); }
+      .print-section28-line-highlight .print-section28-line-label { color: #00215D; font-weight: 900; }
+      .print-section28-line-highlight .print-section28-line-value { color: #FF2756; }
+      .print-section28-monthly { margin-top: 3mm; border: 1px solid #D8DEE9; border-radius: 4mm; background: linear-gradient(135deg, #00215D 0%, #001845 100%); color: #fff; padding: 3mm; text-align: center; }
+      .print-section28-monthly-label { color: rgba(255,255,255,.82); font-size: 8.8px; font-weight: 800; margin-bottom: 1mm; }
+      .print-section28-monthly-value { color: #fff; font-size: 11px; font-weight: 900; direction: ltr; }
     }
   `;
 
@@ -4822,23 +4834,102 @@ function PrintReportA4({ reportData, recommendations = "" }) {
       return <div className="print-muted">לא קיימים נתוני סעיף 28 בדוח.</div>;
     }
 
+    const costGroup = getSection28Group(section28Groups, "employer-cost", "עלויות");
+    const savingGroup = getSection28Group(section28Groups, "saving-simulation", "סימולציה לחיסכון");
+    const retirementGroup = getSection28Group(section28Groups, "retirement", "סימולציה לגיל פרישה");
+
+    const costRows = Array.isArray(costGroup?.rows)
+      ? costGroup.rows.filter((row) => isMeaningfulSection28Value(row.value))
+      : [];
+
+    const monthlyRow = costRows.find((row) => isSection28MonthlySavingRow(row.label));
+
+    const employerRows = pickSection28Rows(costRows, [
+      "השתלמות מעל תקרה",
+      "פיצויים מעל לתקרה",
+      "תגמולים מעל לתקרה",
+    ]);
+
+    const employerSummaryRows = pickSection28Rows(costRows, [
+      "סכום קיטום מעל לסעיף 28 ברוטו",
+      "סכום נטו לאחר ניכוי מס שולי",
+    ]);
+
+    const employeeRows = pickSection28Rows(costRows, [
+      "גידול בנטו בעקבות קיטום בפיצויים",
+      "גידול בנטו בעקבות קיטום תגמולים",
+      "גידול בנטו בעקבות קיטום קה\"ל מעל לתקרה",
+      "הפרשות עובד קה\"ל מעל תקרה",
+      "הפרשות עובד תגמולים",
+    ]);
+
+    const employeeSummaryRows = pickSection28Rows(costRows, [
+      'סה"כ גידול נטו',
+      "סה״כ גידול נטו",
+      "סך הכל גידול נטו",
+    ]);
+
+    const printRow = (row, index, forceHighlight = false) => {
+      const highlight = forceHighlight || isSection28ImportantRow(row.label);
+      return (
+        <div
+          className={`print-section28-line${highlight ? " print-section28-line-highlight" : ""}`}
+          key={`${row.label}-${index}`}
+        >
+          <div className="print-section28-line-label">{row.label}</div>
+          <div className="print-section28-line-value">{formatSection28DisplayValue(row.value)}</div>
+        </div>
+      );
+    };
+
+    const renderSide = (title, rows, summaryRows) => (
+      <div className="print-section28-side-card">
+        <div className="print-section28-side-title">{title}</div>
+        {rows.map((row, index) => printRow(row, index))}
+        {summaryRows.map((row, index) => printRow(row, index, true))}
+        {!rows.length && !summaryRows.length ? <div className="print-muted">אין נתון להצגה</div> : null}
+      </div>
+    );
+
+    const renderSimpleGroup = (group, titleOverride, limit = 4) => {
+      const rows = Array.isArray(group?.rows)
+        ? group.rows.filter((row) => isMeaningfulSection28Value(row.value)).slice(0, limit)
+        : [];
+
+      if (!rows.length) return null;
+
+      return (
+        <div className="print-card-soft" style={{ marginTop: "3mm" }}>
+          <div style={{ color: "#00215D", fontWeight: 900, fontSize: 10.5, marginBottom: "1.5mm" }}>
+            {titleOverride || group.title || "סעיף 28"}
+          </div>
+          {rows.map((row, index) => printRow(row, index, isSection28ImportantRow(row.label)))}
+        </div>
+      );
+    };
+
     return (
       <div>
-        {section28Groups.slice(0, 4).map((group, groupIndex) => {
-          const rows = Array.isArray(group?.rows) ? group.rows.filter((row) => isMeaningfulSection28Value(row.value)).slice(0, 7) : [];
-          return (
-            <div className="print-card-soft" style={{ marginBottom: "3mm" }} key={group.id || group.title || groupIndex}>
-              <div style={{ color: "#00215D", fontWeight: 900, fontSize: 10.5, marginBottom: "1.5mm" }}>{group.title || "סעיף 28"}</div>
-              {rows.map((row, index) => (
-                <div className="print-mini-row" key={`${row.label}-${index}`}>
-                  <div style={{ minWidth: 0 }}>{row.label}</div>
-                  <div className="print-mini-value">{formatSection28DisplayValue(row.value)}</div>
-                </div>
-              ))}
-              {!rows.length ? <div className="print-muted">אין נתון להצגה</div> : null}
+        <div className="print-card-soft" style={{ marginBottom: "3mm" }}>
+          <div style={{ color: "#00215D", fontWeight: 900, fontSize: 10.5, marginBottom: "2mm" }}>
+            פירוט עלויות עובד / מעסיק
+          </div>
+
+          <div className="print-section28-two-cols">
+            {renderSide("חלק מעסיק", employerRows, employerSummaryRows)}
+            {renderSide("חלק עובד", employeeRows, employeeSummaryRows)}
+          </div>
+
+          {monthlyRow ? (
+            <div className="print-section28-monthly">
+              <div className="print-section28-monthly-label">{monthlyRow.label}</div>
+              <div className="print-section28-monthly-value">{formatSection28DisplayValue(monthlyRow.value)}</div>
             </div>
-          );
-        })}
+          ) : null}
+        </div>
+
+        {renderSimpleGroup(savingGroup, "סימולציה לחיסכון", 3)}
+        {renderSimpleGroup(retirementGroup, "סימולציה לגיל פרישה", 3)}
       </div>
     );
   };

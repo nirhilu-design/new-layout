@@ -4834,28 +4834,38 @@ function PrintReportA4({ reportData, recommendations = "" }) {
       return <div className="print-muted">לא קיימים נתוני סעיף 28 בדוח.</div>;
     }
 
-    const costGroup = getSection28Group(section28Groups, "employer-cost", "עלויות");
-    const savingGroup = getSection28Group(section28Groups, "saving-simulation", "סימולציה לחיסכון");
-    const retirementGroup = getSection28Group(section28Groups, "retirement", "סימולציה לגיל פרישה");
+    const allSection28Rows = section28Groups.flatMap((group) =>
+      Array.isArray(group?.rows) ? group.rows.filter((row) => isMeaningfulSection28Value(row.value)) : []
+    );
+
+    const findRowsByParts = (rows, labelParts) =>
+      labelParts
+        .map((part) => rows.find((row) => normalizeSection28Text(row.label).includes(part)))
+        .filter(Boolean);
+
+    const costGroup = getSection28Group(section28Groups, "employer-cost", "עלויות") ||
+      section28Groups.find((group) => normalizeSection28Text(group?.title).includes("עובד") || normalizeSection28Text(group?.title).includes("מעסיק")) ||
+      section28Groups[0];
 
     const costRows = Array.isArray(costGroup?.rows)
       ? costGroup.rows.filter((row) => isMeaningfulSection28Value(row.value))
-      : [];
+      : allSection28Rows;
 
-    const monthlyRow = costRows.find((row) => isSection28MonthlySavingRow(row.label));
+    const monthlyRow = costRows.find((row) => isSection28MonthlySavingRow(row.label)) ||
+      allSection28Rows.find((row) => isSection28MonthlySavingRow(row.label));
 
-    const employerRows = pickSection28Rows(costRows, [
+    const employerRows = findRowsByParts(costRows.length ? costRows : allSection28Rows, [
       "השתלמות מעל תקרה",
       "פיצויים מעל לתקרה",
       "תגמולים מעל לתקרה",
     ]);
 
-    const employerSummaryRows = pickSection28Rows(costRows, [
+    const employerSummaryRows = findRowsByParts(allSection28Rows, [
       "סכום קיטום מעל לסעיף 28 ברוטו",
       "סכום נטו לאחר ניכוי מס שולי",
     ]);
 
-    const employeeRows = pickSection28Rows(costRows, [
+    const employeeRows = findRowsByParts(costRows.length ? costRows : allSection28Rows, [
       "גידול בנטו בעקבות קיטום בפיצויים",
       "גידול בנטו בעקבות קיטום תגמולים",
       "גידול בנטו בעקבות קיטום קה\"ל מעל לתקרה",
@@ -4863,7 +4873,7 @@ function PrintReportA4({ reportData, recommendations = "" }) {
       "הפרשות עובד תגמולים",
     ]);
 
-    const employeeSummaryRows = pickSection28Rows(costRows, [
+    const employeeSummaryRows = findRowsByParts(allSection28Rows, [
       'סה"כ גידול נטו',
       "סה״כ גידול נטו",
       "סך הכל גידול נטו",
@@ -4891,6 +4901,9 @@ function PrintReportA4({ reportData, recommendations = "" }) {
       </div>
     );
 
+    const savingGroup = getSection28Group(section28Groups, "saving-simulation", "סימולציה לחיסכון");
+    const retirementGroup = getSection28Group(section28Groups, "retirement", "סימולציה לגיל פרישה");
+
     const renderSimpleGroup = (group, titleOverride, limit = 4) => {
       const rows = Array.isArray(group?.rows)
         ? group.rows.filter((row) => isMeaningfulSection28Value(row.value)).slice(0, limit)
@@ -4907,6 +4920,10 @@ function PrintReportA4({ reportData, recommendations = "" }) {
         </div>
       );
     };
+
+    const fallbackRows = allSection28Rows
+      .filter((row) => !employerRows.includes(row) && !employerSummaryRows.includes(row) && !employeeRows.includes(row) && !employeeSummaryRows.includes(row))
+      .slice(0, 8);
 
     return (
       <div>
@@ -4930,6 +4947,15 @@ function PrintReportA4({ reportData, recommendations = "" }) {
 
         {renderSimpleGroup(savingGroup, "סימולציה לחיסכון", 3)}
         {renderSimpleGroup(retirementGroup, "סימולציה לגיל פרישה", 3)}
+
+        {fallbackRows.length ? (
+          <div className="print-card-soft" style={{ marginTop: "3mm" }}>
+            <div style={{ color: "#00215D", fontWeight: 900, fontSize: 10.5, marginBottom: "1.5mm" }}>
+              נתונים נוספים
+            </div>
+            {fallbackRows.map((row, index) => printRow(row, index, isSection28ImportantRow(row.label)))}
+          </div>
+        ) : null}
       </div>
     );
   };

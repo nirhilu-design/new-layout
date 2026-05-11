@@ -4654,13 +4654,13 @@ function PrintReportA4({ reportData, recommendations = "" }) {
       .print-grid-3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4mm; }
       .print-grid-4 { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 3mm; }
       .print-card { border: 1px solid #E2D1BF; border-radius: 5mm; padding: 4mm; background: #FFFFFF; break-inside: avoid; page-break-inside: avoid; }
-      .print-card-soft { background: #FCFBF8; border: 1px solid #EEE4D8; border-radius: 4mm; padding: 3.5mm; }
+      .print-card-soft { background: #FCFBF8; border: 1px solid #EEE4D8; border-radius: 4mm; padding: 2.8mm; }
       .print-kpi-label { color: #627D98; font-size: 10.5px; font-weight: 800; margin-bottom: 2mm; }
       .print-kpi-value { color: #00215D; font-size: 19px; font-weight: 900; line-height: 1.1; direction: ltr; text-align: right; }
       .print-section-heading { color: #00215D; font-size: 13px; font-weight: 900; margin: 0 0 3mm; }
       .print-table { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 8.5px; }
-      .print-table th { background: #00215D; color: white; padding: 1.8mm; border-left: 1px solid rgba(255,255,255,.22); font-weight: 900; }
-      .print-table td { padding: 1.8mm; border: 1px solid #EEE4D8; vertical-align: top; word-break: break-word; }
+      .print-table th { background: #00215D; color: white; padding: 1.4mm; border-left: 1px solid rgba(255,255,255,.22); font-weight: 900; }
+      .print-table td { padding: 1.35mm; border: 1px solid #EEE4D8; vertical-align: top; word-break: break-word; }
       .print-bar-track { height: 6mm; background: #EAF1FB; border-radius: 999px; overflow: hidden; }
       .print-bar-fill { height: 100%; background: linear-gradient(90deg, #FF2756, #00215D); border-radius: 999px; }
       .print-footer { position: absolute; bottom: 6mm; right: 10mm; left: 10mm; display: flex; justify-content: space-between; color: #8AA0B8; font-size: 9px; border-top: 1px solid #EEE4D8; padding-top: 3mm; }
@@ -4690,32 +4690,38 @@ function PrintReportA4({ reportData, recommendations = "" }) {
       .print-logo-box img { max-width: 100%; max-height: 100%; object-fit: contain; }
       .print-simple-logo { color: #fff; font-size: 24px; font-weight: 300; direction: ltr; }
       .print-half-page { height: 123mm; }
-      .print-appendix-grid { display: grid; grid-template-columns: minmax(0, 1.65fr) minmax(0, 0.95fr); gap: 6mm; align-items: start; direction: rtl; }
+      .print-appendix-grid { display: grid; grid-template-columns: minmax(0, 1.78fr) minmax(0, 0.82fr); gap: 4.5mm; align-items: start; direction: rtl; }
       .print-appendix-block { min-height: auto !important; break-inside: auto !important; page-break-inside: auto !important; }
-      .print-appendix-card { border: 1px solid #E2D1BF; border-radius: 5mm; padding: 4mm; background: #FFFFFF; box-sizing: border-box; overflow: hidden; }
-      .print-appendix-page .print-page-header { margin-bottom: 5mm; }
-      .print-appendix-page .print-section-heading { font-size: 12.5px; margin-bottom: 3mm; }
+      .print-appendix-card { border: 1px solid #E2D1BF; border-radius: 5mm; padding: 3.2mm; background: #FFFFFF; box-sizing: border-box; overflow: hidden; }
+      .print-appendix-page { padding: 7mm 9mm !important; }
+      .print-appendix-page .print-page-header { margin-bottom: 3.5mm; padding-bottom: 3mm; }
+      .print-appendix-page .print-section-heading { font-size: 12px; margin-bottom: 2.2mm; }
       .print-appendix-page .print-card-soft { border-radius: 5mm; background: linear-gradient(180deg, #FFFFFF 0%, #FCFBF8 100%); }
-      .print-appendix-grid > .print-appendix-card:first-child { min-height: 238mm; }
-      .print-appendix-grid > .print-appendix-card:nth-child(2) { min-height: 196mm; }
+      .print-appendix-grid > .print-appendix-card:first-child { min-height: auto; }
+      .print-appendix-grid > .print-appendix-card:nth-child(2) { min-height: auto; }
       .print-section28-summary-box { border: 1px solid #E2D1BF; border-radius: 4mm; background: #FCFBF8; padding: 3mm 4mm; margin-top: 2.5mm; }
       .print-section28-summary-label { color: #00215D; font-size: 9.2px; font-weight: 900; line-height: 1.35; margin-bottom: 1.5mm; }
       .print-section28-summary-value { color: #FF2756; font-size: 12px; font-weight: 900; direction: ltr; text-align: left; }
       .print-section28-compact-title { color: #00215D; font-size: 10.5px; font-weight: 900; margin: 0 0 2mm; padding-bottom: 1.5mm; border-bottom: 1px solid #EEE4D8; }
       .print-mini-row { display: grid; grid-template-columns: minmax(0, 1fr) 32mm; gap: 2mm; padding: 1.7mm 0; border-bottom: 1px solid #EEE4D8; font-size: 9px; align-items: center; }
       .print-mini-value { color: #00215D; font-weight: 900; direction: ltr; text-align: left; white-space: nowrap; }
-      .print-section28-two-cols { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4mm; align-items: start; }
-      .print-section28-side-card { background: #FFFFFF; border: 1px solid #EEE4D8; border-radius: 4mm; padding: 3.2mm; }
+      .print-section28-two-cols { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 3mm; align-items: start; }
+      .print-section28-side-card { background: #FFFFFF; border: 1px solid #EEE4D8; border-radius: 4mm; padding: 2.6mm; }
       .print-section28-side-title { color: #00215D; font-size: 10.5px; font-weight: 900; padding-bottom: 2mm; margin-bottom: 2mm; border-bottom: 1px solid #EEE4D8; }
-      .print-section28-line { display: grid; grid-template-columns: minmax(0, 1fr) 20mm; gap: 2.5mm; align-items: center; padding: 2.2mm 0; border-bottom: 1px solid #F0E6DA; }
-      .print-section28-line-label { color: #627D98; font-size: 8.4px; font-weight: 800; line-height: 1.32; }
-      .print-section28-line-value { color: #00215D; font-size: 9.2px; font-weight: 900; direction: ltr; text-align: left; white-space: nowrap; }
-      .print-section28-line-highlight { border: 1px solid #E2D1BF; border-radius: 4mm; padding: 2.5mm 3mm; margin-top: 2.5mm; background: linear-gradient(135deg, #FFF7E8 0%, #EEF2FA 100%); box-shadow: 0 1mm 3mm rgba(0,33,93,0.05); }
+      .print-section28-line { display: grid; grid-template-columns: minmax(0, 1fr) 22mm; gap: 2mm; align-items: center; padding: 1.65mm 0; border-bottom: 1px solid #F0E6DA; }
+      .print-section28-line-label { color: #627D98; font-size: 7.8px; font-weight: 800; line-height: 1.22; }
+      .print-section28-line-value { color: #00215D; font-size: 8.8px; font-weight: 900; direction: ltr; text-align: left; white-space: nowrap; }
+      .print-section28-line-highlight { border: 1px solid #E2D1BF; border-radius: 4mm; padding: 2mm 2.5mm; margin-top: 2mm; background: linear-gradient(135deg, #FFF7E8 0%, #EEF2FA 100%); box-shadow: 0 1mm 3mm rgba(0,33,93,0.05); }
       .print-section28-line-highlight .print-section28-line-label { color: #00215D; font-weight: 900; }
       .print-section28-line-highlight .print-section28-line-value { color: #FF2756; }
-      .print-section28-monthly { margin-top: 3mm; border: 1px solid #D8DEE9; border-radius: 4mm; background: linear-gradient(135deg, #00215D 0%, #001845 100%); color: #fff; padding: 3mm; text-align: center; }
+      .print-section28-monthly { margin-top: 2.5mm; border: 1px solid #D8DEE9; border-radius: 4mm; background: linear-gradient(135deg, #00215D 0%, #001845 100%); color: #fff; padding: 2.6mm; text-align: center; }
       .print-section28-monthly-label { color: rgba(255,255,255,.82); font-size: 8.8px; font-weight: 800; margin-bottom: 1mm; }
-      .print-section28-monthly-value { color: #fff; font-size: 11px; font-weight: 900; direction: ltr; }
+      .print-section28-monthly-value { color: #fff; font-size: 10.5px; font-weight: 900; direction: ltr; }
+
+      .print-appendix-page .print-kpi-label { font-size: 9px; margin-bottom: 1.2mm; }
+      .print-appendix-page .print-kpi-value { font-size: 16px; }
+      .print-appendix-page .print-table { font-size: 7.6px; }
+      .print-appendix-page .print-card-soft { margin-bottom: 2.2mm !important; }
     }
   `;
 
@@ -4958,14 +4964,6 @@ function PrintReportA4({ reportData, recommendations = "" }) {
         {renderSimpleGroup(savingGroup, "סימולציה לחיסכון", 3)}
         {renderSimpleGroup(retirementGroup, "סימולציה לגיל פרישה", 3)}
 
-        {fallbackRows.length ? (
-          <div className="print-card-soft" style={{ marginTop: "3mm" }}>
-            <div style={{ color: "#00215D", fontWeight: 900, fontSize: 10.5, marginBottom: "1.5mm" }}>
-              נתונים נוספים
-            </div>
-            {fallbackRows.map((row, index) => printRow(row, index, isSection28ImportantRow(row.label)))}
-          </div>
-        ) : null}
       </div>
     );
   };

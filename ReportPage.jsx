@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useMemo, useState } from "react";
 
 const STORAGE_CLIENT_MODEL_KEY = "familyPensionClientModel";
 const STORAGE_REPORT_DATA_KEY = "familyPensionReportData";
@@ -115,8 +115,6 @@ function saveClientDashboardData(reportData) {
 export default function ReportPage({
   reportData,
   onBack,
-  onResetAll = () => {},
-  onOpenClientDashboard = () => {},
   onCreateShareLink = () => null,
 }) {
   const [recommendations, setRecommendations] = useState(
@@ -126,28 +124,7 @@ export default function ReportPage({
 4. מומלץ לבחון את מדיניות ההשקעה ורמת החשיפה למניות בהתאם לפרופיל הסיכון הרצוי.`
   );
 
-  const [isClientMenuOpen, setIsClientMenuOpen] = useState(false);
   const [isClientLinkCopied, setIsClientLinkCopied] = useState(false);
-  const clientMenuRef = useRef(null);
-
-  useEffect(() => {
-    const handleOutsideClick = (event) => {
-      if (
-        clientMenuRef.current &&
-        !clientMenuRef.current.contains(event.target)
-      ) {
-        setIsClientMenuOpen(false);
-      }
-    };
-
-    document.addEventListener("mousedown", handleOutsideClick);
-    document.addEventListener("touchstart", handleOutsideClick);
-
-    return () => {
-      document.removeEventListener("mousedown", handleOutsideClick);
-      document.removeEventListener("touchstart", handleOutsideClick);
-    };
-  }, []);
 
   const safeReportData = reportData || {};
 
@@ -223,33 +200,6 @@ export default function ReportPage({
 
     setIsClientLinkCopied(true);
     window.setTimeout(() => setIsClientLinkCopied(false), 3500);
-  };
-
-  const handleOpenMemberReport = (member, index) => {
-    if (!reportData || !reportData.family) {
-      alert("אין דוח מוכן לפתיחה. קודם יש להפיק דוח.");
-      return;
-    }
-
-    const memberId = member?.id || member?.name || `member-${index}`;
-
-    setIsClientMenuOpen(false);
-
-    onOpenClientDashboard({
-      view: "member",
-      memberId,
-      memberName: member?.name || "ללא שם",
-    });
-  };
-
-  const handleOpenFamilyClientView = () => {
-    if (!reportData || !reportData.family) {
-      alert("אין דוח מוכן לפתיחה. קודם יש להפיק דוח.");
-      return;
-    }
-
-    setIsClientMenuOpen(false);
-    onOpenClientDashboard({ view: "family" });
   };
 
   const formatCurrency = (value) =>
@@ -2387,64 +2337,9 @@ export default function ReportPage({
 
       <div className="screen-report-root" style={styles.page}>
         <div className="no-print" style={styles.actionsBar}>
-          <div className="client-menu-wrap" ref={clientMenuRef}>
-            <button
-              type="button"
-              onClick={() => setIsClientMenuOpen((value) => !value)}
-              className="action-button client-hamburger-button"
-              aria-label="ניווט תצוגת לקוח"
-              title="ניווט תצוגת לקוח"
-            >
-              <span className="client-hamburger-lines" aria-hidden="true" />
-            </button>
-
-            {isClientMenuOpen ? (
-              <div className="client-menu-panel">
-                <div className="client-menu-title">ניווט תצוגת לקוח</div>
-                <div className="client-menu-subtitle">
-                  בחר את הדוח שתרצה לפתוח מתוך מסך הלקוח.
-                </div>
-
-                <button
-                  type="button"
-                  className="client-menu-member-row"
-                  onClick={handleOpenFamilyClientView}
-                  title="פתיחת דוח משפחתי"
-                >
-                  <span className="client-menu-member-name">דוח משפחתי</span>
-                  <span className="client-menu-member-arrow">›</span>
-                </button>
-
-                {members.length ? (
-                  members.map((member, index) => (
-                    <button
-                      key={member?.id || member?.name || index}
-                      type="button"
-                      className="client-menu-member-row"
-                      onClick={() => handleOpenMemberReport(member, index)}
-                      title={`פתיחת דוח פרט עבור ${member?.name || "ללא שם"}`}
-                    >
-                      <span className="client-menu-member-name">
-                        {member?.name || "ללא שם"}
-                      </span>
-                      <span className="client-menu-member-arrow">›</span>
-                    </button>
-                  ))
-                ) : (
-                  <div className="client-menu-empty">
-                    אין בני משפחה להצגה.
-                  </div>
-                )}
-              </div>
-            ) : null}
-          </div>
 
           <button onClick={handleExportPdf} className="action-button primary">
             ייצוא ל־PDF
-          </button>
-
-          <button onClick={onResetAll} className="action-button danger">
-            איפוס מלא
           </button>
 
           <div className="client-link-button-wrap">

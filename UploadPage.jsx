@@ -593,37 +593,15 @@ export default function UploadPage({ setReportData }) {
   };
 
   const detectPdfColumnCenters = (rows) => {
-    const headerRows = rows.filter((row) =>
-      /שם|קופה|צבירה|הפקדות|תגמולים|פיצויים|פטורים|מקדם|קצבה|ניהול/.test(
-        row.text
-      )
-    );
+    const allItems = rows.flatMap((row) => row.items || []);
 
-    const allHeaderItems = headerRows.flatMap((row) => row.items);
-    const allItems = rows.flatMap((row) => row.items);
+    if (!allItems.length) {
+      return [];
+    }
+
     const minX = Math.min(...allItems.map((item) => item.x));
     const maxX = Math.max(...allItems.map((item) => item.x));
 
-    const findX = (...patterns) => {
-      const match = allHeaderItems.find((item) =>
-        patterns.some((pattern) => pattern.test(item.text))
-      );
-      return match?.x;
-    };
-
-    const detected = {
-      pension: findX(/קצבה/),
-      coefficient: findX(/מקדם/),
-      exemptPayments: findX(/פטורים/),
-      severanceFrom2017: findX(/פיצויים/, /2017/),
-      rewardsFrom2012: findX(/2012/, /מ2012/),
-      rewardsUntil2011: findX(/2011/, /עד/),
-      depositFee: findX(/הפקדות/),
-      balanceFee: findX(/צבירה/),
-      fundName: findX(/קופה/, /שם/),
-    };
-
-    const fallback = {};
     const columnKeys = [
       "pension",
       "coefficient",
@@ -636,9 +614,86 @@ export default function UploadPage({ setReportData }) {
       "fundName",
     ];
 
+    const fallback = {};
+
     columnKeys.forEach((key, index) => {
       fallback[key] = minX + ((maxX - minX) / (columnKeys.length - 1)) * index;
     });
+
+    const scoreHeaderRow = (row) => {
+      const text = normalizeTableText(row.text);
+
+      return [
+        /שם/.test(text) && /קופה/.test(text),
+        /צבירה/.test(text),
+        /הפקדות/.test(text),
+        /תגמולים/.test(text),
+        /2011/.test(text),
+        /2012/.test(text),
+        /פיצויים/.test(text),
+        /2017/.test(text),
+        /פטורים/.test(text),
+        /מקדם/.test(text),
+        /קצבה/.test(text),
+        /ניהול/.test(text),
+      ].filter(Boolean).length;
+    };
+
+    const headerCandidates = rows
+      .map((row) => ({ row, score: scoreHeaderRow(row) }))
+      .filter((item) => item.score >= 3)
+      .sort((a, b) => b.score - a.score);
+
+    const bestHeaderRow = headerCandidates[0]?.row;
+
+    if (!bestHeaderRow) {
+      return columnKeys.map((key) => ({
+        key,
+        x: fallback[key],
+      }));
+    }
+
+    // PDF.js can split one visual header into several nearby text rows.
+    // Use only the local header cluster, not every line in the PDF, so words
+    // such as "קצבה" or "מקדם" from other parts of the document cannot shift
+    // the table one column to the left.
+    const headerItems = rows
+      .filter(
+        (row) =>
+          row.page === bestHeaderRow.page && Math.abs(row.y - bestHeaderRow.y) <= 28
+      )
+      .flatMap((row) => row.items || []);
+
+    const findHeaderX = (matcher) => {
+      const matches = headerItems.filter((item) =>
+        matcher(normalizeTableText(item.text))
+      );
+
+      if (!matches.length) return undefined;
+
+      // If the same header phrase is split into duplicated fragments, use the
+      // average x value so assignment remains stable.
+      const sum = matches.reduce((total, item) => total + Number(item.x || 0), 0);
+      return sum / matches.length;
+    };
+
+    const detected = {
+      pension: findHeaderX((text) => text.includes("קצבה")),
+      coefficient: findHeaderX((text) => text.includes("מקדם")),
+      exemptPayments: findHeaderX((text) => text.includes("פטורים")),
+      severanceFrom2017: findHeaderX(
+        (text) => text.includes("פיצויים") || text.includes("2017")
+      ),
+      rewardsFrom2012: findHeaderX(
+        (text) => text.includes("2012") || text.includes("מ־2012") || text.includes("מ2012")
+      ),
+      rewardsUntil2011: findHeaderX(
+        (text) => text.includes("2011") || text.includes("עד 2011")
+      ),
+      depositFee: findHeaderX((text) => text.includes("הפקדות")),
+      balanceFee: findHeaderX((text) => text.includes("צבירה")),
+      fundName: findHeaderX((text) => text.includes("שם") || text.includes("קופה")),
+    };
 
     return columnKeys.map((key) => ({
       key,

@@ -698,10 +698,13 @@ function AllocationSection({ scope }) {
         title="התפלגות נכסים"
         subtitle="פיזור התיק לפי מוצרים, גופים מנהלים ואפיקים. בהמשך מוצגת טבלת נכסים ברמת מוצר לפי מו״פיד, מסלול ותשואות."
       />
-      <div className="client-grid-3">
+      <div className="client-allocation-top-pies">
         <DonutCard title="חלוקה לפי מוצרים" items={scope.distributions?.products || scope.productTypes || []} />
         <DonutCard title="חלוקה לפי גופים מנהלים" items={scope.distributions?.managers || scope.managers || []} />
-        <DonutCard title="חלוקה לפי אפיקים ראשיים" items={scope.distributions?.mainGroups || []} />
+      </div>
+
+      <div className="client-main-groups-wide client-margin-top">
+        <DonutCard title="חלוקה לפי אפיקים ראשיים" items={scope.distributions?.mainGroups || []} wide />
       </div>
 
       <AssetProductTablesSection productTables={scope.assetProductTables} />
@@ -739,11 +742,11 @@ function AssetProductTablesSection({ productTables }) {
               <span className="client-product-chevron">{isOpen ? "⌃" : "⌄"}</span>
               <strong className="client-product-title">{table.productName}</strong>
               <span className="client-product-strip-item"><small>סך צבירה</small><b>{formatCurrency(table.totalAssets)}</b></span>
-              <span className="client-product-strip-item"><small>תשואה 12 משוקללת</small><b>{formatSignedPercent(table.weightedReturn12)}</b></span>
-              <span className="client-product-strip-item"><small>תשואה 36 משוקללת</small><b>{formatSignedPercent(table.weightedReturn36)}</b></span>
-              <span className="client-product-strip-item"><small>תשואה 60 משוקללת</small><b>{formatSignedPercent(table.weightedReturn60)}</b></span>
-              <span className="client-product-strip-item"><small>סטיית תקן 36</small><b>{formatSignedPercent(table.weightedSt36)}</b></span>
-              <span className="client-product-strip-item"><small>שארפ 36</small><b>{formatDecimal(table.weightedSharp36, 2)}</b></span>
+              <span className="client-product-strip-item"><small>תשואה 12<br />משוקללת</small><b>{formatSignedPercent(table.weightedReturn12)}</b></span>
+              <span className="client-product-strip-item"><small>תשואה 36<br />משוקללת</small><b>{formatSignedPercent(table.weightedReturn36)}</b></span>
+              <span className="client-product-strip-item"><small>תשואה 60<br />משוקללת</small><b>{formatSignedPercent(table.weightedReturn60)}</b></span>
+              <span className="client-product-strip-item"><small>סטיית תקן<br />36</small><b>{formatSignedPercent(table.weightedSt36)}</b></span>
+              <span className="client-product-strip-item"><small>שארפ<br />36</small><b>{formatDecimal(table.weightedSharp36, 2)}</b></span>
             </button>
 
             {isOpen ? <AssetProductRoutesTable rows={table.rows} /> : null}
@@ -943,10 +946,10 @@ function ExposurePanel({ title, value, description }) {
   return <div className="client-panel"><div className="client-exposure-top"><div><h3>{title}</h3><p className="client-panel-subtitle">{description}</p></div><strong>{formatPercent(safe)}</strong></div><div className="client-exposure-track"><div className="client-exposure-fill" style={{ width: `${safe}%` }} /></div><div className="client-exposure-scale"><span>0%</span><span>25%</span><span>50%</span><span>75%</span><span>100%</span></div></div>;
 }
 
-function DonutCard({ title, items }) {
+function DonutCard({ title, items, wide = false }) {
   const segments = buildSegments(items);
   const gradient = segments.length ? segments.map((seg) => `${seg.color} ${seg.start}% ${seg.end}%`).join(", ") : "#D7DEE7 0% 100%";
-  return <div className="client-panel client-donut-panel"><h3>{title}</h3>{segments.length ? <div className="client-donut-layout"><div className="client-donut" style={{ background: `conic-gradient(${gradient})` }}><div className="client-donut-hole" /></div><div className="client-legend">{segments.slice(0, 7).map((seg) => <div key={seg.id || seg.name} className="client-legend-row"><span className="client-legend-dot" style={{ background: seg.color }} /><span className="client-legend-name">{seg.name}</span><strong>{Math.round(seg.percent)}%</strong></div>)}</div></div> : <div className="client-empty-state">אין נתונים להצגה</div>}</div>;
+  return <div className={wide ? "client-panel client-donut-panel wide" : "client-panel client-donut-panel"}><h3>{title}</h3>{segments.length ? <div className={wide ? "client-donut-layout wide" : "client-donut-layout"}><div className="client-donut" style={{ background: `conic-gradient(${gradient})` }}><div className="client-donut-hole" /></div><div className="client-legend">{segments.slice(0, 7).map((seg) => <div key={seg.id || seg.name} className="client-legend-row"><span className="client-legend-dot" style={{ background: seg.color }} /><span className="client-legend-name">{seg.name}</span><strong>{Math.round(seg.percent)}%</strong></div>)}</div></div> : <div className="client-empty-state">אין נתונים להצגה</div>}</div>;
 }
 
 function TextPanel({ title, text }) {
@@ -1042,7 +1045,7 @@ const clientDashboardCss = `
   .client-compare-track, .client-exposure-track { height: 18px; border-radius: 999px; background: ${theme.softBlue}; overflow: hidden; } .client-compare-fill, .client-exposure-fill { height: 100%; border-radius: 999px; } .client-compare-fill.primary, .client-exposure-fill { background: linear-gradient(90deg, ${theme.accent}, ${theme.navy}); } .client-compare-fill.muted { background: ${theme.mutedBar}; }
   .client-exposure-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 14px; margin-bottom: 14px; } .client-exposure-top strong { color: ${theme.navy}; font-size: 30px; line-height: 1; direction: ltr; } .client-exposure-scale { display: flex; justify-content: space-between; margin-top: 10px; color: ${theme.textSoft}; font-size: 12px; direction: ltr; }
   .client-metric-box { min-height: 126px; padding: 18px; display: grid; grid-template-columns: 58px minmax(0, 1fr); gap: 14px; align-items: center; } .client-metric-icon { width: 58px; height: 58px; border-radius: 18px; background: #F4F7FB; color: ${theme.navy}; display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: 900; } .client-metric-title { color: ${theme.textSoft}; font-size: 13px; font-weight: 800; margin-bottom: 8px; } .client-metric-value { color: ${theme.navy}; font-size: 23px; line-height: 1.15; font-weight: 900; direction: ltr; text-align: right; }
-  .client-donut-layout { display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 18px; align-items: center; } .client-donut { width: 142px; height: 142px; border-radius: 50%; position: relative; box-shadow: inset 0 0 0 3px rgba(255,255,255,0.95), inset 0 -9px 16px rgba(0,0,0,0.08), 0 10px 20px rgba(0,33,93,0.08); } .client-donut-hole { position: absolute; inset: 30%; border-radius: 50%; background: #fff; box-shadow: inset 0 4px 8px rgba(0,33,93,0.04); }
+  .client-donut-layout { display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 18px; align-items: center; } .client-donut-layout.wide { grid-template-columns: 190px minmax(0, 1fr); } .client-donut-panel.wide .client-donut { width: 180px; height: 180px; } .client-donut-panel.wide .client-legend { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 18px; row-gap: 10px; } .client-allocation-top-pies { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; } .client-main-groups-wide { width: 100%; } .client-donut { width: 142px; height: 142px; border-radius: 50%; position: relative; box-shadow: inset 0 0 0 3px rgba(255,255,255,0.95), inset 0 -9px 16px rgba(0,0,0,0.08), 0 10px 20px rgba(0,33,93,0.08); } .client-donut-hole { position: absolute; inset: 30%; border-radius: 50%; background: #fff; box-shadow: inset 0 4px 8px rgba(0,33,93,0.04); }
   .client-legend { display: flex; flex-direction: column; gap: 9px; min-width: 0; } .client-legend-row { display: grid; grid-template-columns: 10px minmax(0, 1fr) auto; gap: 8px; align-items: center; color: ${theme.text}; font-size: 12px; } .client-legend-dot { width: 10px; height: 10px; border-radius: 50%; } .client-legend-name { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
   .client-table-wrap { overflow-x: auto; border: 1px solid ${theme.divider}; border-radius: 18px; background: #fff; }
   .client-table { width: 100%; min-width: 760px; border-collapse: collapse; table-layout: auto; }
@@ -1072,20 +1075,20 @@ const clientDashboardCss = `
   .client-section-title-row.compact { margin-top: 18px; margin-bottom: 12px; }
   .client-asset-products { display: flex; flex-direction: column; gap: 12px; }
   .client-product-accordion { border: 1px solid #E7D9CA; border-radius: 20px; background: #FFFFFF; overflow: hidden; box-shadow: 0 2px 10px rgba(16,42,67,0.04); }
-  .client-product-summary { width: 100%; min-height: 82px; border: 0; background: #FFFFFF; color: ${theme.navy}; cursor: pointer; font-family: Calibri, Arial, sans-serif; display: grid; grid-template-columns: 32px minmax(220px, 1.2fr) repeat(6, minmax(100px, .72fr)); gap: 10px; align-items: center; padding: 14px 18px; text-align: right; }
+  .client-product-summary { width: 100%; min-height: 72px; border: 0; background: #FFFFFF; color: ${theme.navy}; cursor: pointer; font-family: Calibri, Arial, sans-serif; display: grid; grid-template-columns: 30px minmax(124px, 1.05fr) repeat(6, minmax(72px, .72fr)); gap: 6px; align-items: center; padding: 10px 12px; text-align: right; }
   .client-product-summary:hover { background: #FCFBF8; }
   .client-product-chevron { width: 28px; height: 28px; border-radius: 50%; border: 1px solid #D8DEE9; display: inline-flex; align-items: center; justify-content: center; color: ${theme.navy}; font-size: 20px; line-height: 1; }
-  .client-product-title { color: ${theme.navy}; font-size: 17px; line-height: 1.25; font-weight: 900; }
-  .client-product-strip-item { min-height: 48px; border-right: 1px solid #EEE4D8; padding-right: 12px; display: flex; flex-direction: column; justify-content: center; gap: 4px; }
-  .client-product-strip-item small { color: ${theme.textSoft}; font-size: 11px; font-weight: 800; line-height: 1.2; }
-  .client-product-strip-item b { color: ${theme.navy}; font-size: 15px; font-weight: 900; direction: ltr; text-align: right; }
+  .client-product-title { color: ${theme.navy}; font-size: 16px; line-height: 1.2; font-weight: 900; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .client-product-strip-item { min-height: 46px; border-right: 1px solid #EEE4D8; padding-right: 8px; display: flex; flex-direction: column; justify-content: center; gap: 3px; min-width: 0; overflow: hidden; }
+  .client-product-strip-item small { color: ${theme.textSoft}; font-size: 10px; font-weight: 800; line-height: 1.15; white-space: normal; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+  .client-product-strip-item b { color: ${theme.navy}; font-size: 14px; font-weight: 900; direction: ltr; text-align: right; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .client-product-assets-table { min-width: 1040px; }
   .client-product-assets-table th, .client-product-assets-table td { text-align: center; }
   .client-product-assets-table th:nth-child(2), .client-product-assets-table td:nth-child(2) { text-align: right; min-width: 240px; }
   .positive-number { color: #07864E !important; font-weight: 900; }
   @media print { .client-web-shell { display: none !important; } }
-  @media (max-width: 1180px) { .client-product-summary { grid-template-columns: 28px minmax(0, 1fr) repeat(2, minmax(110px, .8fr)); } .client-product-strip-item { border-right: 0; padding-right: 0; } .client-web-shell { grid-template-columns: 1fr; } .client-sidebar { position: relative; height: auto; display: block; border-left: 0; border-bottom: 1px solid rgba(255,255,255,0.12); } .client-sidebar-nav { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); } .client-main { padding: 18px; } .client-topbar { flex-direction: column; align-items: stretch; } .client-topbar-actions { justify-content: flex-start; } .client-kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .client-grid-3, .client-grid-2, .client-personal-grid { grid-template-columns: 1fr; } }
-  @media (max-width: 720px) { .client-product-summary { grid-template-columns: 28px minmax(0, 1fr); align-items: start; } .client-product-strip-item { grid-column: 1 / -1; min-height: auto; } .client-main { padding: 12px; } .client-sidebar { padding: 16px 12px; } .client-sidebar-nav { grid-template-columns: 1fr; } .client-kpi-grid { grid-template-columns: 1fr; } .client-content-card { padding: 16px; border-radius: 18px; } .client-topbar { padding: 16px; border-radius: 18px; } .client-page-title { font-size: 22px; } .client-donut-layout { grid-template-columns: 1fr; justify-items: center; } .client-scope-select-wrap, .client-history-button { grid-template-columns: 1fr; width: 100%; } .client-personal-fields { grid-template-columns: 1fr; } }
+  @media (max-width: 1180px) { .client-product-summary { grid-template-columns: 28px minmax(0, 1fr) repeat(2, minmax(110px, .8fr)); } .client-product-strip-item { border-right: 0; padding-right: 0; } .client-web-shell { grid-template-columns: 1fr; } .client-sidebar { position: relative; height: auto; display: block; border-left: 0; border-bottom: 1px solid rgba(255,255,255,0.12); } .client-sidebar-nav { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); } .client-main { padding: 18px; } .client-topbar { flex-direction: column; align-items: stretch; } .client-topbar-actions { justify-content: flex-start; } .client-kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .client-grid-3, .client-grid-2, .client-personal-grid, .client-allocation-top-pies { grid-template-columns: 1fr; } }
+  @media (max-width: 720px) { .client-product-summary { grid-template-columns: 28px minmax(0, 1fr); align-items: start; } .client-product-strip-item { grid-column: 1 / -1; min-height: auto; } .client-main { padding: 12px; } .client-sidebar { padding: 16px 12px; } .client-sidebar-nav { grid-template-columns: 1fr; } .client-kpi-grid { grid-template-columns: 1fr; } .client-content-card { padding: 16px; border-radius: 18px; } .client-topbar { padding: 16px; border-radius: 18px; } .client-page-title { font-size: 22px; } .client-donut-layout, .client-donut-layout.wide { grid-template-columns: 1fr; justify-items: center; } .client-donut-panel.wide .client-legend { grid-template-columns: 1fr; } .client-scope-select-wrap, .client-history-button { grid-template-columns: 1fr; width: 100%; } .client-personal-fields { grid-template-columns: 1fr; } }
 `;
 
 const styles = {

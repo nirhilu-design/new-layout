@@ -27,6 +27,8 @@ function ClientFamilyView({ clientModel }) {
     (Array.isArray(recognizedPensionAdjustments) &&
       recognizedPensionAdjustments.length > 0);
 
+  const recommendationsText = getClientRecommendationsText(clientModel);
+
   const formatCurrency = (value) =>
     `₪${Math.round(Number(value || 0)).toLocaleString("en-US")}`;
 
@@ -487,9 +489,47 @@ function ClientFamilyView({ clientModel }) {
             value={`${loanRatioToAssets.toFixed(1)}%`}
           />
         </SectionCard>
+
+        <SectionCard title="המלצות לפעולה" icon="📝">
+          <div className="family-explanation" style={explanation}>
+            המלצות אלו נכתבות ונערכות במסך ה־REPORT ומוצגות כאן ללקוח כקריאה בלבד.
+          </div>
+
+          {recommendationsText ? (
+            <ReadOnlyRecommendations text={recommendationsText} />
+          ) : (
+            <EmptyText>לא הוזנו המלצות לפעולה בדוח.</EmptyText>
+          )}
+        </SectionCard>
       </div>
     </div>
   );
+}
+
+function getClientRecommendationsText(clientModel) {
+  const sourceReportData = clientModel?.sourceReportData || {};
+
+  const candidates = [
+    clientModel?.actionRecommendations,
+    clientModel?.recommendationsText,
+    clientModel?.recommendations,
+    clientModel?.clientRecommendations,
+    sourceReportData?.actionRecommendations,
+    sourceReportData?.recommendationsText,
+    sourceReportData?.recommendations,
+    sourceReportData?.clientRecommendations,
+    sourceReportData?.family?.actionRecommendations,
+    sourceReportData?.family?.recommendationsText,
+    sourceReportData?.family?.recommendations,
+  ];
+
+  return candidates
+    .map((value) => String(value || "").trim())
+    .find(Boolean) || "";
+}
+
+function ReadOnlyRecommendations({ text }) {
+  return <div style={recommendationsReadOnlyBox}>{text}</div>;
 }
 
 function normalizeClientInsuranceName(value) {
@@ -1607,6 +1647,19 @@ const table = { width: "100%", borderCollapse: "collapse", minWidth: 760, backgr
 const th = { textAlign: "right", padding: 12, fontSize: 12, color: theme.textSoft, borderBottom: `1px solid ${theme.divider}`, whiteSpace: "nowrap", fontWeight: 700, background: "#FAF8F4" };
 const td = { textAlign: "right", padding: 12, fontSize: 12, color: theme.text, borderBottom: "1px solid #F0E6DA", whiteSpace: "nowrap" };
 const emptyState = { background: theme.surfaceAlt, border: `1px dashed ${theme.border}`, borderRadius: 14, padding: 18, fontSize: 12, color: theme.textSoft };
+
+const recommendationsReadOnlyBox = {
+  background: "#FFFDFB",
+  border: `1px solid ${theme.border}`,
+  borderRadius: 16,
+  padding: 18,
+  minHeight: 130,
+  color: theme.text,
+  fontSize: 13,
+  lineHeight: 1.9,
+  whiteSpace: "pre-wrap",
+  wordBreak: "break-word",
+};
 
 
 const clientVestedHeaderRow = {

@@ -23,6 +23,11 @@ function formatCurrency(value) {
   return `₪${Math.round(Number(value || 0)).toLocaleString("en-US")}`;
 }
 
+function formatOptionalCurrency(value) {
+  const number = Number(value || 0);
+  return Number.isFinite(number) && number > 0 ? formatCurrency(number) : "—";
+}
+
 function formatPercent(value) {
   return `${Math.round(Number(value || 0))}%`;
 }
@@ -30,6 +35,7 @@ function formatPercent(value) {
 function formatDate(value) {
   if (!value) return "—";
   const str = String(value).trim();
+  if (!str) return "—";
   if (/^\d{8}$/.test(str)) return `${str.slice(6, 8)}/${str.slice(4, 6)}/${str.slice(0, 4)}`;
   const date = new Date(str);
   return Number.isNaN(date.getTime()) ? str : new Intl.DateTimeFormat("he-IL").format(date);
@@ -48,6 +54,12 @@ function normalizeDistributionItems(items) {
 
 function getFirstPositiveNumber(values) {
   return values.map((value) => Number(value || 0)).find((value) => Number.isFinite(value) && value > 0) || 0;
+}
+
+function getFirstText(values) {
+  return values
+    .map((value) => (value === null || value === undefined ? "" : String(value).trim()))
+    .find((value) => value && value !== "—" && value !== "-") || "";
 }
 
 function getPolicyDeathCoverage(policy) {
@@ -81,9 +93,79 @@ function getPolicyDisabilityValue(policy) {
 function getPlanWeightedExposure(policy, key) {
   const plans = safeArray(policy?.investPlans);
   if (!plans.length) return 0;
-  return plans.reduce((sum, plan) => {
-    return sum + Number(key === "equity" ? plan?.equityExposure || 0 : plan?.foreignExposure || 0);
-  }, 0) / plans.length;
+  return plans.reduce((sum, plan) => sum + Number(key === "equity" ? plan?.equityExposure || 0 : plan?.foreignExposure || 0), 0) / plans.length;
+}
+
+function getRawMemberDetails(rawFile) {
+  const parsed = rawFile?.parsedData || {};
+  return parsed?.memberDetails || parsed?.MemberDetails || parsed?.member || parsed?.insured || parsed?.personalDetails || rawFile?.memberDetails || {};
+}
+
+function getPersonalDetailsFromSources(member, rawFile) {
+  const rawDetails = getRawMemberDetails(rawFile);
+  const policies = safeArray(rawFile?.parsedData?.policies);
+  const firstPolicy = policies[0] || {};
+  const firstEmployerPolicy = policies.find((policy) => getFirstText([policy?.employerName, policy?.employer?.name, policy?.employment?.employerName, policy?.details?.employerName])) || firstPolicy;
+
+  const name = getFirstText([
+    member?.personalDetails?.name,
+    member?.name,
+    rawDetails?.name,
+    rawDetails?.fullName,
+    rawDetails?.memberName,
+    rawDetails?.firstName && rawDetails?.lastName ? `${rawDetails.firstName} ${rawDetails.lastName}` : "",
+    rawFile?.memberName,
+  ]) || "ללא שם";
+
+  const birthDate = getFirstText([
+    member?.personalDetails?.birthDate,
+    member?.birthDate,
+    member?.dateOfBirth,
+    rawDetails?.birthDate,
+    rawDetails?.dateOfBirth,
+    rawDetails?.BirthDate,
+    rawDetails?.DOB,
+    rawDetails?.birthdate,
+  ]);
+
+  const lastWorkplace = getFirstText([
+    member?.personalDetails?.lastWorkplace,
+    member?.personalDetails?.employerName,
+    member?.lastWorkplace,
+    member?.employerName,
+    member?.currentEmployer,
+    rawDetails?.lastWorkplace,
+    rawDetails?.employerName,
+    rawDetails?.currentEmployer,
+    rawDetails?.workplace,
+    firstEmployerPolicy?.employerName,
+    firstEmployerPolicy?.employer?.name,
+    firstEmployerPolicy?.employment?.employerName,
+    firstEmployerPolicy?.details?.employerName,
+  ]);
+
+  const currentSalary = getFirstPositiveNumber([
+    member?.personalDetails?.currentSalary,
+    member?.personalDetails?.salary,
+    member?.currentSalary,
+    member?.salary,
+    member?.income,
+    rawDetails?.currentSalary,
+    rawDetails?.salary,
+    rawDetails?.income,
+    rawDetails?.Income,
+    firstPolicy?.memberDetails?.Income,
+    firstPolicy?.MemberDetails?.Income,
+    firstPolicy?.income,
+    firstPolicy?.salary,
+  ]);
+
+  return {
+    name,
+    birthDate,
+    lastWorkplace,
+    currentSalary,
+  };
 }
 
 function buildMemberProductsFromRawFile(rawFile) {
@@ -173,6 +255,7 @@ function buildClientModelFromReportData(reportData) {
     members: safeArray(data.members).map((member, index) => ({
       id: member?.id || member?.name || `member-${index}`,
       name: member?.name || "ללא שם",
+      personalDetails: getPersonalDetailsFromSources(member, null),
       summary: {
         totalAssets: Number(member?.assets || member?.totalAssets || 0),
         monthlyDeposits: Number(member?.monthlyDeposits || 0),
@@ -212,6 +295,7 @@ function buildDetailedMembers(reportData, clientModel) {
       ...summaryMember,
       id: summaryMember?.id || summaryMember?.name || `member-${index}`,
       name: summaryMember?.name || rawFile?.memberName || "ללא שם",
+      personalDetails: getPersonalDetailsFromSources(summaryMember, rawFile),
       products,
       managers: groupItemsByValue(products, (product) => product.managerName, (product) => product.currentValue),
       productTypes: groupItemsByValue(products, (product) => product.productType, (product) => product.currentValue),
@@ -293,6 +377,7 @@ function EmptyDashboardState({ onBack }) {
 
 const NAV_ITEMS = [
   { id: "pension", label: "סיכום פנסיוני", icon: "▥" },
+  { id: "personal", label: "פרטים אישיים", icon: "☷" },
   { id: "allocation", label: "התפלגות נכסים", icon: "◔" },
   { id: "insurance", label: "פירוט ביטוחים", icon: "🛡" },
   { id: "loans", label: "הלוואות", icon: "🏦" },
@@ -378,6 +463,7 @@ export default function ClientDashboardPage({
 
         <section className="client-content-card">
           {activeSection === "pension" ? <PensionSection scope={scope} /> : null}
+          {activeSection === "personal" ? <PersonalDetailsSection members={detailedMembers} /> : null}
           {activeSection === "allocation" ? <AllocationSection scope={scope} /> : null}
           {activeSection === "insurance" ? <InsuranceSection scope={scope} /> : null}
           {activeSection === "loans" ? <LoansSection scope={scope} /> : null}
@@ -407,6 +493,56 @@ function PensionSection({ scope }) {
         <ExposurePanel title="חשיפה מנייתית משוקללת" value={scope.exposures?.equity} description={getExposureLabel(scope.exposures?.equity)} />
         <ExposurePanel title='חשיפה לחו"ל' value={scope.exposures?.foreign} description={getForeignExposureLabel(scope.exposures?.foreign)} />
       </div>
+    </div>
+  );
+}
+
+function PersonalDetailsSection({ members }) {
+  const displayMembers = safeArray(members).slice(0, 2);
+  return (
+    <div>
+      <SectionTitle title="פרטים אישיים" subtitle="ריכוז פרטי הלקוח/ה לפי הנתונים שנקראו מהמסלקה ומהקבצים שהועלו. הנתונים מוצגים לבעל ולאישה בשני כרטיסים נפרדים." />
+      {displayMembers.length ? (
+        <div className="client-personal-grid">
+          {displayMembers.map((member, index) => (
+            <PersonalDetailsCard key={member.id || member.name || index} member={member} index={index} />
+          ))}
+        </div>
+      ) : (
+        <div className="client-empty-state">לא נמצאו בני משפחה להצגת פרטים אישיים.</div>
+      )}
+    </div>
+  );
+}
+
+function PersonalDetailsCard({ member, index }) {
+  const details = member?.personalDetails || {};
+  const title = index === 0 ? "בעל" : index === 1 ? "אישה" : "בן/בת משפחה";
+  return (
+    <div className="client-personal-card">
+      <div className="client-personal-card-header">
+        <div className="client-personal-avatar">{String(details.name || member?.name || "?").trim().slice(0, 1)}</div>
+        <div>
+          <div className="client-personal-card-kicker">{title}</div>
+          <h3>{details.name || member?.name || "ללא שם"}</h3>
+        </div>
+      </div>
+
+      <div className="client-personal-fields">
+        <PersonalField label="שם לקוח" value={details.name || member?.name || "—"} />
+        <PersonalField label="תאריך לידה" value={formatDate(details.birthDate)} />
+        <PersonalField label="מקום עבודה אחרון מעודכן" value={details.lastWorkplace || "—"} />
+        <PersonalField label="שכר נוכחי" value={formatOptionalCurrency(details.currentSalary)} />
+      </div>
+    </div>
+  );
+}
+
+function PersonalField({ label, value }) {
+  return (
+    <div className="client-personal-field">
+      <span>{label}</span>
+      <strong>{value || "—"}</strong>
     </div>
   );
 }
@@ -595,9 +731,19 @@ const clientDashboardCss = `
   .client-section-title-row { display: flex; justify-content: space-between; gap: 16px; align-items: flex-start; margin-bottom: 18px; } .client-section-title-row h2 { margin: 0; color: ${theme.navy}; font-size: 22px; line-height: 1.25; font-weight: 900; }
   .client-section-title-row p, .client-panel-subtitle { margin: 6px 0 0; color: ${theme.textSoft}; font-size: 13px; line-height: 1.6; }
   .client-kpi-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; margin-bottom: 14px; } .client-grid-2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; } .client-grid-3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; } .client-margin-top { margin-top: 14px; }
-  .client-kpi-card, .client-panel, .client-metric-box { border: 1px solid #E7D9CA; border-radius: 20px; background: linear-gradient(180deg, #fff 0%, ${theme.surfaceAlt} 100%); box-shadow: 0 2px 10px rgba(16,42,67,0.04); }
+  .client-kpi-card, .client-panel, .client-metric-box, .client-personal-card { border: 1px solid #E7D9CA; border-radius: 20px; background: linear-gradient(180deg, #fff 0%, ${theme.surfaceAlt} 100%); box-shadow: 0 2px 10px rgba(16,42,67,0.04); }
   .client-kpi-card { min-height: 184px; padding: 18px; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 8px; text-align: center; }
   .client-kpi-icon { width: 74px; height: 74px; border-radius: 22px; background: #F4F7FB; display: flex; align-items: center; justify-content: center; } .client-kpi-title { color: ${theme.textSoft}; font-size: 14px; font-weight: 800; } .client-kpi-value { color: ${theme.navy}; font-size: 32px; line-height: 1.1; font-weight: 900; direction: ltr; } .client-kpi-sub { color: #7A8CA8; font-size: 12px; line-height: 1.45; }
+  .client-personal-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+  .client-personal-card { padding: 22px; min-height: 290px; }
+  .client-personal-card-header { display: grid; grid-template-columns: 66px minmax(0, 1fr); gap: 14px; align-items: center; padding-bottom: 16px; margin-bottom: 16px; border-bottom: 1px solid ${theme.divider}; }
+  .client-personal-avatar { width: 66px; height: 66px; border-radius: 22px; background: linear-gradient(135deg, ${theme.accent}, ${theme.navy}); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 28px; font-weight: 900; }
+  .client-personal-card-kicker { color: ${theme.textSoft}; font-size: 12px; font-weight: 900; margin-bottom: 4px; }
+  .client-personal-card h3 { margin: 0; color: ${theme.navy}; font-size: 22px; line-height: 1.25; font-weight: 900; }
+  .client-personal-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+  .client-personal-field { min-height: 76px; border: 1px solid ${theme.divider}; border-radius: 16px; background: #FFFFFF; padding: 13px 14px; display: flex; flex-direction: column; justify-content: center; gap: 6px; }
+  .client-personal-field span { color: ${theme.textSoft}; font-size: 12px; font-weight: 800; }
+  .client-personal-field strong { color: ${theme.navy}; font-size: 17px; font-weight: 900; line-height: 1.25; word-break: break-word; }
   .client-panel { padding: 18px; min-width: 0; } .client-panel h3 { margin: 0 0 10px; color: ${theme.navy}; font-size: 16px; line-height: 1.3; font-weight: 900; }
   .client-compare-row { margin-top: 14px; } .client-compare-top { display: flex; justify-content: space-between; gap: 12px; align-items: center; margin-bottom: 8px; color: ${theme.textSoft}; font-size: 13px; font-weight: 800; } .client-compare-top strong { color: ${theme.navy}; font-size: 17px; direction: ltr; }
   .client-compare-track, .client-exposure-track { height: 18px; border-radius: 999px; background: ${theme.softBlue}; overflow: hidden; } .client-compare-fill, .client-exposure-fill { height: 100%; border-radius: 999px; } .client-compare-fill.primary, .client-exposure-fill { background: linear-gradient(90deg, ${theme.accent}, ${theme.navy}); } .client-compare-fill.muted { background: ${theme.mutedBar}; }
@@ -608,8 +754,8 @@ const clientDashboardCss = `
   .client-table-wrap { overflow-x: auto; border: 1px solid ${theme.divider}; border-radius: 18px; background: #fff; } .client-table { width: 100%; min-width: 760px; border-collapse: collapse; } .client-table th { background: ${theme.navy}; color: #fff; padding: 12px 10px; font-size: 12px; text-align: right; white-space: nowrap; } .client-table td { padding: 12px 10px; border-bottom: 1px solid ${theme.divider}; color: ${theme.text}; font-size: 12px; white-space: nowrap; }
   .client-empty-state { border: 1px dashed ${theme.border}; border-radius: 16px; background: ${theme.surfaceAlt}; padding: 18px; color: ${theme.textSoft}; font-size: 13px; text-align: center; line-height: 1.7; } .client-text-panel { min-height: 210px; border: 1px solid ${theme.divider}; border-radius: 16px; background: #FFFDFB; padding: 16px; color: ${theme.text}; font-size: 13px; line-height: 1.9; white-space: pre-wrap; }
   @media print { .client-web-shell { display: none !important; } }
-  @media (max-width: 1180px) { .client-web-shell { grid-template-columns: 1fr; } .client-sidebar { position: relative; height: auto; display: block; border-left: 0; border-bottom: 1px solid rgba(255,255,255,0.12); } .client-sidebar-nav { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); } .client-main { padding: 18px; } .client-topbar { flex-direction: column; align-items: stretch; } .client-topbar-actions { justify-content: flex-start; } .client-kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .client-grid-3, .client-grid-2 { grid-template-columns: 1fr; } }
-  @media (max-width: 720px) { .client-main { padding: 12px; } .client-sidebar { padding: 16px 12px; } .client-sidebar-nav { grid-template-columns: 1fr; } .client-kpi-grid { grid-template-columns: 1fr; } .client-content-card { padding: 16px; border-radius: 18px; } .client-topbar { padding: 16px; border-radius: 18px; } .client-page-title { font-size: 22px; } .client-donut-layout { grid-template-columns: 1fr; justify-items: center; } .client-scope-select-wrap, .client-history-button { grid-template-columns: 1fr; width: 100%; } }
+  @media (max-width: 1180px) { .client-web-shell { grid-template-columns: 1fr; } .client-sidebar { position: relative; height: auto; display: block; border-left: 0; border-bottom: 1px solid rgba(255,255,255,0.12); } .client-sidebar-nav { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); } .client-main { padding: 18px; } .client-topbar { flex-direction: column; align-items: stretch; } .client-topbar-actions { justify-content: flex-start; } .client-kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .client-grid-3, .client-grid-2, .client-personal-grid { grid-template-columns: 1fr; } }
+  @media (max-width: 720px) { .client-main { padding: 12px; } .client-sidebar { padding: 16px 12px; } .client-sidebar-nav { grid-template-columns: 1fr; } .client-kpi-grid { grid-template-columns: 1fr; } .client-content-card { padding: 16px; border-radius: 18px; } .client-topbar { padding: 16px; border-radius: 18px; } .client-page-title { font-size: 22px; } .client-donut-layout { grid-template-columns: 1fr; justify-items: center; } .client-scope-select-wrap, .client-history-button { grid-template-columns: 1fr; width: 100%; } .client-personal-fields { grid-template-columns: 1fr; } }
 `;
 
 const styles = {

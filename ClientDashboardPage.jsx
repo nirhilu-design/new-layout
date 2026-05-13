@@ -572,26 +572,84 @@ function AllocationSection({ scope }) {
 function InsuranceSection({ scope }) {
   const insurance = scope.insurance || {};
   const deathCoverageRows = safeArray(scope.deathCoverageProducts);
+
   return (
     <div>
-      <SectionTitle title="פירוט ביטוחים" subtitle="ריכוז הכיסויים הביטוחיים לפי התצוגה שנבחרה, כולל הכנה לפירוט ביטוח חיים לפי מוצרים וצבירה." />
+      <SectionTitle title="פירוט ביטוחים" subtitle="ריכוז הכיסויים הביטוחיים לפי התצוגה שנבחרה, כולל פירוט ביטוח חיים לפי מוצרים וצבירה." />
+
       <div className="client-grid-3">
         <MetricBox title="ביטוח חיים / הון למוטבים" value={formatCurrency(insurance.deathCoverage)} icon={<ShieldIcon />} />
         <MetricBox title="אובדן כושר עבודה" value={formatCurrency(insurance.disabilityValue)} icon={<PersonIcon />} />
         <MetricBox title="שיעור אובדן כושר עבודה" value={formatPercent(insurance.disabilityPercent)} icon="%" />
       </div>
+
       <div className="client-panel client-margin-top">
         <h3>פירוט ביטוח חיים לפי מוצרים וצבירה</h3>
-        <p className="client-panel-subtitle">המבנה כבר מוכן לקליטת נתונים מה־parser. אם קיימים נתוני מוצרים בקובץ הגולמי, הם יוצגו כאן; אחרת תופיע הודעת הכנה.</p>
-        <div className="client-table-wrap client-margin-top">
-          {deathCoverageRows.length ? (
-            <table className="client-table">
-              <thead><tr>{scope.isFamily ? <th>בן משפחה</th> : null}<th>מוצר</th><th>גוף מנהל</th><th>סוג מוצר</th><th>מספר פוליסה</th><th>צבירה</th><th>ביטוח חיים</th></tr></thead>
-              <tbody>{deathCoverageRows.map((row, index) => <tr key={row.id || index}>{scope.isFamily ? <td>{row.memberName || "—"}</td> : null}<td>{row.planName || "—"}</td><td>{row.managerName || "—"}</td><td>{row.productType || "—"}</td><td>{row.policyNo || "—"}</td><td>{formatCurrency(row.currentValue)}</td><td>{formatCurrency(row.deathCoverage)}</td></tr>)}</tbody>
-            </table>
-          ) : <div className="client-empty-state">אין עדיין פירוט מוצרי להצגה. המבנה קיים, ונדרש לחבר את שדות ביטוח החיים מה־parser לפי מוצר/פוליסה.</div>}
-        </div>
+        <p className="client-panel-subtitle">
+          ברמת משפחה מוצגת עמודת בן משפחה. בתצוגת לקוח פרטית העמודה מוסרת לגמרי כדי שלא תיווצר הזזת עמודות בטבלה.
+        </p>
+
+        <InsuranceProductsTable rows={deathCoverageRows} isFamily={Boolean(scope.isFamily)} />
       </div>
+    </div>
+  );
+}
+
+function InsuranceProductsTable({ rows, isFamily }) {
+  const safeRows = safeArray(rows);
+
+  if (!safeRows.length) {
+    return (
+      <div className="client-empty-state client-margin-top">
+        אין עדיין פירוט מוצרי להצגה. המבנה קיים, ונדרש לחבר את שדות ביטוח החיים מה־parser לפי מוצר/פוליסה.
+      </div>
+    );
+  }
+
+  const columns = isFamily
+    ? [
+        { key: "memberName", label: "בן משפחה", className: "text-col", render: (row) => row.memberName || "—" },
+        { key: "planName", label: "מוצר", className: "wide-col", render: (row) => row.planName || "—" },
+        { key: "managerName", label: "גוף מנהל", className: "text-col", render: (row) => row.managerName || "—" },
+        { key: "productType", label: "סוג מוצר", className: "text-col", render: (row) => row.productType || "—" },
+        { key: "policyNo", label: "מספר פוליסה", className: "policy-col", render: (row) => row.policyNo || "—" },
+        { key: "currentValue", label: "צבירה", className: "money-col", render: (row) => formatCurrency(row.currentValue) },
+        { key: "deathCoverage", label: "ביטוח חיים", className: "money-col", render: (row) => formatCurrency(row.deathCoverage) },
+      ]
+    : [
+        { key: "planName", label: "מוצר", className: "wide-col", render: (row) => row.planName || "—" },
+        { key: "managerName", label: "גוף מנהל", className: "text-col", render: (row) => row.managerName || "—" },
+        { key: "productType", label: "סוג מוצר", className: "text-col", render: (row) => row.productType || "—" },
+        { key: "policyNo", label: "מספר פוליסה", className: "policy-col", render: (row) => row.policyNo || "—" },
+        { key: "currentValue", label: "צבירה", className: "money-col", render: (row) => formatCurrency(row.currentValue) },
+        { key: "deathCoverage", label: "ביטוח חיים", className: "money-col", render: (row) => formatCurrency(row.deathCoverage) },
+      ];
+
+  return (
+    <div className="client-table-wrap client-margin-top">
+      <table className={isFamily ? "client-table client-insurance-table family" : "client-table client-insurance-table member"}>
+        <colgroup>
+          {columns.map((column) => (
+            <col key={column.key} className={`client-insurance-col-${column.key}`} />
+          ))}
+        </colgroup>
+        <thead>
+          <tr>
+            {columns.map((column) => (
+              <th key={column.key} className={column.className}>{column.label}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {safeRows.map((row, rowIndex) => (
+            <tr key={row.id || `${row.policyNo || "policy"}-${rowIndex}`}>
+              {columns.map((column) => (
+                <td key={column.key} className={column.className} title={String(column.render(row) || "")}>{column.render(row)}</td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }
@@ -760,7 +818,29 @@ const clientDashboardCss = `
   .client-metric-box { min-height: 126px; padding: 18px; display: grid; grid-template-columns: 58px minmax(0, 1fr); gap: 14px; align-items: center; } .client-metric-icon { width: 58px; height: 58px; border-radius: 18px; background: #F4F7FB; color: ${theme.navy}; display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: 900; } .client-metric-title { color: ${theme.textSoft}; font-size: 13px; font-weight: 800; margin-bottom: 8px; } .client-metric-value { color: ${theme.navy}; font-size: 23px; line-height: 1.15; font-weight: 900; direction: ltr; text-align: right; }
   .client-donut-layout { display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 18px; align-items: center; } .client-donut { width: 142px; height: 142px; border-radius: 50%; position: relative; box-shadow: inset 0 0 0 3px rgba(255,255,255,0.95), inset 0 -9px 16px rgba(0,0,0,0.08), 0 10px 20px rgba(0,33,93,0.08); } .client-donut-hole { position: absolute; inset: 30%; border-radius: 50%; background: #fff; box-shadow: inset 0 4px 8px rgba(0,33,93,0.04); }
   .client-legend { display: flex; flex-direction: column; gap: 9px; min-width: 0; } .client-legend-row { display: grid; grid-template-columns: 10px minmax(0, 1fr) auto; gap: 8px; align-items: center; color: ${theme.text}; font-size: 12px; } .client-legend-dot { width: 10px; height: 10px; border-radius: 50%; } .client-legend-name { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
-  .client-table-wrap { overflow-x: auto; border: 1px solid ${theme.divider}; border-radius: 18px; background: #fff; } .client-table { width: 100%; min-width: 760px; border-collapse: collapse; } .client-table th { background: ${theme.navy}; color: #fff; padding: 12px 10px; font-size: 12px; text-align: right; white-space: nowrap; } .client-table td { padding: 12px 10px; border-bottom: 1px solid ${theme.divider}; color: ${theme.text}; font-size: 12px; white-space: nowrap; }
+  .client-table-wrap { overflow-x: auto; border: 1px solid ${theme.divider}; border-radius: 18px; background: #fff; }
+  .client-table { width: 100%; min-width: 760px; border-collapse: collapse; table-layout: auto; }
+  .client-table th { background: ${theme.navy}; color: #fff; padding: 12px 10px; font-size: 12px; text-align: right; white-space: nowrap; }
+  .client-table td { padding: 12px 10px; border-bottom: 1px solid ${theme.divider}; color: ${theme.text}; font-size: 12px; white-space: nowrap; }
+  .client-insurance-table { table-layout: fixed; min-width: 0; }
+  .client-insurance-table.family { min-width: 860px; }
+  .client-insurance-table.member { min-width: 720px; }
+  .client-insurance-table th, .client-insurance-table td { vertical-align: middle; }
+  .client-insurance-table .wide-col, .client-insurance-table .text-col { white-space: normal; overflow-wrap: anywhere; line-height: 1.45; }
+  .client-insurance-table .policy-col, .client-insurance-table .money-col { direction: ltr; text-align: center; white-space: nowrap; }
+  .client-insurance-table .client-insurance-col-memberName { width: 13%; }
+  .client-insurance-table .client-insurance-col-planName { width: 22%; }
+  .client-insurance-table .client-insurance-col-managerName { width: 19%; }
+  .client-insurance-table .client-insurance-col-productType { width: 16%; }
+  .client-insurance-table .client-insurance-col-policyNo { width: 13%; }
+  .client-insurance-table .client-insurance-col-currentValue { width: 13%; }
+  .client-insurance-table .client-insurance-col-deathCoverage { width: 12%; }
+  .client-insurance-table.member .client-insurance-col-planName { width: 25%; }
+  .client-insurance-table.member .client-insurance-col-managerName { width: 22%; }
+  .client-insurance-table.member .client-insurance-col-productType { width: 17%; }
+  .client-insurance-table.member .client-insurance-col-policyNo { width: 14%; }
+  .client-insurance-table.member .client-insurance-col-currentValue { width: 11%; }
+  .client-insurance-table.member .client-insurance-col-deathCoverage { width: 11%; }
   .client-empty-state { border: 1px dashed ${theme.border}; border-radius: 16px; background: ${theme.surfaceAlt}; padding: 18px; color: ${theme.textSoft}; font-size: 13px; text-align: center; line-height: 1.7; } .client-text-panel { min-height: 210px; border: 1px solid ${theme.divider}; border-radius: 16px; background: #FFFDFB; padding: 16px; color: ${theme.text}; font-size: 13px; line-height: 1.9; white-space: pre-wrap; }
   @media print { .client-web-shell { display: none !important; } }
   @media (max-width: 1180px) { .client-web-shell { grid-template-columns: 1fr; } .client-sidebar { position: relative; height: auto; display: block; border-left: 0; border-bottom: 1px solid rgba(255,255,255,0.12); } .client-sidebar-nav { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); } .client-main { padding: 18px; } .client-topbar { flex-direction: column; align-items: stretch; } .client-topbar-actions { justify-content: flex-start; } .client-kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .client-grid-3, .client-grid-2, .client-personal-grid { grid-template-columns: 1fr; } }

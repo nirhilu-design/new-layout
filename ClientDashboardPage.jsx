@@ -105,7 +105,14 @@ function getPersonalDetailsFromSources(member, rawFile) {
   const rawDetails = getRawMemberDetails(rawFile);
   const policies = safeArray(rawFile?.parsedData?.policies);
   const firstPolicy = policies[0] || {};
-  const firstEmployerPolicy = policies.find((policy) => getFirstText([policy?.employerName, policy?.employer?.name, policy?.employment?.employerName, policy?.details?.employerName])) || firstPolicy;
+  const firstEmployerPolicy = policies.find((policy) => getFirstText([
+    policy?.employerName,
+    policy?.companyName,
+    policy?.CompanyName,
+    policy?.employer?.name,
+    policy?.employment?.employerName,
+    policy?.details?.employerName,
+  ])) || firstPolicy;
 
   const name = getFirstText([
     member?.personalDetails?.name,
@@ -139,6 +146,8 @@ function getPersonalDetailsFromSources(member, rawFile) {
     rawDetails?.currentEmployer,
     rawDetails?.workplace,
     firstEmployerPolicy?.employerName,
+    firstEmployerPolicy?.companyName,
+    firstEmployerPolicy?.CompanyName,
     firstEmployerPolicy?.employer?.name,
     firstEmployerPolicy?.employment?.employerName,
     firstEmployerPolicy?.details?.employerName,

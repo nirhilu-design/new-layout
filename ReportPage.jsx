@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 
 const STORAGE_CLIENT_MODEL_KEY = "familyPensionClientModel";
 const STORAGE_REPORT_DATA_KEY = "familyPensionReportData";
@@ -85,6 +85,13 @@ function buildClientModelFromReportData(reportData) {
       details: safeArray(data.loans?.details),
     },
 
+    conversationSummary:
+      data.conversationSummary || data.clientConversationSummary || data.summaryText || "",
+    actionRecommendations:
+      data.actionRecommendations || data.recommendationsText || data.recommendations || "",
+    recommendationsText:
+      data.recommendationsText || data.actionRecommendations || data.recommendations || "",
+
     sourceReportData: data,
   };
 }
@@ -118,7 +125,11 @@ export default function ReportPage({
   onCreateShareLink = () => null,
 }) {
   const [recommendations, setRecommendations] = useState(
-    `1. מומלץ לבחון את הפער בין הקצבה הצפויה עם המשך הפקדות לבין ללא המשך הפקדות.
+    () =>
+      reportData?.actionRecommendations ||
+      reportData?.recommendationsText ||
+      reportData?.recommendations ||
+      `1. מומלץ לבחון את הפער בין הקצבה הצפויה עם המשך הפקדות לבין ללא המשך הפקדות.
 2. מומלץ לבדוק האם יש ריכוז יתר במוצרים או בגופים מנהלים מסוימים.
 3. מומלץ לעבור על הכיסויים הביטוחיים ולוודא שהם מתאימים לצרכים המשפחתיים.
 4. מומלץ לבחון את מדיניות ההשקעה ורמת החשיפה למניות בהתאם לפרופיל הסיכון הרצוי.`
@@ -127,6 +138,22 @@ export default function ReportPage({
   const [isClientLinkCopied, setIsClientLinkCopied] = useState(false);
 
   const safeReportData = reportData || {};
+
+  const reportDataForClient = useMemo(
+    () => ({
+      ...safeReportData,
+      recommendationsText: recommendations,
+      actionRecommendations: recommendations,
+      recommendations,
+      clientActionRecommendations: recommendations,
+    }),
+    [safeReportData, recommendations]
+  );
+
+  useEffect(() => {
+    if (!reportDataForClient?.family) return;
+    saveClientDashboardData(reportDataForClient);
+  }, [reportDataForClient]);
 
   const {
     family = {},
@@ -184,7 +211,14 @@ export default function ReportPage({
       return;
     }
 
-    const result = onCreateShareLink({ expirationHours: 24 });
+    saveClientDashboardData(reportDataForClient);
+
+    const result = onCreateShareLink({
+      expirationHours: 24,
+      reportData: reportDataForClient,
+      recommendationsText: recommendations,
+      actionRecommendations: recommendations,
+    });
 
     if (!result?.success || !result?.url) {
       alert(result?.error || "לא ניתן היה ליצור לינק ללקוח.");
@@ -2333,7 +2367,7 @@ export default function ReportPage({
         `}
       </style>
 
-      <PrintReportA4 reportData={safeReportData} recommendations={recommendations} />
+      <PrintReportA4 reportData={reportDataForClient} recommendations={recommendations} />
 
       <div className="screen-report-root" style={styles.page}>
         <div className="no-print" style={styles.actionsBar}>

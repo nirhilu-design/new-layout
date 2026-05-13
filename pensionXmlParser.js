@@ -36,6 +36,33 @@ function normalizeText(value) {
   return stripHtml(value).replace(/\s+/g, " ").trim();
 }
 
+function normalizeDateValue(value) {
+  const text = normalizeText(value);
+  if (!text) return "";
+
+  const ddmmyyyy = text.match(/\b(\d{1,2})[./-](\d{1,2})[./-](\d{4})\b/);
+  if (ddmmyyyy) {
+    const day = ddmmyyyy[1].padStart(2, "0");
+    const month = ddmmyyyy[2].padStart(2, "0");
+    const year = ddmmyyyy[3];
+    return `${day}/${month}/${year}`;
+  }
+
+  const yyyymmdd = text.match(/\b(\d{4})[./-]?(\d{2})[./-]?(\d{2})\b/);
+  if (yyyymmdd) {
+    return `${yyyymmdd[3]}/${yyyymmdd[2]}/${yyyymmdd[1]}`;
+  }
+
+  return text;
+}
+
+function parseSortableDate(value) {
+  const dateText = normalizeDateValue(value);
+  const match = dateText.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  if (!match) return 0;
+  return Number(`${match[3]}${match[2]}${match[1]}`);
+}
+
 function normalizeManagerName(value) {
   const raw = normalizeText(value);
   const text = raw
@@ -225,6 +252,41 @@ function parseInvestPlans(policyNode) {
   });
 }
 
+
+function getPolicyEmployerName(policyNode, sectionRoots) {
+  // In this XML structure the employer / workplace is represented by CompanyName.
+  // For the client personal-details card we intentionally take CompanyName from
+  // the active depositing policy, not the managing body normalization.
+  const companyName = pickFirstText(sectionRoots, "CompanyName") || getText(policyNode, "CompanyName");
+  if (normalizeText(companyName)) return normalizeText(companyName);
+
+  const employerTags = [
+    "EmployerName",
+    "Employer",
+    "EmployerCompanyName",
+    "EmployerCompany",
+    "Workplace",
+    "WorkPlace",
+    "WorkPlaceName",
+    "MaasikName",
+    "MaavidName",
+    "MasikName",
+    "MavidName",
+    "ShemMaasik",
+    "ShemMaavid",
+    "SHEM-MAASIK",
+    "SHEM-MAAVID",
+    "CompanyEmployerName",
+  ];
+
+  for (const tag of employerTags) {
+    const value = pickFirstText(sectionRoots, tag) || getText(policyNode, tag);
+    if (normalizeText(value)) return normalizeText(value);
+  }
+
+  return "";
+}
+
 function parseLoans(policyNode) {
   const loansRoot = policyNode.querySelector("Loans");
   if (!loansRoot) return [];
@@ -278,6 +340,8 @@ function parsePolicy(policyNode) {
     productType,
     planName,
     managerName,
+    companyName: pickFirstText(sectionRoots, "CompanyName") || getText(policyNode, "CompanyName"),
+    employerName: getPolicyEmployerName(policyNode, sectionRoots),
     memberType: pickFirstText([budgets, save], "MemberTypeName"),
     joinDate: pickFirstText(sectionRoots, "JoinDate") || null,
     dateOfRights: pickFirstText(sectionRoots, "DateOfRights") || null,
@@ -450,12 +514,17 @@ export function parsePensionXml(rawXml, fileName = "") {
   const firstName = normalizeText(getText(memberNode, "FirstName"));
   const lastName = normalizeText(getText(memberNode, "FamilyName"));
 
+  const birthDate = normalizeDateValue(getText(memberNode, "BirthDate"));
+
   const member = {
     id: normalizeText(getText(memberNode, "ID")),
     firstName,
     lastName,
     fullName: [firstName, lastName].filter(Boolean).join(" "),
     companyName: normalizeText(getText(memberNode, "CompanyName")),
+    birthDate,
+    dateOfBirth: birthDate,
+    currentSalary: parseNumber(getText(memberNode, "Income")),
     income: parseNumber(getText(memberNode, "Income")),
   };
 
@@ -723,6 +792,36 @@ function buildForeignExposureAllocation(flatPolicies) {
   };
 }
 
+
+function isActiveDepositPolicy(policy) {
+  const deposits = policy?.monthlyDeposits || {};
+  return [
+    deposits.sumCost,
+    deposits.worker,
+    deposits.employer,
+    deposits.compensation,
+  ].some((value) => Number(value || 0) > 0);
+}
+
+function getLastActiveEmployerName(policies, fallbackEmployer = "") {
+  const candidates = (Array.isArray(policies) ? policies : [])
+    .filter(isActiveDepositPolicy)
+    .slice()
+    .sort((a, b) => {
+      const dateGap =
+        parseSortableDate(b?.dateOfRights || b?.joinDate) -
+        parseSortableDate(a?.dateOfRights || a?.joinDate);
+
+      if (dateGap !== 0) return dateGap;
+
+      return Number(b?.monthlyDeposits?.sumCost || 0) - Number(a?.monthlyDeposits?.sumCost || 0);
+    });
+
+  const activePolicyWithEmployer = candidates.find((policy) => normalizeText(policy?.employerName));
+
+  return normalizeText(activePolicyWithEmployer?.employerName) || normalizeText(fallbackEmployer) || "";
+}
+
 export function buildLegacyReportData(parsedFiles) {
   const files = Array.isArray(parsedFiles) ? parsedFiles : [];
 
@@ -734,6 +833,9 @@ export function buildLegacyReportData(parsedFiles) {
       ownerFile: file.fileName,
       ownerFirstName: file.member.firstName,
       ownerLastName: file.member.lastName,
+      ownerBirthDate: file.member.birthDate,
+      ownerIncome: file.member.income,
+      ownerEmployerName: file.member.companyName,
     }))
   );
 
@@ -802,8 +904,29 @@ export function buildLegacyReportData(parsedFiles) {
     const disabilityPercent =
       incomeBase > 0 ? Math.round((disabilityValue / incomeBase) * 100) : 0;
 
+    const lastWorkplace = getLastActiveEmployerName(
+      memberPolicies,
+      file.member.companyName
+    );
+
     return {
+      id: file.member.id || file.member.fullName || "",
       name: file.member.fullName || "ללא שם",
+      firstName: file.member.firstName || "",
+      lastName: file.member.lastName || "",
+      birthDate: file.member.birthDate || "",
+      dateOfBirth: file.member.birthDate || "",
+      currentSalary: file.member.income || 0,
+      income: file.member.income || 0,
+      lastWorkplace,
+      employerName: lastWorkplace,
+      personalDetails: {
+        name: file.member.fullName || "ללא שם",
+        birthDate: file.member.birthDate || "",
+        currentSalary: file.member.income || 0,
+        lastWorkplace,
+        employerName: lastWorkplace,
+      },
       shareOfFamilyAssets:
         totalAssets > 0 ? Math.round((assets / totalAssets) * 100) : 0,
       monthlyDeposits: monthlyDepositsMember,

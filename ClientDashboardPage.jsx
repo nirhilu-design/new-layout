@@ -32,6 +32,25 @@ function formatPercent(value) {
   return `${Math.round(Number(value || 0))}%`;
 }
 
+function formatSignedPercent(value, decimals = 2) {
+  const number = Number(value || 0);
+  if (!Number.isFinite(number)) return "—";
+  return `${number.toLocaleString("he-IL", { minimumFractionDigits: decimals, maximumFractionDigits: decimals })}%`;
+}
+
+function formatDecimal(value, decimals = 2) {
+  const number = Number(value || 0);
+  if (!Number.isFinite(number)) return "—";
+  return number.toLocaleString("he-IL", { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+}
+
+function weightedAverage(items, valueKey, weightKey = "allocatedValue") {
+  const rows = safeArray(items).filter((item) => Number(item?.[weightKey] || 0) > 0 && Number.isFinite(Number(item?.[valueKey])));
+  const totalWeight = rows.reduce((sum, item) => sum + Number(item[weightKey] || 0), 0);
+  if (totalWeight <= 0) return 0;
+  return rows.reduce((sum, item) => sum + Number(item[valueKey] || 0) * Number(item[weightKey] || 0), 0) / totalWeight;
+}
+
 function formatDate(value) {
   if (!value) return "—";
   const str = String(value).trim();
@@ -194,6 +213,18 @@ function buildMemberProductsFromRawFile(rawFile) {
       managementFeeFromBalance: Number(policy?.details?.managementFeeFromBalance || 0),
       equityExposure: getPlanWeightedExposure(policy, "equity"),
       foreignExposure: getPlanWeightedExposure(policy, "foreign"),
+      investmentRoutes: safeArray(policy?.investPlans).map((plan, planIndex) => ({
+        id: plan?.mofid || `${policy?.policyNo || index}-${planIndex}`,
+        mofid: plan?.mofid || "",
+        assetName: plan?.trackName || plan?.planName || policy?.planName || policy?.productType || "מסלול ללא שם",
+        return12: Number(plan?.totalRate12 ?? plan?.avgRate12 ?? 0),
+        return36: Number(plan?.totalRate36 ?? plan?.avgRate36 ?? 0),
+        return60: Number(plan?.totalRate60 ?? plan?.avgRate60 ?? 0),
+        st36: Number(plan?.standardDeviation36 ?? 0),
+        sharp36: Number(plan?.sharp ?? 0),
+        equityExposure: Number(plan?.equityExposure || 0),
+        foreignExposure: Number(plan?.foreignExposure || 0),
+      })),
       deathCoverage: getPolicyDeathCoverage(policy),
       disabilityValue: getPolicyDisabilityValue(policy),
     };
@@ -229,6 +260,107 @@ function buildDeathCoverageRows(products) {
     }))
     .filter((row) => row.currentValue > 0 || row.deathCoverage > 0)
     .sort((a, b) => Number(b.deathCoverage || 0) + Number(b.currentValue || 0) - (Number(a.deathCoverage || 0) + Number(a.currentValue || 0)));
+}
+
+
+function buildProductAssetTables(products) {
+  const groupedProducts = new Map();
+
+  safeArray(products).forEach((product) => {
+    const productName = product?.productType || product?.planName || "ללא סוג מוצר";
+    const productValue = Number(product?.currentValue || 0);
+    const routes = safeArray(product?.investmentRoutes);
+    const effectiveRoutes = routes.length
+      ? routes
+      : [{
+          id: product?.id || product?.policyNo || productName,
+          mofid: "—",
+          assetName: product?.planName || productName,
+          return12: 0,
+          return36: 0,
+          return60: 0,
+          st36: 0,
+          sharp36: 0,
+          equityExposure: Number(product?.equityExposure || 0),
+          foreignExposure: Number(product?.foreignExposure || 0),
+        }];
+
+    const routeWeight = productValue > 0 ? productValue / Math.max(effectiveRoutes.length, 1) : 0;
+
+    if (!groupedProducts.has(productName)) {
+      groupedProducts.set(productName, {
+        id: productName,
+        productName,
+        totalAssets: 0,
+        routeMap: new Map(),
+      });
+    }
+
+    const group = groupedProducts.get(productName);
+    group.totalAssets += productValue;
+
+    effectiveRoutes.forEach((route) => {
+      const key = `${route?.mofid || "—"}|${route?.assetName || "מסלול ללא שם"}`;
+      const current = group.routeMap.get(key) || {
+        id: key,
+        mofid: route?.mofid || "—",
+        assetName: route?.assetName || "מסלול ללא שם",
+        allocatedValue: 0,
+        weightedReturn12: 0,
+        weightedReturn36: 0,
+        weightedReturn60: 0,
+        weightedSt36: 0,
+        weightedSharp36: 0,
+        weightedEquityExposure: 0,
+      };
+
+      current.allocatedValue += routeWeight;
+      current.weightedReturn12 += Number(route?.return12 || 0) * routeWeight;
+      current.weightedReturn36 += Number(route?.return36 || 0) * routeWeight;
+      current.weightedReturn60 += Number(route?.return60 || 0) * routeWeight;
+      current.weightedSt36 += Number(route?.st36 || 0) * routeWeight;
+      current.weightedSharp36 += Number(route?.sharp36 || 0) * routeWeight;
+      current.weightedEquityExposure += Number(route?.equityExposure || 0) * routeWeight;
+      group.routeMap.set(key, current);
+    });
+  });
+
+  return Array.from(groupedProducts.values())
+    .map((group) => {
+      const rows = Array.from(group.routeMap.values())
+        .map((row) => {
+          const weight = Number(row.allocatedValue || 0);
+          return {
+            id: row.id,
+            mofid: row.mofid,
+            assetName: row.assetName,
+            allocatedValue: weight,
+            return12: weight > 0 ? row.weightedReturn12 / weight : 0,
+            return36: weight > 0 ? row.weightedReturn36 / weight : 0,
+            return60: weight > 0 ? row.weightedReturn60 / weight : 0,
+            st36: weight > 0 ? row.weightedSt36 / weight : 0,
+            sharp36: weight > 0 ? row.weightedSharp36 / weight : 0,
+            equityExposure: weight > 0 ? row.weightedEquityExposure / weight : 0,
+          };
+        })
+        .filter((row) => row.allocatedValue > 0 || row.mofid !== "—")
+        .sort((a, b) => Number(b.allocatedValue || 0) - Number(a.allocatedValue || 0));
+
+      return {
+        id: group.id,
+        productName: group.productName,
+        totalAssets: group.totalAssets,
+        weightedReturn12: weightedAverage(rows, "return12"),
+        weightedReturn36: weightedAverage(rows, "return36"),
+        weightedReturn60: weightedAverage(rows, "return60"),
+        weightedSt36: weightedAverage(rows, "st36"),
+        weightedSharp36: weightedAverage(rows, "sharp36"),
+        weightedEquityExposure: weightedAverage(rows, "equityExposure"),
+        rows,
+      };
+    })
+    .filter((group) => group.totalAssets > 0 || group.rows.length > 0)
+    .sort((a, b) => Number(b.totalAssets || 0) - Number(a.totalAssets || 0));
 }
 
 function buildClientModelFromReportData(reportData) {
@@ -308,6 +440,7 @@ function buildDetailedMembers(reportData, clientModel) {
       products,
       managers: groupItemsByValue(products, (product) => product.managerName, (product) => product.currentValue),
       productTypes: groupItemsByValue(products, (product) => product.productType, (product) => product.currentValue),
+      assetProductTables: buildProductAssetTables(products),
       deathCoverageProducts: buildDeathCoverageRows(products),
       exposures: {
         equity: Math.round(weightedEquity),
@@ -344,6 +477,7 @@ function getSelectedScope(clientModel, detailedMembers, selectedScopeId) {
       distributions: clientModel.distributions,
       managers: clientModel.distributions.managers,
       productTypes: clientModel.distributions.products,
+      assetProductTables: buildProductAssetTables(detailedMembers.flatMap((member) => safeArray(member.products))),
       deathCoverageProducts: aggregateDeathCoverageRows(detailedMembers),
     };
   }
@@ -368,6 +502,7 @@ function getSelectedScope(clientModel, detailedMembers, selectedScopeId) {
       mainGroupAllocation: member.productTypes || [],
       foreignExposureAllocation: [],
     },
+    assetProductTables: member.assetProductTables || [],
     deathCoverageProducts: member.deathCoverageProducts || [],
   };
 }
@@ -559,12 +694,103 @@ function PersonalField({ label, value }) {
 function AllocationSection({ scope }) {
   return (
     <div>
-      <SectionTitle title="התפלגות נכסים" subtitle="פיזור התיק לפי מוצרים, גופים מנהלים ואפיקים — מוצג במסך נפרד ולא בעמוד הסיכום הראשי." />
+      <SectionTitle
+        title="התפלגות נכסים"
+        subtitle="פיזור התיק לפי מוצרים, גופים מנהלים ואפיקים. בהמשך מוצגת טבלת נכסים ברמת מוצר לפי מו״פיד, מסלול ותשואות."
+      />
       <div className="client-grid-3">
         <DonutCard title="חלוקה לפי מוצרים" items={scope.distributions?.products || scope.productTypes || []} />
         <DonutCard title="חלוקה לפי גופים מנהלים" items={scope.distributions?.managers || scope.managers || []} />
         <DonutCard title="חלוקה לפי אפיקים ראשיים" items={scope.distributions?.mainGroups || []} />
       </div>
+
+      <AssetProductTablesSection productTables={scope.assetProductTables} />
+    </div>
+  );
+}
+
+function AssetProductTablesSection({ productTables }) {
+  const tables = safeArray(productTables);
+  const [openId, setOpenId] = useState(tables[0]?.id || "");
+
+  if (!tables.length) {
+    return (
+      <div className="client-panel client-margin-top">
+        <h3>נכסים ברמת מוצר</h3>
+        <div className="client-empty-state">לא נמצאו מסלולי השקעה מתוך ה־XML להצגה.</div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="client-asset-products client-margin-top">
+      <div className="client-section-title-row compact">
+        <div>
+          <h2>נכסים ברמת מוצר</h2>
+          <p>כל מוצר מוצג ככרטיס נפרד. נתוני הסטריפ בכל מוצר משוקללים לפי כמות הנכסים במסלולים שבתוך אותו מוצר.</p>
+        </div>
+      </div>
+
+      {tables.map((table) => {
+        const isOpen = openId === table.id;
+        return (
+          <div key={table.id} className="client-product-accordion">
+            <button type="button" className="client-product-summary" onClick={() => setOpenId(isOpen ? "" : table.id)}>
+              <span className="client-product-chevron">{isOpen ? "⌃" : "⌄"}</span>
+              <strong className="client-product-title">{table.productName}</strong>
+              <span className="client-product-strip-item"><small>סך צבירה</small><b>{formatCurrency(table.totalAssets)}</b></span>
+              <span className="client-product-strip-item"><small>תשואה 12 משוקללת</small><b>{formatSignedPercent(table.weightedReturn12)}</b></span>
+              <span className="client-product-strip-item"><small>תשואה 36 משוקללת</small><b>{formatSignedPercent(table.weightedReturn36)}</b></span>
+              <span className="client-product-strip-item"><small>תשואה 60 משוקללת</small><b>{formatSignedPercent(table.weightedReturn60)}</b></span>
+              <span className="client-product-strip-item"><small>סטיית תקן 36</small><b>{formatSignedPercent(table.weightedSt36)}</b></span>
+              <span className="client-product-strip-item"><small>שארפ 36</small><b>{formatDecimal(table.weightedSharp36, 2)}</b></span>
+            </button>
+
+            {isOpen ? <AssetProductRoutesTable rows={table.rows} /> : null}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function AssetProductRoutesTable({ rows }) {
+  const safeRows = safeArray(rows);
+
+  if (!safeRows.length) {
+    return <div className="client-empty-state">אין מסלולים להצגה עבור מוצר זה.</div>;
+  }
+
+  return (
+    <div className="client-table-wrap client-margin-top">
+      <table className="client-table client-product-assets-table">
+        <thead>
+          <tr>
+            <th>מו״פיד</th>
+            <th>שם נכס / מסלול</th>
+            <th>שווי במסלול</th>
+            <th>תשואה 12 חודשים</th>
+            <th>תשואה 36 חודשים</th>
+            <th>תשואה 60 חודשים</th>
+            <th>סטיית תקן 36</th>
+            <th>שארפ 36</th>
+          </tr>
+        </thead>
+        <tbody>
+          {safeRows.map((row, index) => (
+            <tr key={row.id || index}>
+              <td>{row.mofid || "—"}</td>
+              <td>{row.assetName || "—"}</td>
+              <td>{formatCurrency(row.allocatedValue)}</td>
+              <td className="positive-number">{formatSignedPercent(row.return12)}</td>
+              <td className="positive-number">{formatSignedPercent(row.return36)}</td>
+              <td className="positive-number">{formatSignedPercent(row.return60)}</td>
+              <td>{formatSignedPercent(row.st36)}</td>
+              <td>{formatDecimal(row.sharp36, 2)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }
@@ -842,9 +1068,24 @@ const clientDashboardCss = `
   .client-insurance-table.member .client-insurance-col-currentValue { width: 11%; }
   .client-insurance-table.member .client-insurance-col-deathCoverage { width: 11%; }
   .client-empty-state { border: 1px dashed ${theme.border}; border-radius: 16px; background: ${theme.surfaceAlt}; padding: 18px; color: ${theme.textSoft}; font-size: 13px; text-align: center; line-height: 1.7; } .client-text-panel { min-height: 210px; border: 1px solid ${theme.divider}; border-radius: 16px; background: #FFFDFB; padding: 16px; color: ${theme.text}; font-size: 13px; line-height: 1.9; white-space: pre-wrap; }
+
+  .client-section-title-row.compact { margin-top: 18px; margin-bottom: 12px; }
+  .client-asset-products { display: flex; flex-direction: column; gap: 12px; }
+  .client-product-accordion { border: 1px solid #E7D9CA; border-radius: 20px; background: #FFFFFF; overflow: hidden; box-shadow: 0 2px 10px rgba(16,42,67,0.04); }
+  .client-product-summary { width: 100%; min-height: 82px; border: 0; background: #FFFFFF; color: ${theme.navy}; cursor: pointer; font-family: Calibri, Arial, sans-serif; display: grid; grid-template-columns: 32px minmax(220px, 1.2fr) repeat(6, minmax(100px, .72fr)); gap: 10px; align-items: center; padding: 14px 18px; text-align: right; }
+  .client-product-summary:hover { background: #FCFBF8; }
+  .client-product-chevron { width: 28px; height: 28px; border-radius: 50%; border: 1px solid #D8DEE9; display: inline-flex; align-items: center; justify-content: center; color: ${theme.navy}; font-size: 20px; line-height: 1; }
+  .client-product-title { color: ${theme.navy}; font-size: 17px; line-height: 1.25; font-weight: 900; }
+  .client-product-strip-item { min-height: 48px; border-right: 1px solid #EEE4D8; padding-right: 12px; display: flex; flex-direction: column; justify-content: center; gap: 4px; }
+  .client-product-strip-item small { color: ${theme.textSoft}; font-size: 11px; font-weight: 800; line-height: 1.2; }
+  .client-product-strip-item b { color: ${theme.navy}; font-size: 15px; font-weight: 900; direction: ltr; text-align: right; }
+  .client-product-assets-table { min-width: 1040px; }
+  .client-product-assets-table th, .client-product-assets-table td { text-align: center; }
+  .client-product-assets-table th:nth-child(2), .client-product-assets-table td:nth-child(2) { text-align: right; min-width: 240px; }
+  .positive-number { color: #07864E !important; font-weight: 900; }
   @media print { .client-web-shell { display: none !important; } }
-  @media (max-width: 1180px) { .client-web-shell { grid-template-columns: 1fr; } .client-sidebar { position: relative; height: auto; display: block; border-left: 0; border-bottom: 1px solid rgba(255,255,255,0.12); } .client-sidebar-nav { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); } .client-main { padding: 18px; } .client-topbar { flex-direction: column; align-items: stretch; } .client-topbar-actions { justify-content: flex-start; } .client-kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .client-grid-3, .client-grid-2, .client-personal-grid { grid-template-columns: 1fr; } }
-  @media (max-width: 720px) { .client-main { padding: 12px; } .client-sidebar { padding: 16px 12px; } .client-sidebar-nav { grid-template-columns: 1fr; } .client-kpi-grid { grid-template-columns: 1fr; } .client-content-card { padding: 16px; border-radius: 18px; } .client-topbar { padding: 16px; border-radius: 18px; } .client-page-title { font-size: 22px; } .client-donut-layout { grid-template-columns: 1fr; justify-items: center; } .client-scope-select-wrap, .client-history-button { grid-template-columns: 1fr; width: 100%; } .client-personal-fields { grid-template-columns: 1fr; } }
+  @media (max-width: 1180px) { .client-product-summary { grid-template-columns: 28px minmax(0, 1fr) repeat(2, minmax(110px, .8fr)); } .client-product-strip-item { border-right: 0; padding-right: 0; } .client-web-shell { grid-template-columns: 1fr; } .client-sidebar { position: relative; height: auto; display: block; border-left: 0; border-bottom: 1px solid rgba(255,255,255,0.12); } .client-sidebar-nav { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); } .client-main { padding: 18px; } .client-topbar { flex-direction: column; align-items: stretch; } .client-topbar-actions { justify-content: flex-start; } .client-kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .client-grid-3, .client-grid-2, .client-personal-grid { grid-template-columns: 1fr; } }
+  @media (max-width: 720px) { .client-product-summary { grid-template-columns: 28px minmax(0, 1fr); align-items: start; } .client-product-strip-item { grid-column: 1 / -1; min-height: auto; } .client-main { padding: 12px; } .client-sidebar { padding: 16px 12px; } .client-sidebar-nav { grid-template-columns: 1fr; } .client-kpi-grid { grid-template-columns: 1fr; } .client-content-card { padding: 16px; border-radius: 18px; } .client-topbar { padding: 16px; border-radius: 18px; } .client-page-title { font-size: 22px; } .client-donut-layout { grid-template-columns: 1fr; justify-items: center; } .client-scope-select-wrap, .client-history-button { grid-template-columns: 1fr; width: 100%; } .client-personal-fields { grid-template-columns: 1fr; } }
 `;
 
 const styles = {

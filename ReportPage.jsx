@@ -104,8 +104,6 @@ function saveClientDashboardData(reportData) {
 
   localStorage.setItem(STORAGE_CLIENT_MODEL_KEY, clientModelJson);
   localStorage.setItem(STORAGE_REPORT_DATA_KEY, reportDataJson);
-
-  // Backup keys for older/alternate dashboard implementations.
   localStorage.setItem("clientModel", clientModelJson);
   localStorage.setItem("reportData", reportDataJson);
   localStorage.setItem("familyPensionClientModel", clientModelJson);

@@ -27,6 +27,7 @@ function ClientFamilyView({ clientModel }) {
     (Array.isArray(recognizedPensionAdjustments) &&
       recognizedPensionAdjustments.length > 0);
 
+  const summaryText = getClientConversationSummaryText(clientModel);
   const recommendationsText = getClientRecommendationsText(clientModel);
 
   const formatCurrency = (value) =>
@@ -490,20 +491,54 @@ function ClientFamilyView({ clientModel }) {
           />
         </SectionCard>
 
-        <SectionCard title="המלצות לפעולה" icon="📝">
+        <SectionCard title="סיכום והמלצות" icon="🧾">
           <div className="family-explanation" style={explanation}>
-            המלצות אלו נכתבות ונערכות במסך ה־REPORT ומוצגות כאן ללקוח כקריאה בלבד.
+            הסיכום וההמלצות נכתבים במסך ה־REPORT ומוצגים כאן ללקוח כקריאה בלבד.
           </div>
 
-          {recommendationsText ? (
-            <ReadOnlyRecommendations text={recommendationsText} />
-          ) : (
-            <EmptyText>לא הוזנו המלצות לפעולה בדוח.</EmptyText>
-          )}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 14 }}>
+            <div>
+              <div style={readonlyBlockTitle}>סיכום</div>
+              {summaryText ? (
+                <ReadOnlyRecommendations text={summaryText} />
+              ) : (
+                <EmptyText>לא הוזן סיכום בדוח.</EmptyText>
+              )}
+            </div>
+
+            <div>
+              <div style={readonlyBlockTitle}>המלצות לפעולה</div>
+              {recommendationsText ? (
+                <ReadOnlyRecommendations text={recommendationsText} />
+              ) : (
+                <EmptyText>לא הוזנו המלצות לפעולה בדוח.</EmptyText>
+              )}
+            </div>
+          </div>
         </SectionCard>
       </div>
     </div>
   );
+}
+
+function getClientConversationSummaryText(clientModel) {
+  const sourceReportData = clientModel?.sourceReportData || {};
+
+  const candidates = [
+    clientModel?.conversationSummary,
+    clientModel?.clientConversationSummary,
+    clientModel?.summaryText,
+    sourceReportData?.conversationSummary,
+    sourceReportData?.clientConversationSummary,
+    sourceReportData?.summaryText,
+    sourceReportData?.family?.conversationSummary,
+    sourceReportData?.family?.clientConversationSummary,
+    sourceReportData?.family?.summaryText,
+  ];
+
+  return candidates
+    .map((value) => String(value || "").trim())
+    .find(Boolean) || "";
 }
 
 function getClientRecommendationsText(clientModel) {
@@ -1647,6 +1682,13 @@ const table = { width: "100%", borderCollapse: "collapse", minWidth: 760, backgr
 const th = { textAlign: "right", padding: 12, fontSize: 12, color: theme.textSoft, borderBottom: `1px solid ${theme.divider}`, whiteSpace: "nowrap", fontWeight: 700, background: "#FAF8F4" };
 const td = { textAlign: "right", padding: 12, fontSize: 12, color: theme.text, borderBottom: "1px solid #F0E6DA", whiteSpace: "nowrap" };
 const emptyState = { background: theme.surfaceAlt, border: `1px dashed ${theme.border}`, borderRadius: 14, padding: 18, fontSize: 12, color: theme.textSoft };
+
+const readonlyBlockTitle = {
+  color: theme.navy,
+  fontSize: 13,
+  fontWeight: 900,
+  marginBottom: 8,
+};
 
 const recommendationsReadOnlyBox = {
   background: "#FFFDFB",

@@ -88,9 +88,9 @@ function buildClientModelFromReportData(reportData) {
     conversationSummary:
       data.conversationSummary || data.clientConversationSummary || data.summaryText || "",
     actionRecommendations:
-      data.actionRecommendations || data.recommendationsText || data.recommendations || "",
+      data.actionRecommendations || data.clientActionRecommendations || data.recommendationsText || data.recommendations || "",
     recommendationsText:
-      data.recommendationsText || data.actionRecommendations || data.recommendations || "",
+      data.actionRecommendations || data.clientActionRecommendations || data.recommendationsText || data.recommendations || "",
 
     sourceReportData: data,
   };
@@ -124,9 +124,18 @@ export default function ReportPage({
   onBack,
   onCreateShareLink = () => null,
 }) {
-  const [recommendations, setRecommendations] = useState(
+  const [conversationSummary, setConversationSummary] = useState(
+    () =>
+      reportData?.conversationSummary ||
+      reportData?.clientConversationSummary ||
+      reportData?.summaryText ||
+      ""
+  );
+
+  const [actionRecommendations, setActionRecommendations] = useState(
     () =>
       reportData?.actionRecommendations ||
+      reportData?.clientActionRecommendations ||
       reportData?.recommendationsText ||
       reportData?.recommendations ||
       `1. מומלץ לבחון את הפער בין הקצבה הצפויה עם המשך הפקדות לבין ללא המשך הפקדות.
@@ -142,12 +151,15 @@ export default function ReportPage({
   const reportDataForClient = useMemo(
     () => ({
       ...safeReportData,
-      recommendationsText: recommendations,
-      actionRecommendations: recommendations,
-      recommendations,
-      clientActionRecommendations: recommendations,
+      conversationSummary,
+      clientConversationSummary: conversationSummary,
+      summaryText: conversationSummary,
+      actionRecommendations,
+      clientActionRecommendations: actionRecommendations,
+      recommendationsText: actionRecommendations,
+      recommendations: actionRecommendations,
     }),
-    [safeReportData, recommendations]
+    [safeReportData, conversationSummary, actionRecommendations]
   );
 
   const {
@@ -211,8 +223,9 @@ export default function ReportPage({
     const result = onCreateShareLink({
       expirationHours: 24,
       reportData: reportDataForClient,
-      recommendationsText: recommendations,
-      actionRecommendations: recommendations,
+      conversationSummary,
+      actionRecommendations,
+      recommendationsText: actionRecommendations,
     });
 
     if (!result?.success || !result?.url) {
@@ -2362,7 +2375,11 @@ export default function ReportPage({
         `}
       </style>
 
-      <PrintReportA4 reportData={reportDataForClient} recommendations={recommendations} />
+      <PrintReportA4
+        reportData={reportDataForClient}
+        conversationSummary={conversationSummary}
+        actionRecommendations={actionRecommendations}
+      />
 
       <div className="screen-report-root" style={styles.page}>
         <div className="no-print" style={styles.actionsBar}>
@@ -2900,7 +2917,35 @@ export default function ReportPage({
 
 
           <section
-            className="print-section recommendations-section recommendations-print avoid-break"
+            className="print-section conversation-summary-section recommendations-print avoid-break"
+            style={styles.sectionCard}
+          >
+            <div style={styles.sectionHeader}>
+              <div style={styles.titleWithIcon}>
+                <span>🧾</span>
+                <h2 style={styles.h2}>סיכום</h2>
+              </div>
+            </div>
+
+            <div style={styles.explanation}>
+              כאן אפשר לכתוב סיכום שיחה, תובנות כלליות ונקודות מרכזיות להצגה
+              ללקוח ב־Family Dashboard.
+            </div>
+
+            <div style={styles.recommendationsWrap}>
+              <div className="screen-only">
+                <textarea
+                  value={conversationSummary}
+                  onChange={(e) => setConversationSummary(e.target.value)}
+                  style={styles.recommendationsText}
+                  placeholder="כתוב כאן סיכום שיחה..."
+                />
+              </div>
+            </div>
+          </section>
+
+          <section
+            className="print-section action-recommendations-section recommendations-print avoid-break"
             style={styles.sectionCard}
           >
             <div style={styles.sectionHeader}>
@@ -2911,20 +2956,19 @@ export default function ReportPage({
             </div>
 
             <div style={styles.explanation}>
-              כאן אפשר לכתוב פעולות מומלצות, תובנות, נקודות להמשך טיפול או מסרים שיוצגו ללקוח ב־Family View כקריאה בלבד.
+              כאן אפשר לכתוב פעולות מומלצות, משימות להמשך טיפול ונקודות לבדיקה.
+              הבלוק יוצג ללקוח כקריאה בלבד ב־Family Dashboard.
             </div>
 
             <div style={styles.recommendationsWrap}>
               <div className="screen-only">
                 <textarea
-                  value={recommendations}
-                  onChange={(e) => setRecommendations(e.target.value)}
+                  value={actionRecommendations}
+                  onChange={(e) => setActionRecommendations(e.target.value)}
                   style={styles.recommendationsText}
                   placeholder="כתוב כאן המלצות לפעולה..."
                 />
               </div>
-
-              {/* Print fallback removed to prevent duplicate recommendations box on screen. */}
             </div>
           </section>
 
@@ -4516,9 +4560,13 @@ function GiftIcon() {
   );
 }
 
-function PrintReportA4({ reportData, recommendations = "" }) {
+function PrintReportA4({ reportData, conversationSummary = "", actionRecommendations = "" }) {
   const data = reportData || {};
   const family = data.family || {};
+  const printConversationSummary =
+    conversationSummary || data.conversationSummary || data.clientConversationSummary || data.summaryText || "";
+  const printActionRecommendations =
+    actionRecommendations || data.actionRecommendations || data.clientActionRecommendations || data.recommendationsText || data.recommendations || "";
   const members = Array.isArray(data.members) ? data.members : [];
   const products = Array.isArray(data.products) ? data.products : [];
   const managers = Array.isArray(data.managers) ? data.managers : [];
@@ -5056,8 +5104,10 @@ function PrintReportA4({ reportData, recommendations = "" }) {
               <Kpi label="בני משפחה" value={members.length} />
               <Kpi label="יחס הלוואות לנכסים" value={`${loanRatioToAssets.toFixed(1)}%`} />
             </div>
-            <h3 className="print-section-heading">המלצות</h3>
-            <div className="print-card-soft" style={{ whiteSpace: "pre-wrap", fontSize: 10.5, lineHeight: 1.75, minHeight: "54mm" }}>{recommendations || "—"}</div>
+            <h3 className="print-section-heading">סיכום</h3>
+            <div className="print-card-soft" style={{ whiteSpace: "pre-wrap", fontSize: 10.5, lineHeight: 1.75, minHeight: "25mm", marginBottom: "3mm" }}>{printConversationSummary || "—"}</div>
+            <h3 className="print-section-heading">המלצות לפעולה</h3>
+            <div className="print-card-soft" style={{ whiteSpace: "pre-wrap", fontSize: 10.5, lineHeight: 1.75, minHeight: "28mm" }}>{printActionRecommendations || "—"}</div>
           </div>
         </div>
       </section>

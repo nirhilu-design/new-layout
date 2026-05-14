@@ -477,6 +477,12 @@ function getSelectedScope(clientModel, detailedMembers, selectedScopeId) {
       distributions: clientModel.distributions,
       managers: clientModel.distributions.managers,
       productTypes: clientModel.distributions.products,
+      products: detailedMembers.flatMap((member) =>
+        safeArray(member.products).map((product) => ({
+          ...product,
+          memberName: member.name,
+        }))
+      ),
       assetProductTables: buildProductAssetTables(detailedMembers.flatMap((member) => safeArray(member.products))),
       deathCoverageProducts: aggregateDeathCoverageRows(detailedMembers),
     };
@@ -538,12 +544,24 @@ export default function ClientDashboardPage({
   onOpenPreviousReports = () => {},
 }) {
   const [activeSection, setActiveSection] = useState("pension");
+  const [selectedPieSegment, setSelectedPieSegment] = useState(null);
   const initialScopeId = viewMode === "member" && selectedMemberId ? selectedMemberId : "family";
   const [localScopeId, setLocalScopeId] = useState(initialScopeId);
 
   const clientModel = useMemo(() => buildClientModelFromReportData(reportData), [reportData]);
   const detailedMembers = useMemo(() => buildDetailedMembers(reportData, clientModel), [reportData, clientModel]);
   const scope = getSelectedScope(clientModel, detailedMembers, localScopeId);
+
+  const handleOpenPieDrawer = (payload) => {
+    setSelectedPieSegment({
+      ...payload,
+      details: buildPieSegmentDetails(scope, payload),
+    });
+  };
+
+  const handleClosePieDrawer = () => {
+    setSelectedPieSegment(null);
+  };
 
   if (!reportData || !reportData.family) return <EmptyDashboardState onBack={onBack} />;
 
@@ -608,12 +626,14 @@ export default function ClientDashboardPage({
         <section className="client-content-card">
           {activeSection === "pension" ? <PensionSection scope={scope} /> : null}
           {activeSection === "personal" ? <PersonalDetailsSection members={detailedMembers} /> : null}
-          {activeSection === "allocation" ? <AllocationSection scope={scope} /> : null}
+          {activeSection === "allocation" ? <AllocationSection scope={scope} onSegmentClick={handleOpenPieDrawer} /> : null}
           {activeSection === "insurance" ? <InsuranceSection scope={scope} /> : null}
           {activeSection === "loans" ? <LoansSection scope={scope} /> : null}
           {activeSection === "summary" ? <ConversationSummarySection scope={scope} clientModel={clientModel} reportData={reportData} /> : null}
         </section>
       </main>
+
+      <PieSegmentDrawer selected={selectedPieSegment} onClose={handleClosePieDrawer} />
     </div>
   );
 }
@@ -691,7 +711,7 @@ function PersonalField({ label, value }) {
   );
 }
 
-function AllocationSection({ scope }) {
+function AllocationSection({ scope, onSegmentClick }) {
   return (
     <div>
       <SectionTitle
@@ -699,12 +719,31 @@ function AllocationSection({ scope }) {
         subtitle="פיזור התיק לפי מוצרים, גופים מנהלים ואפיקים. בהמשך מוצגת טבלת נכסים ברמת מוצר לפי מו״פיד, מסלול ותשואות."
       />
       <div className="client-allocation-top-pies">
-        <DonutCard title="חלוקה לפי מוצרים" items={scope.distributions?.products || scope.productTypes || []} />
-        <DonutCard title="חלוקה לפי גופים מנהלים" items={scope.distributions?.managers || scope.managers || []} />
+        <DonutCard
+          title="חלוקה לפי מוצרים"
+          items={scope.distributions?.products || scope.productTypes || []}
+          type="product"
+          scope={scope}
+          onSegmentClick={onSegmentClick}
+        />
+        <DonutCard
+          title="חלוקה לפי גופים מנהלים"
+          items={scope.distributions?.managers || scope.managers || []}
+          type="manager"
+          scope={scope}
+          onSegmentClick={onSegmentClick}
+        />
       </div>
 
       <div className="client-main-groups-wide client-margin-top">
-        <DonutCard title="חלוקה לפי אפיקים ראשיים" items={scope.distributions?.mainGroups || []} wide />
+        <DonutCard
+          title="חלוקה לפי אפיקים ראשיים"
+          items={scope.distributions?.mainGroups || []}
+          type="mainGroup"
+          scope={scope}
+          onSegmentClick={onSegmentClick}
+          wide
+        />
       </div>
 
       <AssetProductTablesSection productTables={scope.assetProductTables} />
@@ -946,11 +985,315 @@ function ExposurePanel({ title, value, description }) {
   return <div className="client-panel"><div className="client-exposure-top"><div><h3>{title}</h3><p className="client-panel-subtitle">{description}</p></div><strong>{formatPercent(safe)}</strong></div><div className="client-exposure-track"><div className="client-exposure-fill" style={{ width: `${safe}%` }} /></div><div className="client-exposure-scale"><span>0%</span><span>25%</span><span>50%</span><span>75%</span><span>100%</span></div></div>;
 }
 
-function DonutCard({ title, items, wide = false }) {
+function DonutCard({ title, items, wide = false, type = "segment", scope = null, onSegmentClick }) {
   const segments = buildSegments(items);
-  const gradient = segments.length ? segments.map((seg) => `${seg.color} ${seg.start}% ${seg.end}%`).join(", ") : "#D7DEE7 0% 100%";
-  return <div className={wide ? "client-panel client-donut-panel wide" : "client-panel client-donut-panel"}><h3>{title}</h3>{segments.length ? <div className={wide ? "client-donut-layout wide" : "client-donut-layout"}><div className="client-donut" style={{ background: `conic-gradient(${gradient})` }}><div className="client-donut-hole" /></div><div className="client-legend">{segments.slice(0, 7).map((seg) => <div key={seg.id || seg.name} className="client-legend-row"><span className="client-legend-dot" style={{ background: seg.color }} /><span className="client-legend-name">{seg.name}</span><strong>{Math.round(seg.percent)}%</strong></div>)}</div></div> : <div className="client-empty-state">אין נתונים להצגה</div>}</div>;
+  return (
+    <div className={wide ? "client-panel client-donut-panel wide" : "client-panel client-donut-panel"}>
+      <h3>{title}</h3>
+
+      {segments.length ? (
+        <div className={wide ? "client-donut-layout wide" : "client-donut-layout"}>
+          <InteractiveDonut
+            title={title}
+            segments={segments}
+            type={type}
+            scope={scope}
+            onSegmentClick={onSegmentClick}
+            wide={wide}
+          />
+
+          <div className="client-legend">
+            {segments.slice(0, 7).map((seg) => (
+              <button
+                key={seg.id || seg.name}
+                type="button"
+                className="client-legend-row client-legend-button"
+                onClick={() =>
+                  typeof onSegmentClick === "function"
+                    ? onSegmentClick({ title, type, segment: seg, scope })
+                    : null
+                }
+                title={`${seg.name} · ${Math.round(seg.percent)}% · ${formatCurrency(seg.value)}`}
+              >
+                <span className="client-legend-dot" style={{ background: seg.color }} />
+                <span className="client-legend-name">{seg.name}</span>
+                <strong>{Math.round(seg.percent)}%</strong>
+              </button>
+            ))}
+          </div>
+        </div>
+      ) : (
+        <div className="client-empty-state">אין נתונים להצגה</div>
+      )}
+    </div>
+  );
 }
+
+
+function InteractiveDonut({ title, segments, type, scope, onSegmentClick, wide = false }) {
+  const size = wide ? 190 : 154;
+  const strokeWidth = wide ? 36 : 30;
+  const radius = (size - strokeWidth - 12) / 2;
+  const center = size / 2;
+  const circumference = 2 * Math.PI * radius;
+  const clickable = typeof onSegmentClick === "function";
+
+  return (
+    <svg
+      className={wide ? "client-donut-svg wide" : "client-donut-svg"}
+      width={size}
+      height={size}
+      viewBox={`0 0 ${size} ${size}`}
+      role="img"
+      aria-label={title}
+    >
+      <circle cx={center} cy={center} r={radius} fill="none" stroke="#EEF2FA" strokeWidth={strokeWidth} />
+
+      {segments.map((seg, index) => {
+        const dash = Math.max((seg.percent / 100) * circumference - 2, 0);
+        const gap = circumference - dash;
+        const offset = circumference * (1 - seg.start / 100);
+
+        return (
+          <circle
+            key={`${seg.id || seg.name}-${index}`}
+            className="client-donut-slice"
+            cx={center}
+            cy={center}
+            r={radius}
+            fill="none"
+            stroke={seg.color}
+            strokeWidth={strokeWidth}
+            strokeDasharray={`${dash} ${gap}`}
+            strokeDashoffset={offset}
+            strokeLinecap="butt"
+            transform={`rotate(-90 ${center} ${center})`}
+            tabIndex={clickable ? 0 : -1}
+            onClick={() =>
+              clickable
+                ? onSegmentClick({ title, type, segment: seg, scope })
+                : null
+            }
+            onKeyDown={(event) => {
+              if (!clickable) return;
+              if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                onSegmentClick({ title, type, segment: seg, scope });
+              }
+            }}
+          >
+            <title>{`${seg.name} · ${Math.round(seg.percent)}% · ${formatCurrency(seg.value)}`}</title>
+          </circle>
+        );
+      })}
+
+      <circle cx={center} cy={center} r={Math.max(radius - strokeWidth / 2 + 2, 18)} fill="#fff" className="client-donut-center" />
+    </svg>
+  );
+}
+
+function normalizeForCompare(value) {
+  return String(value || "")
+    .replace(/[״"]/g, "")
+    .replace(/[׳']/g, "")
+    .replace(/בע"מ/g, "")
+    .replace(/בעמ/g, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
+}
+
+function rowValue(row) {
+  return Number(
+    row?.currentValue ||
+    row?.value ||
+    row?.amount ||
+    row?.assets ||
+    row?.totalAssets ||
+    row?.balance ||
+    row?.allocatedValue ||
+    0
+  );
+}
+
+function rowMatchesSegment(row, segment, type) {
+  const wanted = normalizeForCompare(segment?.name);
+  if (!wanted) return false;
+
+  if (type === "product") {
+    return [
+      row?.productType,
+      row?.productName,
+      row?.product,
+      row?.type,
+      row?.name,
+      row?.label,
+    ].some((value) => normalizeForCompare(value).includes(wanted));
+  }
+
+  if (type === "manager") {
+    return [
+      row?.managerName,
+      row?.companyName,
+      row?.insuranceCompany,
+      row?.provider,
+      row?.manufacturer,
+      row?.name,
+      row?.label,
+    ].some((value) => normalizeForCompare(value).includes(wanted));
+  }
+
+  if (type === "mainGroup") {
+    return [
+      row?.mainGroup,
+      row?.assetClass,
+      row?.assetCategory,
+      row?.category,
+      row?.group,
+      row?.afik,
+      row?.productType,
+      row?.productName,
+      row?.name,
+      row?.label,
+    ].some((value) => normalizeForCompare(value).includes(wanted));
+  }
+
+  return false;
+}
+
+function buildPieSegmentDetails(scope, payload) {
+  const segment = payload?.segment || {};
+  const type = payload?.type || "segment";
+
+  const productRows = safeArray(scope?.products).map((row) => ({
+    ...row,
+    sourceType: "product",
+  }));
+
+  const routeRows = safeArray(scope?.assetProductTables).flatMap((table) =>
+    safeArray(table.rows).map((row) => ({
+      ...row,
+      name: row.assetName,
+      productType: table.productName,
+      currentValue: row.allocatedValue,
+      sourceType: "route",
+    }))
+  );
+
+  const deathRows = safeArray(scope?.deathCoverageProducts).map((row) => ({
+    ...row,
+    sourceType: "insurance",
+  }));
+
+  const candidates = [...productRows, ...routeRows, ...deathRows];
+
+  const matched = candidates
+    .filter((row) => rowMatchesSegment(row, segment, type))
+    .map((row, index) => ({
+      id: row.id || `${segment.name}-${index}`,
+      name: row.planName || row.assetName || row.productName || row.productType || row.name || "מוצר",
+      value: rowValue(row),
+      memberName: row.memberName || row.ownerName || "",
+      managerName: row.managerName || row.companyName || "—",
+      productType: row.productType || "—",
+      policyNo: row.policyNo || row.mofid || "—",
+      monthlyDeposit: Number(row.monthlyDeposit || row.monthlyDeposits || 0),
+    }))
+    .filter((row, index, arr) => {
+      const key = `${row.name}|${row.value}|${row.memberName}|${row.managerName}|${row.productType}|${row.policyNo}`;
+      return arr.findIndex(
+        (item) =>
+          `${item.name}|${item.value}|${item.memberName}|${item.managerName}|${item.productType}|${item.policyNo}` === key
+      ) === index;
+    })
+    .sort((a, b) => Number(b.value || 0) - Number(a.value || 0));
+
+  if (matched.length) return matched;
+
+  return [
+    {
+      id: "summary",
+      name: segment.name || "החלק הנבחר",
+      value: Number(segment.value || 0),
+      memberName: scope?.isFamily ? "משפחה מאוחדת" : scope?.name || "",
+      managerName: "—",
+      productType: type === "product" ? segment.name : "—",
+      policyNo: "—",
+      monthlyDeposit: 0,
+    },
+  ];
+}
+
+function PieSegmentDrawer({ selected, onClose }) {
+  if (!selected) return null;
+
+  const segment = selected.segment || {};
+  const details = safeArray(selected.details);
+  const total = Number(segment.value || 0);
+  const typeTitle =
+    selected.type === "product"
+      ? "פירוט לפי מוצר"
+      : selected.type === "manager"
+      ? "פירוט לפי גוף מנהל"
+      : selected.type === "mainGroup"
+      ? "פירוט לפי אפיק ראשי"
+      : "פירוט";
+
+  return (
+    <div className="client-drawer-overlay" onClick={onClose}>
+      <aside className="client-drawer" onClick={(event) => event.stopPropagation()}>
+        <div className="client-drawer-header">
+          <button type="button" className="client-drawer-close" onClick={onClose}>×</button>
+          <div>
+            <div className="client-drawer-eyebrow">{typeTitle}</div>
+            <h2>{segment.name || "פירוט"}</h2>
+            <p>{Math.round(Number(segment.percent || 0))}% · {formatCurrency(total)}</p>
+          </div>
+        </div>
+
+        <div className="client-drawer-stats">
+          <div><span>שווי</span><strong>{formatCurrency(total)}</strong></div>
+          <div><span>משקל</span><strong>{Math.round(Number(segment.percent || 0))}%</strong></div>
+          <div><span>רשומות</span><strong>{details.length}</strong></div>
+        </div>
+
+        <div className="client-table-wrap">
+          <table className="client-table client-drawer-table">
+            <thead>
+              <tr>
+                <th>שם מוצר / מסלול</th>
+                <th>בן משפחה</th>
+                <th>גוף מנהל</th>
+                <th>סוג מוצר</th>
+                <th>מספר / מו״פיד</th>
+                <th>צבירה</th>
+                <th>הפקדה חודשית</th>
+              </tr>
+            </thead>
+            <tbody>
+              {details.map((row) => (
+                <tr key={row.id}>
+                  <td>{row.name || "—"}</td>
+                  <td>{row.memberName || "—"}</td>
+                  <td>{row.managerName || "—"}</td>
+                  <td>{row.productType || "—"}</td>
+                  <td>{row.policyNo || "—"}</td>
+                  <td>{formatCurrency(row.value)}</td>
+                  <td>{formatCurrency(row.monthlyDeposit)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        <div className="client-drawer-note">
+          הנתונים מוצגים לפי המידע שעבר ל־Family Dashboard. אם נדרש פירוט עמוק יותר לפי נכס בודד, צריך לוודא שה־parser שומר breakdown ברמת פוליסה/נכס עבור אותו אפיק.
+        </div>
+      </aside>
+    </div>
+  );
+}
+
 
 function TextPanel({ title, text }) {
   return <div className="client-panel"><h3>{title}</h3><div className="client-text-panel">{text}</div></div>;
@@ -968,7 +1311,7 @@ function buildSegments(items) {
     const start = current;
     const end = current + percent;
     current = end;
-    return { ...item, id: item.id || item.name || `segment-${index}`, name: item.name || item.label || "ללא שם", percent, start, end, color: colors[index % colors.length] };
+    return { ...item, id: item.id || item.name || `segment-${index}`, name: item.name || item.label || "ללא שם", value, percent, start, end, color: colors[index % colors.length] };
   });
 }
 
@@ -1045,8 +1388,22 @@ const clientDashboardCss = `
   .client-compare-track, .client-exposure-track { height: 18px; border-radius: 999px; background: ${theme.softBlue}; overflow: hidden; } .client-compare-fill, .client-exposure-fill { height: 100%; border-radius: 999px; } .client-compare-fill.primary, .client-exposure-fill { background: linear-gradient(90deg, ${theme.accent}, ${theme.navy}); } .client-compare-fill.muted { background: ${theme.mutedBar}; }
   .client-exposure-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 14px; margin-bottom: 14px; } .client-exposure-top strong { color: ${theme.navy}; font-size: 30px; line-height: 1; direction: ltr; } .client-exposure-scale { display: flex; justify-content: space-between; margin-top: 10px; color: ${theme.textSoft}; font-size: 12px; direction: ltr; }
   .client-metric-box { min-height: 126px; padding: 18px; display: grid; grid-template-columns: 58px minmax(0, 1fr); gap: 14px; align-items: center; } .client-metric-icon { width: 58px; height: 58px; border-radius: 18px; background: #F4F7FB; color: ${theme.navy}; display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: 900; } .client-metric-title { color: ${theme.textSoft}; font-size: 13px; font-weight: 800; margin-bottom: 8px; } .client-metric-value { color: ${theme.navy}; font-size: 23px; line-height: 1.15; font-weight: 900; direction: ltr; text-align: right; }
-  .client-donut-layout { display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 18px; align-items: center; } .client-donut-layout.wide { grid-template-columns: 190px minmax(0, 1fr); } .client-donut-panel.wide .client-donut { width: 180px; height: 180px; } .client-donut-panel.wide .client-legend { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 18px; row-gap: 10px; } .client-allocation-top-pies { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; } .client-main-groups-wide { width: 100%; } .client-donut { width: 142px; height: 142px; border-radius: 50%; position: relative; box-shadow: inset 0 0 0 3px rgba(255,255,255,0.95), inset 0 -9px 16px rgba(0,0,0,0.08), 0 10px 20px rgba(0,33,93,0.08); } .client-donut-hole { position: absolute; inset: 30%; border-radius: 50%; background: #fff; box-shadow: inset 0 4px 8px rgba(0,33,93,0.04); }
-  .client-legend { display: flex; flex-direction: column; gap: 9px; min-width: 0; } .client-legend-row { display: grid; grid-template-columns: 10px minmax(0, 1fr) auto; gap: 8px; align-items: center; color: ${theme.text}; font-size: 12px; } .client-legend-dot { width: 10px; height: 10px; border-radius: 50%; } .client-legend-name { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+  .client-donut-layout { display: grid; grid-template-columns: 170px minmax(0, 1fr); gap: 18px; align-items: center; }
+  .client-donut-layout.wide { grid-template-columns: 210px minmax(0, 1fr); }
+  .client-donut-panel.wide .client-legend { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 18px; row-gap: 10px; }
+  .client-allocation-top-pies { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+  .client-main-groups-wide { width: 100%; }
+  .client-donut-svg { overflow: visible; filter: drop-shadow(0 10px 18px rgba(0,33,93,0.10)); }
+  .client-donut-slice { cursor: pointer; transition: stroke-width .18s ease, filter .18s ease, opacity .18s ease; outline: none; }
+  .client-donut-slice:hover, .client-donut-slice:focus { stroke-width: 44px; filter: drop-shadow(0 5px 8px rgba(0,33,93,0.24)); }
+  .client-donut-svg.wide .client-donut-slice:hover, .client-donut-svg.wide .client-donut-slice:focus { stroke-width: 52px; }
+  .client-donut-svg:hover .client-donut-slice:not(:hover) { opacity: .62; }
+  .client-donut-center { pointer-events: none; filter: drop-shadow(0 1px 4px rgba(0,33,93,0.06)); }
+  .client-legend { display: flex; flex-direction: column; gap: 9px; min-width: 0; }
+  .client-legend-row { display: grid; grid-template-columns: 10px minmax(0, 1fr) auto; gap: 8px; align-items: center; color: ${theme.text}; font-size: 12px; }
+  .client-legend-button { width: 100%; border: 0; background: transparent; padding: 5px 2px; text-align: right; cursor: pointer; border-radius: 10px; font-family: Calibri, Arial, sans-serif; }
+  .client-legend-button:hover, .client-legend-button:focus { background: #F4F7FB; outline: 0; }
+  .client-legend-dot { width: 10px; height: 10px; border-radius: 50%; } .client-legend-name { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
   .client-table-wrap { overflow-x: auto; border: 1px solid ${theme.divider}; border-radius: 18px; background: #fff; }
   .client-table { width: 100%; min-width: 760px; border-collapse: collapse; table-layout: auto; }
   .client-table th { background: ${theme.navy}; color: #fff; padding: 12px 10px; font-size: 12px; text-align: right; white-space: nowrap; }
@@ -1086,9 +1443,25 @@ const clientDashboardCss = `
   .client-product-assets-table th, .client-product-assets-table td { text-align: center; }
   .client-product-assets-table th:nth-child(2), .client-product-assets-table td:nth-child(2) { text-align: right; min-width: 240px; }
   .positive-number { color: #07864E !important; font-weight: 900; }
+
+  .client-drawer-overlay { position: fixed; inset: 0; z-index: 9999; background: rgba(0, 24, 69, .24); display: flex; justify-content: flex-start; direction: rtl; }
+  .client-drawer { width: min(680px, 94vw); height: 100vh; overflow-y: auto; background: #fff; border-left: 1px solid ${theme.border}; box-shadow: 24px 0 54px rgba(0,33,93,.22); padding: 22px; animation: clientDrawerIn .18s ease-out; }
+  @keyframes clientDrawerIn { from { transform: translateX(-26px); opacity: .65; } to { transform: translateX(0); opacity: 1; } }
+  .client-drawer-header { background: linear-gradient(135deg, ${theme.navy}, ${theme.navyDark}); color: #fff; border-radius: 22px; padding: 18px; margin-bottom: 18px; display: flex; justify-content: space-between; gap: 14px; align-items: flex-start; }
+  .client-drawer-close { width: 36px; height: 36px; border-radius: 999px; border: 1px solid rgba(255,255,255,.28); background: rgba(255,255,255,.12); color: #fff; font-size: 28px; line-height: 1; cursor: pointer; }
+  .client-drawer-eyebrow { font-size: 12px; color: rgba(255,255,255,.76); font-weight: 800; margin-bottom: 4px; }
+  .client-drawer-header h2 { margin: 0; color: #fff; font-size: 24px; line-height: 1.25; }
+  .client-drawer-header p { margin: 8px 0 0; color: rgba(255,255,255,.84); font-size: 13px; }
+  .client-drawer-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-bottom: 18px; }
+  .client-drawer-stats > div { background: ${theme.surfaceAlt}; border: 1px solid ${theme.divider}; border-radius: 16px; padding: 13px; }
+  .client-drawer-stats span { display: block; color: ${theme.textSoft}; font-size: 11px; font-weight: 800; margin-bottom: 6px; }
+  .client-drawer-stats strong { color: ${theme.navy}; font-size: 16px; direction: ltr; }
+  .client-drawer-table { min-width: 900px; }
+  .client-drawer-note { margin-top: 14px; background: #EEF2FA; border: 1px solid #D8DEE9; border-radius: 14px; padding: 13px; color: ${theme.textSoft}; font-size: 12px; line-height: 1.7; }
+
   @media print { .client-web-shell { display: none !important; } }
   @media (max-width: 1180px) { .client-product-summary { grid-template-columns: 28px minmax(0, 1fr) repeat(2, minmax(110px, .8fr)); } .client-product-strip-item { border-right: 0; padding-right: 0; } .client-web-shell { grid-template-columns: 1fr; } .client-sidebar { position: relative; height: auto; display: block; border-left: 0; border-bottom: 1px solid rgba(255,255,255,0.12); } .client-sidebar-nav { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); } .client-main { padding: 18px; } .client-topbar { flex-direction: column; align-items: stretch; } .client-topbar-actions { justify-content: flex-start; } .client-kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .client-grid-3, .client-grid-2, .client-personal-grid, .client-allocation-top-pies { grid-template-columns: 1fr; } }
-  @media (max-width: 720px) { .client-product-summary { grid-template-columns: 28px minmax(0, 1fr); align-items: start; } .client-product-strip-item { grid-column: 1 / -1; min-height: auto; } .client-main { padding: 12px; } .client-sidebar { padding: 16px 12px; } .client-sidebar-nav { grid-template-columns: 1fr; } .client-kpi-grid { grid-template-columns: 1fr; } .client-content-card { padding: 16px; border-radius: 18px; } .client-topbar { padding: 16px; border-radius: 18px; } .client-page-title { font-size: 22px; } .client-donut-layout, .client-donut-layout.wide { grid-template-columns: 1fr; justify-items: center; } .client-donut-panel.wide .client-legend { grid-template-columns: 1fr; } .client-scope-select-wrap, .client-history-button { grid-template-columns: 1fr; width: 100%; } .client-personal-fields { grid-template-columns: 1fr; } }
+  @media (max-width: 720px) { .client-product-summary { grid-template-columns: 28px minmax(0, 1fr); align-items: start; } .client-product-strip-item { grid-column: 1 / -1; min-height: auto; } .client-main { padding: 12px; } .client-sidebar { padding: 16px 12px; } .client-sidebar-nav { grid-template-columns: 1fr; } .client-kpi-grid { grid-template-columns: 1fr; } .client-content-card { padding: 16px; border-radius: 18px; } .client-topbar { padding: 16px; border-radius: 18px; } .client-page-title { font-size: 22px; } .client-donut-layout, .client-donut-layout.wide { grid-template-columns: 1fr; justify-items: center; } .client-drawer-stats { grid-template-columns: 1fr; } .client-donut-panel.wide .client-legend { grid-template-columns: 1fr; } .client-scope-select-wrap, .client-history-button { grid-template-columns: 1fr; width: 100%; } .client-personal-fields { grid-template-columns: 1fr; } }
 `;
 
 const styles = {

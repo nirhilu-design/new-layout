@@ -43,34 +43,30 @@ function ClientFamilyView({ clientModel }) {
   const [linkedClientModel, setLinkedClientModel] = useState(() => readLinkedClientModel());
 
   useEffect(() => {
-    const syncFromStorage = () => {
+    const syncReportData = (event) => {
+      if (event?.detail?.reportData || event?.detail?.clientModel) {
+        if (event.detail.reportData) setLinkedReportData(event.detail.reportData);
+        if (event.detail.clientModel) setLinkedClientModel(event.detail.clientModel);
+        return;
+      }
+
       setLinkedReportData(readLinkedReportData());
       setLinkedClientModel(readLinkedClientModel());
     };
 
-    const handleReportUpdate = (event) => {
-      if (event?.detail?.reportData) {
-        setLinkedReportData(event.detail.reportData);
-      }
+    window.addEventListener("familyPensionReportDataUpdated", syncReportData);
+    window.addEventListener("storage", syncReportData);
 
-      if (event?.detail?.clientModel) {
-        setLinkedClientModel(event.detail.clientModel);
-      }
-    };
-
-    window.addEventListener("storage", syncFromStorage);
-    window.addEventListener("familyPensionReportDataUpdated", handleReportUpdate);
-
-    syncFromStorage();
+    syncReportData();
 
     return () => {
-      window.removeEventListener("storage", syncFromStorage);
-      window.removeEventListener("familyPensionReportDataUpdated", handleReportUpdate);
+      window.removeEventListener("familyPensionReportDataUpdated", syncReportData);
+      window.removeEventListener("storage", syncReportData);
     };
   }, []);
 
   const model = linkedClientModel || clientModel || {};
-  const linkedSourceReportData = linkedReportData || model.sourceReportData || clientModel?.sourceReportData || {};
+  const sourceReportData = linkedReportData || model.sourceReportData || clientModel?.sourceReportData || {};
 
   const summary = model.summary || {};
   const exposures = model.exposures || {};
@@ -87,7 +83,21 @@ function ClientFamilyView({ clientModel }) {
   const loans = model.loans || {};
   const loanDetails = Array.isArray(loans.details) ? loans.details : [];
 
-  const sourceReportData = linkedSourceReportData || {};
+  const conversationSummaryText =
+    sourceReportData?.conversationSummary ||
+    sourceReportData?.clientConversationSummary ||
+    sourceReportData?.summaryText ||
+    model?.conversationSummary ||
+    "";
+
+  const actionRecommendationsText =
+    sourceReportData?.actionRecommendations ||
+    sourceReportData?.clientActionRecommendations ||
+    sourceReportData?.recommendationsText ||
+    sourceReportData?.recommendations ||
+    model?.actionRecommendations ||
+    model?.recommendationsText ||
+    "";
   const vestedBalanceTable =
     clientModel.vestedBalanceTable || sourceReportData.vestedBalanceTable || null;
   const recognizedPensionAdjustments =

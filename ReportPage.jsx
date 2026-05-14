@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 
 const STORAGE_CLIENT_MODEL_KEY = "familyPensionClientModel";
 const STORAGE_REPORT_DATA_KEY = "familyPensionReportData";
@@ -108,13 +108,27 @@ function saveClientDashboardData(reportData) {
   // Backup keys for older/alternate dashboard implementations.
   localStorage.setItem("clientModel", clientModelJson);
   localStorage.setItem("reportData", reportDataJson);
+  localStorage.setItem("familyPensionClientModel", clientModelJson);
+  localStorage.setItem("familyPensionReportData", reportDataJson);
+
   sessionStorage.setItem(STORAGE_CLIENT_MODEL_KEY, clientModelJson);
   sessionStorage.setItem(STORAGE_REPORT_DATA_KEY, reportDataJson);
   sessionStorage.setItem("clientModel", clientModelJson);
   sessionStorage.setItem("reportData", reportDataJson);
+  sessionStorage.setItem("familyPensionClientModel", clientModelJson);
+  sessionStorage.setItem("familyPensionReportData", reportDataJson);
 
   window.__familyPensionClientModel = clientModel;
   window.__familyPensionReportData = reportData;
+
+  window.dispatchEvent(
+    new CustomEvent("familyPensionReportDataUpdated", {
+      detail: {
+        reportData,
+        clientModel,
+      },
+    })
+  );
 
   return clientModel;
 }
@@ -223,6 +237,7 @@ export default function ReportPage({
     const result = onCreateShareLink({
       expirationHours: 24,
       reportData: reportDataForClient,
+      clientModel: buildClientModelFromReportData(reportDataForClient),
       conversationSummary,
       actionRecommendations,
       recommendationsText: actionRecommendations,

@@ -144,6 +144,12 @@ function ClientFamilyView({ clientModel }) {
     <div className="client-family-root" style={page}>
       <style>
         {`
+          @media (max-width: 900px) {
+            .family-wide-donut-grid [style*="grid-template-columns"] {
+              grid-template-columns: 1fr !important;
+            }
+          }
+
           @media print {
             @page {
               size: A4 portrait;
@@ -207,6 +213,15 @@ function ClientFamilyView({ clientModel }) {
             .family-top-grid {
               display: grid !important;
               grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+              gap: 7px !important;
+              margin-bottom: 8px !important;
+              width: 100% !important;
+            }
+
+            /* Wide donut grid - one donut per full row */
+            .family-wide-donut-grid {
+              display: grid !important;
+              grid-template-columns: 1fr !important;
               gap: 7px !important;
               margin-bottom: 8px !important;
               width: 100% !important;
@@ -293,8 +308,8 @@ function ClientFamilyView({ clientModel }) {
             /* Donut inner layout */
             .family-donut-card [style*="grid-template-columns"] {
               display: grid !important;
-              grid-template-columns: 70px minmax(0, 1fr) !important;
-              gap: 6px !important;
+              grid-template-columns: 135px minmax(0, 1fr) !important;
+              gap: 8px !important;
               margin-top: 5px !important;
             }
 
@@ -392,12 +407,15 @@ function ClientFamilyView({ clientModel }) {
             value={formatCurrency(summary.monthlyDeposits)}
             subtext="סך ההפקדות החודשיות של בני המשפחה"
           />
+        </section>
 
+        <section className="family-wide-donut-grid" style={wideDonutGrid}>
           <DonutSummaryCard
             title="חלוקה לפי מוצרים"
             subtitle="התפלגות הנכסים בין סוגי החיסכון הקיימים בתיק."
             items={products}
             formatCurrency={formatCurrency}
+            wide
           />
 
           <DonutSummaryCard
@@ -405,6 +423,7 @@ function ClientFamilyView({ clientModel }) {
             subtitle="התפלגות הניהול בין החברות והגופים המנהלים."
             items={managers}
             formatCurrency={formatCurrency}
+            wide
           />
         </section>
 
@@ -1038,7 +1057,7 @@ function ComparisonChartCard({ title, explanation, bars }) {
   );
 }
 
-function DonutSummaryCard({ title, subtitle, items, formatCurrency }) {
+function DonutSummaryCard({ title, subtitle, items, formatCurrency, wide = false }) {
   const data = buildSegments(items);
 
   return (
@@ -1049,22 +1068,23 @@ function DonutSummaryCard({ title, subtitle, items, formatCurrency }) {
       {!data.segments.length ? (
         <EmptyText>אין נתונים להצגה</EmptyText>
       ) : (
-        <div style={donutLayout}>
-          <div style={{ display: "flex", justifyContent: "center" }}>
+        <div style={wide ? wideDonutLayout : donutLayout}>
+          <div style={{ display: "flex", justifyContent: "center", alignItems: "center" }}>
             <DonutVisual
               gradient={data.gradient}
-              size={102}
+              size={wide ? 182 : 122}
               holeInset="31%"
               soft
             />
           </div>
 
-          <div style={legendList}>
-            {data.segments.slice(0, 5).map((seg, index) => (
+          <div style={wide ? wideLegendList : legendList}>
+            {data.segments.slice(0, wide ? 8 : 5).map((seg, index) => (
               <LegendRow
                 key={`${seg.id || seg.name}-${index}`}
                 seg={seg}
                 formatCurrency={formatCurrency}
+                wide={wide}
               />
             ))}
           </div>
@@ -1240,9 +1260,9 @@ function buildSegments(items) {
   return { segments, gradient };
 }
 
-function LegendRow({ seg, formatCurrency }) {
+function LegendRow({ seg, formatCurrency, wide = false }) {
   return (
-    <div style={legendRow}>
+    <div style={wide ? wideLegendRow : legendRow}>
       <span style={{ ...legendDot, background: seg.color }} />
       <div style={{ minWidth: 0 }}>
         <div style={legendName}>{seg.name}</div>
@@ -1566,7 +1586,14 @@ const heroSubtitle = { margin: "12px auto 0", maxWidth: 760, fontSize: 12, lineH
 
 const topGrid = {
   display: "grid",
-  gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
+  gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+  gap: 18,
+  marginBottom: 18,
+};
+
+const wideDonutGrid = {
+  display: "grid",
+  gridTemplateColumns: "1fr",
   gap: 18,
   marginBottom: 18,
 };
@@ -1632,20 +1659,47 @@ const donutCard = {
   background: theme.surface,
   border: `1px solid ${theme.border}`,
   borderRadius: 20,
-  padding: 18,
-  minHeight: 188,
+  padding: 22,
+  minHeight: 250,
   boxShadow: "0 2px 10px rgba(16,42,67,0.05)",
 };
 
 const donutTitle = { margin: 0, color: theme.navy, fontSize: 14, fontWeight: 700 };
 const smallText = { fontSize: 12, color: theme.textSoft, lineHeight: 1.6 };
 const donutLayout = {
-  display: "grid", gridTemplateColumns: "110px 1fr",
-  gap: 14, alignItems: "center", marginTop: 12,
+  display: "grid",
+  gridTemplateColumns: "140px minmax(0, 1fr)",
+  gap: 20,
+  alignItems: "center",
+  marginTop: 12,
+};
+
+const wideDonutLayout = {
+  display: "grid",
+  gridTemplateColumns: "220px minmax(0, 1fr)",
+  gap: 28,
+  alignItems: "center",
+  marginTop: 18,
+  direction: "rtl",
 };
 
 const legendList = { display: "flex", flexDirection: "column", gap: 8 };
+const wideLegendList = {
+  display: "grid",
+  gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+  columnGap: 22,
+  rowGap: 10,
+  alignItems: "start",
+};
 const legendRow = { display: "grid", gridTemplateColumns: "10px 1fr auto", gap: 8, alignItems: "center", fontSize: 12 };
+const wideLegendRow = {
+  display: "grid",
+  gridTemplateColumns: "12px minmax(0, 1fr) 54px",
+  gap: 10,
+  alignItems: "center",
+  fontSize: 13,
+  minWidth: 0,
+};
 const legendDot = { width: 10, height: 10, borderRadius: "50%", display: "inline-block" };
 const legendName = { color: theme.text, fontWeight: 700, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" };
 const legendSub = { color: theme.textSoft, fontSize: 11, marginTop: 2 };

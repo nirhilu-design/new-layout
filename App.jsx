@@ -157,10 +157,15 @@ function App() {
   };
 
   const handleCreateShareLink = (options = {}) => {
-    if (!reportData) return null;
+    const dataForShare = options.reportData || reportData;
 
-    const result = createClientShare(reportData, {
+    if (!dataForShare) return null;
+
+    setReportData(dataForShare);
+
+    const result = createClientShare(dataForShare, {
       expirationHours: options.expirationHours || 24,
+      clientModel: options.clientModel || null,
     });
 
     if (!result.success) {
@@ -170,6 +175,8 @@ function App() {
         error: result.error,
       };
     }
+
+    setSharePayload(result.payload || null);
 
     return {
       success: true,

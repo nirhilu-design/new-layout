@@ -41,6 +41,7 @@ function readLinkedClientModel() {
 function ClientFamilyView({ clientModel }) {
   const [linkedReportData, setLinkedReportData] = useState(() => readLinkedReportData());
   const [linkedClientModel, setLinkedClientModel] = useState(() => readLinkedClientModel());
+  const [selectedPieSegment, setSelectedPieSegment] = useState(null);
 
   useEffect(() => {
     const syncReportData = (event) => {
@@ -98,6 +99,24 @@ function ClientFamilyView({ clientModel }) {
     model?.actionRecommendations ||
     model?.recommendationsText ||
     "";
+
+  const openPieDrawer = (payload) => {
+    setSelectedPieSegment({
+      ...payload,
+      details: buildPieSegmentDetails(payload, {
+        sourceReportData,
+        model,
+        members,
+        products,
+        managers,
+        mainGroups,
+      }),
+    });
+  };
+
+  const closePieDrawer = () => {
+    setSelectedPieSegment(null);
+  };
   const vestedBalanceTable =
     clientModel.vestedBalanceTable || sourceReportData.vestedBalanceTable || null;
   const recognizedPensionAdjustments =
@@ -144,6 +163,11 @@ function ClientFamilyView({ clientModel }) {
     <div className="client-family-root" style={page}>
       <style>
         {`
+          @keyframes familyDrawerIn {
+            from { transform: translateX(-24px); opacity: 0.65; }
+            to { transform: translateX(0); opacity: 1; }
+          }
+
           @media (max-width: 900px) {
             .family-wide-donut-grid [style*="grid-template-columns"] {
               grid-template-columns: 1fr !important;
@@ -416,6 +440,8 @@ function ClientFamilyView({ clientModel }) {
             items={products}
             formatCurrency={formatCurrency}
             wide
+            drawerType="product"
+            onSegmentClick={openPieDrawer}
           />
 
           <DonutSummaryCard
@@ -424,6 +450,8 @@ function ClientFamilyView({ clientModel }) {
             items={managers}
             formatCurrency={formatCurrency}
             wide
+            drawerType="manager"
+            onSegmentClick={openPieDrawer}
           />
         </section>
 
@@ -486,6 +514,8 @@ function ClientFamilyView({ clientModel }) {
             items={mainGroups.length ? mainGroups : products}
             formatCurrency={formatCurrency}
             emptyText="אין נתוני אפיקים להצגה"
+            drawerType="mainGroup"
+            onSegmentClick={openPieDrawer}
           />
         </SectionCard>
 
@@ -619,6 +649,12 @@ function ClientFamilyView({ clientModel }) {
           </div>
         </SectionCard>
       </div>
+
+      <PieSegmentDrawer
+        segment={selectedPieSegment}
+        onClose={closePieDrawer}
+        formatCurrency={formatCurrency}
+      />
     </div>
   );
 }
@@ -670,6 +706,233 @@ function getClientRecommendationsText(clientModel, linkedReportData = null) {
 function ReadOnlyRecommendations({ text }) {
   return <div style={recommendationsReadOnlyBox}>{text}</div>;
 }
+
+
+function normalizeForCompare(value) {
+  return String(value || "")
+    .replace(/[״"]/g, "")
+    .replace(/[׳']/g, "")
+    .replace(/בע"מ/g, "")
+    .replace(/בעמ/g, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
+}
+
+function collectCandidateRows(value) {
+  if (!value) return [];
+  if (Array.isArray(value)) return value.flatMap(collectCandidateRows);
+  if (typeof value !== "object") return [];
+
+  const directRows = [
+    value.details,
+    value.rows,
+    value.items,
+    value.assets,
+    value.products,
+    value.policies,
+    value.funds,
+    value.children,
+    value.breakdown,
+    value.allocations,
+    value.investPlans,
+    value.investments,
+  ]
+    .filter(Array.isArray)
+    .flat();
+
+  const nestedRows = Object.values(value)
+    .filter((item) => item && typeof item === "object")
+    .flatMap((item) => (Array.isArray(item) ? item : collectCandidateRows(item)));
+
+  return [...directRows, ...nestedRows].filter((row) => row && typeof row === "object");
+}
+
+function rowMatchesSegment(row, segment, type) {
+  const wanted = normalizeForCompare(segment?.name);
+  if (!wanted) return false;
+
+  const keysByType = {
+    product: ["productType", "productName", "type", "product", "category", "name", "label"],
+    manager: ["managerName", "companyName", "insuranceCompany", "provider", "manufacturer", "managingCompany", "name", "label"],
+    mainGroup: ["mainGroup", "assetClass", "assetCategory", "category", "group", "afik", "name", "label"],
+  };
+
+  const keys = keysByType[type] || ["name", "label", "category", "type", "productType", "managerName", "companyName", "mainGroup", "assetClass"];
+  return keys.some((key) => normalizeForCompare(row?.[key]).includes(wanted));
+}
+
+function pickRowName(row) {
+  return (
+    row?.name ||
+    row?.label ||
+    row?.productName ||
+    row?.productType ||
+    row?.policyName ||
+    row?.fundName ||
+    row?.trackName ||
+    row?.planName ||
+    row?.managerName ||
+    row?.companyName ||
+    row?.mainGroup ||
+    row?.assetClass ||
+    "פריט"
+  );
+}
+
+function pickRowValue(row) {
+  const candidates = [
+    row?.value,
+    row?.amount,
+    row?.balance,
+    row?.assets,
+    row?.totalAssets,
+    row?.accumulation,
+    row?.currentBalance,
+    row?.saving,
+  ];
+
+  return candidates
+    .map((value) => Number(value || 0))
+    .find((value) => Number.isFinite(value) && value > 0) || 0;
+}
+
+function buildPieSegmentDetails(payload, context) {
+  const segment = payload?.segment || {};
+  const type = payload?.type || "segment";
+
+  const directRows = [
+    segment.details,
+    segment.rows,
+    segment.items,
+    segment.assets,
+    segment.products,
+    segment.policies,
+    segment.children,
+    segment.breakdown,
+  ]
+    .filter(Array.isArray)
+    .flat();
+
+  const sourceRows = collectCandidateRows(context?.sourceReportData);
+  const modelRows = collectCandidateRows(context?.model);
+
+  const matchedRows = [...directRows, ...sourceRows, ...modelRows]
+    .filter((row) => rowMatchesSegment(row, segment, type))
+    .map((row, index) => ({
+      id: row.id || `${type}-${segment.name}-${index}`,
+      name: pickRowName(row),
+      value: pickRowValue(row),
+      member: row.memberName || row.ownerName || row.clientName || row.familyMember || row.nameMember || "",
+      manager: row.managerName || row.companyName || row.insuranceCompany || row.provider || row.manufacturer || "",
+      product: row.productType || row.productName || row.product || row.type || "",
+      track: row.trackName || row.planName || row.investmentTrack || row.routeName || "",
+    }))
+    .filter((row, index, arr) => {
+      const key = `${row.name}|${row.value}|${row.member}|${row.manager}|${row.product}|${row.track}`;
+      return arr.findIndex((item) => `${item.name}|${item.value}|${item.member}|${item.manager}|${item.product}|${item.track}` === key) === index;
+    })
+    .sort((a, b) => Number(b.value || 0) - Number(a.value || 0));
+
+  if (matchedRows.length) return matchedRows;
+
+  return [
+    {
+      id: "summary",
+      name: segment.name || "החלק הנבחר",
+      value: Number(segment.value || 0),
+      member: "",
+      manager: "",
+      product: "",
+      track: "",
+    },
+  ];
+}
+
+function PieSegmentDrawer({ segment, onClose, formatCurrency }) {
+  if (!segment) return null;
+
+  const selected = segment.segment || {};
+  const details = Array.isArray(segment.details) ? segment.details : [];
+  const totalValue = Number(selected.value || 0);
+  const typeLabel =
+    segment.type === "product"
+      ? "מוצר"
+      : segment.type === "manager"
+      ? "גוף מנהל"
+      : segment.type === "mainGroup"
+      ? "אפיק השקעה"
+      : "נתון";
+
+  return (
+    <div style={drawerOverlay} onClick={onClose}>
+      <aside style={drawerPanel} onClick={(event) => event.stopPropagation()}>
+        <div style={drawerHeader}>
+          <button type="button" onClick={onClose} style={drawerCloseButton}>
+            ×
+          </button>
+
+          <div>
+            <div style={drawerEyebrow}>{typeLabel}</div>
+            <div style={drawerTitle}>{selected.name || "פירוט"}</div>
+            <div style={drawerSub}>
+              {Math.round(Number(selected.percent || 0))}% מתוך הדוח · {formatCurrency(totalValue)}
+            </div>
+          </div>
+        </div>
+
+        <div style={drawerStatsGrid}>
+          <div style={drawerStat}>
+            <div style={drawerStatLabel}>שווי כולל</div>
+            <div style={drawerStatValue}>{formatCurrency(totalValue)}</div>
+          </div>
+
+          <div style={drawerStat}>
+            <div style={drawerStatLabel}>משקל</div>
+            <div style={drawerStatValue}>{Math.round(Number(selected.percent || 0))}%</div>
+          </div>
+
+          <div style={drawerStat}>
+            <div style={drawerStatLabel}>רשומות</div>
+            <div style={drawerStatValue}>{details.length}</div>
+          </div>
+        </div>
+
+        <div style={drawerSectionTitle}>פירוט הנתונים שנכללו בחלק זה</div>
+
+        <div style={drawerTableWrap}>
+          <table style={drawerTable}>
+            <thead>
+              <tr>
+                <th style={drawerTh}>שם</th>
+                <th style={drawerTh}>שווי</th>
+                <th style={drawerTh}>בן משפחה</th>
+                <th style={drawerTh}>מוצר / מסלול</th>
+              </tr>
+            </thead>
+            <tbody>
+              {details.map((row) => (
+                <tr key={row.id}>
+                  <td style={drawerTd}>{row.name || "—"}</td>
+                  <td style={drawerTd}>{formatCurrency(row.value)}</td>
+                  <td style={drawerTd}>{row.member || "—"}</td>
+                  <td style={drawerTd}>
+                    {[row.product, row.track, row.manager].filter(Boolean).join(" · ") || "—"}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        <div style={drawerNote}>
+          הנתונים מוצגים לפי המידע שעבר ל־Family Dashboard. אם נדרש פירוט עמוק יותר לפי נכס בודד, צריך לוודא שה־parser שומר breakdown ברמת נכס/פוליסה.
+        </div>
+      </aside>
+    </div>
+  );
+}
+
 
 function normalizeClientInsuranceName(value) {
   const text = String(value || "")
@@ -1057,7 +1320,15 @@ function ComparisonChartCard({ title, explanation, bars }) {
   );
 }
 
-function DonutSummaryCard({ title, subtitle, items, formatCurrency, wide = false }) {
+function DonutSummaryCard({
+  title,
+  subtitle,
+  items,
+  formatCurrency,
+  wide = false,
+  drawerType = "segment",
+  onSegmentClick,
+}) {
   const data = buildSegments(items);
 
   return (
@@ -1072,9 +1343,13 @@ function DonutSummaryCard({ title, subtitle, items, formatCurrency, wide = false
           <div style={{ display: "flex", justifyContent: "center", alignItems: "center" }}>
             <DonutVisual
               gradient={data.gradient}
+              segments={data.segments}
               size={wide ? 182 : 122}
               holeInset="31%"
               soft
+              title={title}
+              drawerType={drawerType}
+              onSegmentClick={onSegmentClick}
             />
           </div>
 
@@ -1094,7 +1369,13 @@ function DonutSummaryCard({ title, subtitle, items, formatCurrency, wide = false
   );
 }
 
-function FullWidthDonutCard({ items, formatCurrency, emptyText }) {
+function FullWidthDonutCard({
+  items,
+  formatCurrency,
+  emptyText,
+  drawerType = "mainGroup",
+  onSegmentClick,
+}) {
   const data = buildSegments(items);
 
   if (!data.segments.length) {
@@ -1109,33 +1390,30 @@ function FullWidthDonutCard({ items, formatCurrency, emptyText }) {
   return (
     <div className="family-main-breakdown" style={mainBreakdownCardLayout}>
       <div style={mainDonutWrap}>
-        <div
-          className="family-main-donut"
-          style={{
-            width: 285,
-            height: 285,
-            borderRadius: "50%",
-            background: `conic-gradient(${data.gradient})`,
-            position: "relative",
-            flexShrink: 0,
-            boxShadow:
-              "inset 0 0 0 3px rgba(255,255,255,0.95), inset 0 -10px 16px rgba(0,0,0,0.10), 0 12px 24px rgba(0,33,93,0.10)",
-          }}
-        >
-          <div style={donutGloss} />
+        <div style={{ position: "relative", width: 285, height: 285 }}>
+          <DonutVisual
+            gradient={data.gradient}
+            segments={data.segments}
+            size={285}
+            holeInset="30%"
+            soft={false}
+            title="חלוקה לפי אפיקים ראשיים"
+            drawerType={drawerType}
+            onSegmentClick={onSegmentClick}
+            className="family-main-donut"
+          />
+
           <div
             style={{
               position: "absolute",
               inset: "30%",
-              background: "#fff",
               borderRadius: "50%",
               display: "flex",
               flexDirection: "column",
               alignItems: "center",
               justifyContent: "center",
               textAlign: "center",
-              boxShadow:
-                "inset 0 5px 10px rgba(0,33,93,0.05), 0 0 0 2px rgba(255,255,255,0.9)",
+              pointerEvents: "none",
             }}
           >
             <div
@@ -1186,37 +1464,151 @@ function FullWidthDonutCard({ items, formatCurrency, emptyText }) {
   );
 }
 
-function DonutVisual({ gradient, size = 110, holeInset = "31%", soft = true }) {
+function DonutVisual({
+  gradient,
+  segments = [],
+  size = 110,
+  holeInset = "31%",
+  soft = true,
+  title = "",
+  drawerType = "segment",
+  onSegmentClick,
+  className,
+}) {
+  const strokeWidth = Math.max(18, Math.round(size * 0.22));
+  const radius = (size - strokeWidth - 12) / 2;
+  const center = size / 2;
+  const circumference = 2 * Math.PI * radius;
+  const gap = Math.min(0.9, 100 / Math.max(segments.length * 24, 1));
+
+  if (!segments.length) {
+    return (
+      <div
+        className={className}
+        style={{
+          width: size,
+          height: size,
+          borderRadius: "50%",
+          position: "relative",
+          flexShrink: 0,
+          background: `conic-gradient(${gradient})`,
+          boxShadow: soft
+            ? "inset 0 0 0 2px rgba(255,255,255,0.95), inset 0 -7px 10px rgba(0,0,0,0.12), 0 7px 14px rgba(0,33,93,0.10)"
+            : "inset 0 0 0 3px rgba(255,255,255,0.95), inset 0 -10px 16px rgba(0,0,0,0.13), 0 12px 22px rgba(0,33,93,0.12)",
+          transform: soft
+            ? "perspective(700px) rotateX(4deg)"
+            : "perspective(850px) rotateX(4deg)",
+        }}
+      >
+        <div style={donutGloss} />
+        <div
+          style={{
+            position: "absolute",
+            inset: holeInset,
+            background: "#fff",
+            borderRadius: "50%",
+            boxShadow:
+              "inset 0 5px 10px rgba(0,33,93,0.05), 0 0 0 2px rgba(255,255,255,0.9)",
+            transform: "rotateX(-4deg)",
+          }}
+        />
+      </div>
+    );
+  }
+
   return (
-    <div
+    <svg
+      className={className}
+      width={size}
+      height={size}
+      viewBox={`0 0 ${size} ${size}`}
+      role="img"
+      aria-label={title}
       style={{
-        width: size,
-        height: size,
-        borderRadius: "50%",
-        position: "relative",
-        flexShrink: 0,
-        background: `conic-gradient(${gradient})`,
-        boxShadow: soft
-          ? "inset 0 0 0 2px rgba(255,255,255,0.95), inset 0 -7px 10px rgba(0,0,0,0.12), 0 7px 14px rgba(0,33,93,0.10)"
-          : "inset 0 0 0 3px rgba(255,255,255,0.95), inset 0 -10px 16px rgba(0,0,0,0.13), 0 12px 22px rgba(0,33,93,0.12)",
+        display: "block",
+        overflow: "visible",
+        filter: "drop-shadow(0 10px 18px rgba(0,33,93,0.12))",
         transform: soft
           ? "perspective(700px) rotateX(4deg)"
           : "perspective(850px) rotateX(4deg)",
       }}
     >
-      <div style={donutGloss} />
-      <div
-        style={{
-          position: "absolute",
-          inset: holeInset,
-          background: "#fff",
-          borderRadius: "50%",
-          boxShadow:
-            "inset 0 5px 10px rgba(0,33,93,0.05), 0 0 0 2px rgba(255,255,255,0.9)",
-          transform: "rotateX(-4deg)",
-        }}
+      <circle
+        cx={center}
+        cy={center}
+        r={radius}
+        fill="none"
+        stroke="#EEF2FA"
+        strokeWidth={strokeWidth}
       />
-    </div>
+
+      {segments.map((seg, index) => {
+        const dash = Math.max((seg.percent - gap) / 100, 0) * circumference;
+        const empty = circumference - dash;
+        const offset = circumference * (1 - seg.start / 100);
+        const clickable = typeof onSegmentClick === "function";
+
+        return (
+          <circle
+            key={`${seg.name}-${index}`}
+            cx={center}
+            cy={center}
+            r={radius}
+            fill="none"
+            stroke={seg.color}
+            strokeWidth={strokeWidth}
+            strokeDasharray={`${dash} ${empty}`}
+            strokeDashoffset={offset}
+            strokeLinecap="butt"
+            transform={`rotate(-90 ${center} ${center})`}
+            tabIndex={clickable ? 0 : -1}
+            onClick={() =>
+              clickable
+                ? onSegmentClick({
+                    title,
+                    type: drawerType,
+                    segment: seg,
+                  })
+                : null
+            }
+            onKeyDown={(event) => {
+              if (!clickable) return;
+              if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                onSegmentClick({
+                  title,
+                  type: drawerType,
+                  segment: seg,
+                });
+              }
+            }}
+            style={{
+              cursor: clickable ? "pointer" : "default",
+              transition: "stroke-width 180ms ease, opacity 180ms ease, filter 180ms ease",
+              outline: "none",
+            }}
+            onMouseEnter={(event) => {
+              event.currentTarget.setAttribute("stroke-width", String(strokeWidth + 7));
+              event.currentTarget.style.filter = "drop-shadow(0 5px 8px rgba(0,33,93,0.25))";
+            }}
+            onMouseLeave={(event) => {
+              event.currentTarget.setAttribute("stroke-width", String(strokeWidth));
+              event.currentTarget.style.filter = "none";
+            }}
+          >
+            <title>{`${seg.name}: ${Math.round(seg.percent)}%`}</title>
+          </circle>
+        );
+      })}
+
+      <circle
+        cx={center}
+        cy={center}
+        r={Math.max(radius - strokeWidth / 2, 12)}
+        fill="#fff"
+        style={{ pointerEvents: "none" }}
+      />
+    </svg>
   );
 }
 
@@ -1840,6 +2232,149 @@ const recommendationsReadOnlyBox = {
   lineHeight: 1.9,
   whiteSpace: "pre-wrap",
   wordBreak: "break-word",
+};
+
+
+
+const drawerOverlay = {
+  position: "fixed",
+  inset: 0,
+  background: "rgba(0, 24, 69, 0.24)",
+  zIndex: 9999,
+  display: "flex",
+  justifyContent: "flex-start",
+  direction: "rtl",
+};
+
+const drawerPanel = {
+  width: "min(520px, 92vw)",
+  height: "100vh",
+  background: "#fff",
+  boxShadow: "24px 0 54px rgba(0, 33, 93, 0.22)",
+  borderLeft: `1px solid ${theme.border}`,
+  padding: 22,
+  overflowY: "auto",
+  animation: "familyDrawerIn 180ms ease-out",
+};
+
+const drawerHeader = {
+  display: "flex",
+  alignItems: "flex-start",
+  gap: 14,
+  justifyContent: "space-between",
+  background: `linear-gradient(135deg, ${theme.navy}, ${theme.navyDark})`,
+  color: "#fff",
+  borderRadius: 20,
+  padding: 18,
+  marginBottom: 18,
+};
+
+const drawerCloseButton = {
+  width: 34,
+  height: 34,
+  borderRadius: 999,
+  border: "1px solid rgba(255,255,255,0.25)",
+  background: "rgba(255,255,255,0.12)",
+  color: "#fff",
+  fontSize: 26,
+  lineHeight: 1,
+  cursor: "pointer",
+};
+
+const drawerEyebrow = {
+  fontSize: 12,
+  color: "rgba(255,255,255,0.72)",
+  fontWeight: 800,
+  marginBottom: 4,
+};
+
+const drawerTitle = {
+  fontSize: 22,
+  fontWeight: 900,
+  lineHeight: 1.25,
+};
+
+const drawerSub = {
+  marginTop: 8,
+  color: "rgba(255,255,255,0.82)",
+  fontSize: 13,
+};
+
+const drawerStatsGrid = {
+  display: "grid",
+  gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+  gap: 10,
+  marginBottom: 18,
+};
+
+const drawerStat = {
+  background: theme.surfaceAlt,
+  border: `1px solid ${theme.divider}`,
+  borderRadius: 16,
+  padding: 13,
+};
+
+const drawerStatLabel = {
+  color: theme.textSoft,
+  fontSize: 11,
+  fontWeight: 800,
+  marginBottom: 6,
+};
+
+const drawerStatValue = {
+  color: theme.navy,
+  fontSize: 15,
+  fontWeight: 900,
+  direction: "ltr",
+};
+
+const drawerSectionTitle = {
+  color: theme.navy,
+  fontSize: 15,
+  fontWeight: 900,
+  margin: "4px 0 12px",
+};
+
+const drawerTableWrap = {
+  overflowX: "auto",
+  border: `1px solid ${theme.divider}`,
+  borderRadius: 16,
+  background: "#fff",
+};
+
+const drawerTable = {
+  width: "100%",
+  borderCollapse: "collapse",
+  minWidth: 620,
+};
+
+const drawerTh = {
+  background: theme.navy,
+  color: "#fff",
+  fontSize: 12,
+  fontWeight: 900,
+  padding: "11px 10px",
+  textAlign: "right",
+  whiteSpace: "nowrap",
+};
+
+const drawerTd = {
+  color: theme.text,
+  fontSize: 12,
+  padding: "11px 10px",
+  borderBottom: "1px solid #F0E6DA",
+  whiteSpace: "nowrap",
+};
+
+const drawerNote = {
+  marginTop: 14,
+  background: "#EEF2FA",
+  border: "1px solid #D8DEE9",
+  borderRadius: 14,
+  padding: 13,
+  color: theme.textSoft,
+  fontSize: 12,
+  lineHeight: 1.7,
 };
 
 

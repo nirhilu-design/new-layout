@@ -1,20 +1,93 @@
+import React, { useEffect, useState } from "react";
+
+
+const STORAGE_CLIENT_MODEL_KEY = "familyPensionClientModel";
+const STORAGE_REPORT_DATA_KEY = "familyPensionReportData";
+
+function safeJsonParse(value, fallback = null) {
+  try {
+    return value ? JSON.parse(value) : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+function readLinkedReportData() {
+  return (
+    window.__familyPensionReportData ||
+    safeJsonParse(sessionStorage.getItem(STORAGE_REPORT_DATA_KEY)) ||
+    safeJsonParse(localStorage.getItem(STORAGE_REPORT_DATA_KEY)) ||
+    safeJsonParse(sessionStorage.getItem("reportData")) ||
+    safeJsonParse(localStorage.getItem("reportData")) ||
+    safeJsonParse(sessionStorage.getItem("familyPensionReportData")) ||
+    safeJsonParse(localStorage.getItem("familyPensionReportData")) ||
+    null
+  );
+}
+
+function readLinkedClientModel() {
+  return (
+    window.__familyPensionClientModel ||
+    safeJsonParse(sessionStorage.getItem(STORAGE_CLIENT_MODEL_KEY)) ||
+    safeJsonParse(localStorage.getItem(STORAGE_CLIENT_MODEL_KEY)) ||
+    safeJsonParse(sessionStorage.getItem("clientModel")) ||
+    safeJsonParse(localStorage.getItem("clientModel")) ||
+    safeJsonParse(sessionStorage.getItem("familyPensionClientModel")) ||
+    safeJsonParse(localStorage.getItem("familyPensionClientModel")) ||
+    null
+  );
+}
+
 function ClientFamilyView({ clientModel }) {
-  const summary = clientModel.summary || {};
-  const exposures = clientModel.exposures || {};
-  const members = clientModel.members || [];
-  const managers = clientModel.distributions?.managers || [];
-  const products = clientModel.distributions?.products || [];
+  const [linkedReportData, setLinkedReportData] = useState(() => readLinkedReportData());
+  const [linkedClientModel, setLinkedClientModel] = useState(() => readLinkedClientModel());
+
+  useEffect(() => {
+    const syncFromStorage = () => {
+      setLinkedReportData(readLinkedReportData());
+      setLinkedClientModel(readLinkedClientModel());
+    };
+
+    const handleReportUpdate = (event) => {
+      if (event?.detail?.reportData) {
+        setLinkedReportData(event.detail.reportData);
+      }
+
+      if (event?.detail?.clientModel) {
+        setLinkedClientModel(event.detail.clientModel);
+      }
+    };
+
+    window.addEventListener("storage", syncFromStorage);
+    window.addEventListener("familyPensionReportDataUpdated", handleReportUpdate);
+
+    syncFromStorage();
+
+    return () => {
+      window.removeEventListener("storage", syncFromStorage);
+      window.removeEventListener("familyPensionReportDataUpdated", handleReportUpdate);
+    };
+  }, []);
+
+  const model = linkedClientModel || clientModel || {};
+  const linkedSourceReportData = linkedReportData || model.sourceReportData || clientModel?.sourceReportData || {};
+
+  const summary = model.summary || {};
+  const exposures = model.exposures || {};
+  const members = model.members || [];
+  const managers = model.distributions?.managers || [];
+  const products = model.distributions?.products || [];
   const mainGroups =
-    clientModel.distributions?.mainGroups ||
-    clientModel.distributions?.mainGroupAllocation ||
-    clientModel.mainGroupAllocation ||
-    clientModel.distributions?.assetClasses ||
+    model.distributions?.mainGroups ||
+    model.distributions?.mainGroupAllocation ||
+    model.mainGroupAllocation ||
+    model.distributions?.assetClasses ||
     [];
 
-  const loans = clientModel.loans || {};
+  const loans = model.loans || {};
   const loanDetails = Array.isArray(loans.details) ? loans.details : [];
 
-  const sourceReportData = clientModel.sourceReportData || {};
+  const sourceReportData = linkedSourceReportData || {};
   const vestedBalanceTable =
     clientModel.vestedBalanceTable || sourceReportData.vestedBalanceTable || null;
   const recognizedPensionAdjustments =
@@ -27,8 +100,8 @@ function ClientFamilyView({ clientModel }) {
     (Array.isArray(recognizedPensionAdjustments) &&
       recognizedPensionAdjustments.length > 0);
 
-  const summaryText = getClientConversationSummaryText(clientModel);
-  const recommendationsText = getClientRecommendationsText(clientModel);
+  const summaryText = getClientConversationSummaryText(model, sourceReportData);
+  const recommendationsText = getClientRecommendationsText(model, sourceReportData);
 
   const formatCurrency = (value) =>
     `₪${Math.round(Number(value || 0)).toLocaleString("en-US")}`;
@@ -292,7 +365,7 @@ function ClientFamilyView({ clientModel }) {
           title="דוח פנסיוני משפחתי מאוחד"
           eyebrow="מסך לקוח · דוח משפחתי מאוחד"
           subtitle="ריכזנו עבורך תמונת מצב משפחתית אחת הכוללת את כלל הנכסים הפנסיוניים, תחזית פרישה, פיזור בין מוצרים וגופים מנהלים, חשיפות ומידע מרכזי לכל אחד מבני המשפחה."
-          lastUpdated={clientModel.lastUpdated}
+          lastUpdated={model.lastUpdated}
         />
 
         <section className="family-top-grid" style={topGrid}>
@@ -521,16 +594,16 @@ function ClientFamilyView({ clientModel }) {
   );
 }
 
-function getClientConversationSummaryText(clientModel) {
-  const sourceReportData = clientModel?.sourceReportData || {};
+function getClientConversationSummaryText(clientModel, linkedReportData = null) {
+  const sourceReportData = linkedReportData || clientModel?.sourceReportData || {};
 
   const candidates = [
-    clientModel?.conversationSummary,
-    clientModel?.clientConversationSummary,
-    clientModel?.summaryText,
     sourceReportData?.conversationSummary,
     sourceReportData?.clientConversationSummary,
     sourceReportData?.summaryText,
+    clientModel?.conversationSummary,
+    clientModel?.clientConversationSummary,
+    clientModel?.summaryText,
     sourceReportData?.family?.conversationSummary,
     sourceReportData?.family?.clientConversationSummary,
     sourceReportData?.family?.summaryText,
@@ -541,17 +614,19 @@ function getClientConversationSummaryText(clientModel) {
     .find(Boolean) || "";
 }
 
-function getClientRecommendationsText(clientModel) {
-  const sourceReportData = clientModel?.sourceReportData || {};
+function getClientRecommendationsText(clientModel, linkedReportData = null) {
+  const sourceReportData = linkedReportData || clientModel?.sourceReportData || {};
 
   const candidates = [
+    sourceReportData?.actionRecommendations,
+    sourceReportData?.clientActionRecommendations,
+    sourceReportData?.recommendationsText,
+    sourceReportData?.recommendations,
     clientModel?.actionRecommendations,
+    clientModel?.clientActionRecommendations,
     clientModel?.recommendationsText,
     clientModel?.recommendations,
     clientModel?.clientRecommendations,
-    sourceReportData?.actionRecommendations,
-    sourceReportData?.recommendationsText,
-    sourceReportData?.recommendations,
     sourceReportData?.clientRecommendations,
     sourceReportData?.family?.actionRecommendations,
     sourceReportData?.family?.recommendationsText,

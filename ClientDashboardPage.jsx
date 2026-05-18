@@ -1691,26 +1691,45 @@ function TaxSavingGapSummary({ pdfTotal, manualTotal }) {
   );
 }
 
+function cleanActionRecommendationLine(line) {
+  return String(line || "")
+    .replace(/^\s*(?:[-•*]+\s*)+/, "")
+    .replace(/^\s*\d+\s*[.)\-–:]\s*/, "")
+    .replace(/^\s*[א-ת]{1,3}[׳'״\"]?\s*[.)\-–:]\s*/, "")
+    .trim();
+}
+
 function splitActionRecommendations(text) {
-  const raw = String(text || "").trim();
+  const raw = String(text || "").replace(/\r/g, "").trim();
   if (!raw) return [];
 
-  const lines = raw
-    .split(/\n+/)
-    .map((line) => line.replace(/^[-•*\d.)א-ת\s]+/, "").trim())
+  const numberedMatches = Array.from(
+    raw.matchAll(/(?:^|\n)\s*(?:\d+\s*[.)\-–:]|[א-ת]{1,3}[׳'״\"]?\s*[.)\-–:])\s+([\s\S]*?)(?=(?:\n\s*(?:\d+\s*[.)\-–:]|[א-ת]{1,3}[׳'״\"]?\s*[.)\-–:])\s+)|$)/g)
+  )
+    .map((match) => cleanActionRecommendationLine(match[1]))
     .filter(Boolean);
 
-  if (lines.length > 1) return lines;
+  if (numberedMatches.length) {
+    return numberedMatches;
+  }
+
+  const bulletLines = raw
+    .split(/\n+/)
+    .map(cleanActionRecommendationLine)
+    .filter(Boolean);
+
+  if (bulletLines.length > 1) {
+    return bulletLines;
+  }
 
   return raw
     .split(/(?<=[.!?])\s+/)
-    .map((line) => line.trim())
+    .map(cleanActionRecommendationLine)
     .filter(Boolean);
 }
 
-function getHebrewListMarker(index) {
-  const letters = ["א׳", "ב׳", "ג׳", "ד׳", "ה׳", "ו׳", "ז׳", "ח׳", "ט׳", "י׳", "י״א", "י״ב", "י״ג", "י״ד", "ט״ו", "ט״ז", "י״ז", "י״ח", "י״ט", "כ׳"];
-  return letters[index] || `${index + 1}.`;
+function getActionListMarker(index) {
+  return String(index + 1);
 }
 
 function escapeHtml(value) {
@@ -1732,8 +1751,8 @@ function downloadActionsPdf(actionsText) {
   }
 
   const actionsHtml = actions.length
-    ? actions.map((action, index) => `<li><span>${getHebrewListMarker(index)}</span><p>${escapeHtml(action)}</p></li>`).join("")
-    : `<li><span>א׳</span><p>לא הוזנו המלצות פעולה בדוח זה.</p></li>`;
+    ? actions.map((action, index) => `<li><span>${getActionListMarker(index)}</span><p>${escapeHtml(action)}</p></li>`).join("")
+    : `<li><span>1</span><p>לא הוזנו המלצות פעולה בדוח זה.</p></li>`;
 
   printWindow.document.open();
   printWindow.document.write(`<!doctype html>
@@ -1757,7 +1776,7 @@ function downloadActionsPdf(actionsText) {
     .actions-intro { color: #627D98; font-size: 14px; line-height: 1.7; margin: 0 0 18px; }
     ol { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 14px; }
     li { display: grid; grid-template-columns: 48px minmax(0, 1fr); gap: 12px; align-items: start; border: 1px solid #E2D1BF; border-radius: 16px; padding: 14px 16px; background: #FCFBF8; break-inside: avoid; page-break-inside: avoid; }
-    li span { width: 38px; height: 38px; border-radius: 14px; background: #00215D; color: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 900; }
+    li span { width: 38px; height: 38px; border-radius: 14px; background: #00215D; color: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 900; direction: ltr; }
     li p { margin: 0; color: #102A43; font-size: 15px; line-height: 1.75; white-space: pre-wrap; }
   </style>
 </head>

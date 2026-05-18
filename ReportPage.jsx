@@ -29,6 +29,8 @@ function createDefaultSummaryTopics(existingTopics = []) {
       checked: Boolean(existing.checked),
       spouseA: existing.spouseA || existing.partnerA || existing.husband || "",
       spouseB: existing.spouseB || existing.partnerB || existing.wife || "",
+      actionA: existing.actionA || existing.partnerAAction || existing.husbandAction || "",
+      actionB: existing.actionB || existing.partnerBAction || existing.wifeAction || "",
       action: existing.action || existing.recommendedAction || "",
     };
   });
@@ -71,26 +73,76 @@ function stripLeadingActionNumber(value) {
     .trim();
 }
 
-function buildActionRecommendationsText(manualText, topics) {
-  const manualActions = String(manualText || "")
+function cleanManualActionText(value) {
+  const text = String(value || "").trim();
+
+  if (!text) return "";
+
+  const legacyDefaultMarkers = [
+    "מומלץ לבחון את הפער בין הקצבה הצפויה",
+    "מומלץ לבדוק האם יש ריכוז יתר במוצרים",
+    "מומלץ לעבור על הכיסויים הביטוחיים",
+    "מומלץ לבחון את מדיניות ההשקעה",
+  ];
+
+  if (legacyDefaultMarkers.some((marker) => text.includes(marker))) {
+    return "";
+  }
+
+  return text;
+}
+
+function splitActionLines(value) {
+  return String(value || "")
     .split(/\n+/)
     .map(stripLeadingActionNumber)
     .filter(Boolean);
-
-  const topicActions = safeArray(topics)
-    .filter((topic) => topic.checked)
-    .map((topic) => ({
-      title: topic.title,
-      action: String(topic.action || "").trim(),
-    }))
-    .filter((topic) => topic.action)
-    .map((topic) => `${topic.title}: ${topic.action}`);
-
-  return [...manualActions, ...topicActions]
-    .map((line, index) => `${index + 1}. ${line}`)
-    .join("\n");
 }
 
+function formatTopicActionBlock(topic) {
+  const spouseAActions = splitActionLines(topic.actionA);
+  const spouseBActions = splitActionLines(topic.actionB);
+  const generalActions = splitActionLines(topic.action);
+  const lines = [];
+
+  if (spouseAActions.length) {
+    lines.push("בן זוג");
+    spouseAActions.forEach((action, index) => lines.push(`${index + 1}. ${action}`));
+  }
+
+  if (spouseBActions.length) {
+    if (lines.length) lines.push("");
+    lines.push("בת זוג");
+    spouseBActions.forEach((action, index) => lines.push(`${index + 1}. ${action}`));
+  }
+
+  if (generalActions.length) {
+    if (lines.length) lines.push("");
+    lines.push("כללי");
+    generalActions.forEach((action, index) => lines.push(`${index + 1}. ${action}`));
+  }
+
+  if (!lines.length) return "";
+
+  return `${topic.title}\n${lines.join("\n")}`;
+}
+
+function buildActionRecommendationsText(manualText, topics) {
+  const manualActions = splitActionLines(cleanManualActionText(manualText));
+
+  const topicActionBlocks = safeArray(topics)
+    .filter((topic) => topic.checked)
+    .map(formatTopicActionBlock)
+    .filter(Boolean);
+
+  const manualBlock = manualActions.length
+    ? `פעולות כלליות\n${manualActions
+        .map((line, index) => `${index + 1}. ${line}`)
+        .join("\n")}`
+    : "";
+
+  return [manualBlock, ...topicActionBlocks].filter(Boolean).join("\n\n");
+}
 
 function safeArray(value) {
   return Array.isArray(value) ? value : [];
@@ -242,15 +294,14 @@ export default function ReportPage({
 
   const [manualActionRecommendations, setManualActionRecommendations] = useState(
     () =>
-      reportData?.manualActionRecommendations ||
-      reportData?.actionRecommendations ||
-      reportData?.clientActionRecommendations ||
-      reportData?.recommendationsText ||
-      reportData?.recommendations ||
-      `1. מומלץ לבחון את הפער בין הקצבה הצפויה עם המשך הפקדות לבין ללא המשך הפקדות.
-2. מומלץ לבדוק האם יש ריכוז יתר במוצרים או בגופים מנהלים מסוימים.
-3. מומלץ לעבור על הכיסויים הביטוחיים ולוודא שהם מתאימים לצרכים המשפחתיים.
-4. מומלץ לבחון את מדיניות ההשקעה ורמת החשיפה למניות בהתאם לפרופיל הסיכון הרצוי.`
+      cleanManualActionText(
+        reportData?.manualActionRecommendations ||
+          reportData?.actionRecommendations ||
+          reportData?.clientActionRecommendations ||
+          reportData?.recommendationsText ||
+          reportData?.recommendations ||
+          ""
+      )
   );
 
   const [isClientLinkCopied, setIsClientLinkCopied] = useState(false);
@@ -273,15 +324,14 @@ export default function ReportPage({
     );
 
     setManualActionRecommendations(
-      reportData?.manualActionRecommendations ||
-        reportData?.actionRecommendations ||
-        reportData?.clientActionRecommendations ||
-        reportData?.recommendationsText ||
-        reportData?.recommendations ||
-        `1. מומלץ לבחון את הפער בין הקצבה הצפויה עם המשך הפקדות לבין ללא המשך הפקדות.
-2. מומלץ לבדוק האם יש ריכוז יתר במוצרים או בגופים מנהלים מסוימים.
-3. מומלץ לעבור על הכיסויים הביטוחיים ולוודא שהם מתאימים לצרכים המשפחתיים.
-4. מומלץ לבחון את מדיניות ההשקעה ורמת החשיפה למניות בהתאם לפרופיל הסיכון הרצוי.`
+      cleanManualActionText(
+        reportData?.manualActionRecommendations ||
+          reportData?.actionRecommendations ||
+          reportData?.clientActionRecommendations ||
+          reportData?.recommendationsText ||
+          reportData?.recommendations ||
+          ""
+      )
     );
   }, [reportData]);
 
@@ -302,6 +352,8 @@ export default function ReportPage({
           topic.checked &&
           (String(topic.spouseA || "").trim() ||
             String(topic.spouseB || "").trim() ||
+            String(topic.actionA || "").trim() ||
+            String(topic.actionB || "").trim() ||
             String(topic.action || "").trim())
       ),
     [summaryTopics]
@@ -1450,22 +1502,22 @@ export default function ReportPage({
     summaryTopicList: {
       display: "flex",
       flexDirection: "column",
-      gap: "12px",
-      marginTop: "14px",
+      gap: "7px",
+      marginTop: "12px",
     },
     summaryTopicCard: {
       border: `1px solid ${divider}`,
-      borderRadius: "18px",
+      borderRadius: "16px",
       background: "linear-gradient(180deg, #FFFFFF 0%, #FCFBF8 100%)",
-      padding: "14px",
+      padding: "10px 12px",
       boxShadow: "0 2px 8px rgba(16,42,67,0.035)",
     },
     summaryTopicTop: {
       display: "flex",
       justifyContent: "space-between",
       alignItems: "center",
-      gap: "12px",
-      marginBottom: "12px",
+      gap: "10px",
+      marginBottom: "6px",
       flexWrap: "wrap",
     },
     summaryTopicCheckLabel: {
@@ -1486,8 +1538,8 @@ export default function ReportPage({
     },
     summaryTopicGrid: {
       display: "grid",
-      gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
-      gap: "12px",
+      gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
+      gap: "10px",
       alignItems: "stretch",
     },
     summaryTopicFieldLabel: {
@@ -1498,7 +1550,7 @@ export default function ReportPage({
     },
     summaryTopicTextarea: {
       width: "100%",
-      minHeight: "74px",
+      minHeight: "60px",
       resize: "vertical",
       border: `1px solid ${border}`,
       borderRadius: "14px",
@@ -1513,13 +1565,13 @@ export default function ReportPage({
     },
     summaryTopicActionTextarea: {
       width: "100%",
-      minHeight: "74px",
+      minHeight: "60px",
       resize: "vertical",
       border: `1px solid ${border}`,
       borderRadius: "14px",
       padding: "12px",
       color: text,
-      background: "#FFF7E8",
+      background: "#FFFDFB",
       fontSize: "12px",
       lineHeight: 1.55,
       fontFamily: 'Calibri, "Arial", sans-serif',
@@ -3342,53 +3394,67 @@ export default function ReportPage({
                         </div>
                       </div>
 
-                      <div className="summary-topic-grid" style={styles.summaryTopicGrid}>
-                        <div>
-                          <div style={styles.summaryTopicFieldLabel}>סיכום בן זוג</div>
-                          <textarea
-                            className="summary-topic-textarea"
-                            value={topic.spouseA}
-                            onChange={(e) =>
-                              updateSummaryTopic(topic.id, "spouseA", e.target.value)
-                            }
-                            style={styles.summaryTopicTextarea}
-                            placeholder="כתוב סיכום קצר לבן זוג..."
-                          />
-                        </div>
+                      {topic.checked ? (
+                        <div className="summary-topic-grid" style={styles.summaryTopicGrid}>
+                          <div>
+                            <div style={styles.summaryTopicFieldLabel}>סיכום בן זוג</div>
+                            <textarea
+                              className="summary-topic-textarea"
+                              value={topic.spouseA}
+                              onChange={(e) =>
+                                updateSummaryTopic(topic.id, "spouseA", e.target.value)
+                              }
+                              style={styles.summaryTopicTextarea}
+                              placeholder="כתוב סיכום קצר לבן זוג..."
+                            />
+                          </div>
 
-                        <div>
-                          <div style={styles.summaryTopicFieldLabel}>סיכום בת זוג</div>
-                          <textarea
-                            className="summary-topic-textarea"
-                            value={topic.spouseB}
-                            onChange={(e) =>
-                              updateSummaryTopic(topic.id, "spouseB", e.target.value)
-                            }
-                            style={styles.summaryTopicTextarea}
-                            placeholder="כתוב סיכום קצר לבת זוג..."
-                          />
-                        </div>
+                          <div>
+                            <div style={styles.summaryTopicFieldLabel}>סיכום בת זוג</div>
+                            <textarea
+                              className="summary-topic-textarea"
+                              value={topic.spouseB}
+                              onChange={(e) =>
+                                updateSummaryTopic(topic.id, "spouseB", e.target.value)
+                              }
+                              style={styles.summaryTopicTextarea}
+                              placeholder="כתוב סיכום קצר לבת זוג..."
+                            />
+                          </div>
 
-                        <div>
-                          <div style={styles.summaryTopicFieldLabel}>פעולה אופרטיבית לביצוע</div>
-                          <textarea
-                            className="summary-topic-textarea"
-                            value={topic.action}
-                            onChange={(e) =>
-                              updateSummaryTopic(topic.id, "action", e.target.value)
-                            }
-                            style={styles.summaryTopicActionTextarea}
-                            placeholder="לדוגמה: לבדוק ניוד, לשנות מסלול, לפנות לחברת הביטוח..."
-                          />
+                          <div>
+                            <div style={styles.summaryTopicFieldLabel}>פעולה לבן זוג</div>
+                            <textarea
+                              className="summary-topic-textarea"
+                              value={topic.actionA}
+                              onChange={(e) =>
+                                updateSummaryTopic(topic.id, "actionA", e.target.value)
+                              }
+                              style={styles.summaryTopicActionTextarea}
+                              placeholder="כתוב פעולה אחת או יותר, כל פעולה בשורה נפרדת..."
+                            />
+                          </div>
+
+                          <div>
+                            <div style={styles.summaryTopicFieldLabel}>פעולה לבת זוג</div>
+                            <textarea
+                              className="summary-topic-textarea"
+                              value={topic.actionB}
+                              onChange={(e) =>
+                                updateSummaryTopic(topic.id, "actionB", e.target.value)
+                              }
+                              style={styles.summaryTopicActionTextarea}
+                              placeholder="כתוב פעולה אחת או יותר, כל פעולה בשורה נפרדת..."
+                            />
+                          </div>
                         </div>
-                      </div>
+                      ) : null}
                     </div>
                   ))}
                 </div>
 
                 <div style={styles.summaryPreviewBox}>
-                  {conversationSummary ||
-                    "תצוגה מקדימה של הסיכום שיועבר ללקוח תופיע כאן לאחר סימון נושאים או כתיבת סיכום כללי."}
+                  {conversationSummary || "אין סיכום להצגה ללקוח כרגע."}
                 </div>
               </div>
             </div>
@@ -3406,8 +3472,7 @@ export default function ReportPage({
             </div>
 
             <div style={styles.explanation}>
-              ניתן להוסיף פעולות ידניות חופשיות. בנוסף, כל פעולה שנכתבה בשורת
-              נושא מסומנת תתווסף אוטומטית לרשימת הפעולות שתוצג ללקוח.
+              כאן יוצגו רק פעולות שנכתבו בפועל — ידנית או לפי נושא מסומן. לא תתווסף פעולה אוטומטית שלא נכתבה.
             </div>
 
             <div style={styles.recommendationsWrap}>
@@ -3419,7 +3484,7 @@ export default function ReportPage({
                   value={manualActionRecommendations}
                   onChange={(e) => setManualActionRecommendations(e.target.value)}
                   style={styles.recommendationsText}
-                  placeholder="כתוב כאן פעולות כלליות שאינן קשורות לנושא ספציפי..."
+                  placeholder="כתוב כאן רק פעולות כלליות, אם יש. פעולות לפי נושא יש להזין בטבלת הנושאים למעלה."
                 />
 
                 <div style={{ marginTop: 14 }}>
@@ -3427,7 +3492,7 @@ export default function ReportPage({
                     תצוגה מקדימה של פעולות ללקוח
                   </div>
                   <div style={styles.summaryPreviewBox}>
-                    {actionRecommendations || "לא הוגדרו פעולות להצגה."}
+                    {actionRecommendations || "אין פעולות להצגה ללקוח כרגע."}
                   </div>
                 </div>
               </div>

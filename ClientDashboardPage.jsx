@@ -129,58 +129,29 @@ function findFirstObjectByKeyHints(source, keyHints, depth = 0, visited = new Se
 
 function buildSpecialSectionsModel(reportData) {
   const data = reportData || {};
+  const section28Capping = data.section28Capping || data.sourceReportData?.section28Capping || null;
+  const vestedBalanceTable = data.vestedBalanceTable || data.sourceReportData?.vestedBalanceTable || null;
+  const recognizedPensionAdjustments = data.recognizedPensionAdjustments || data.sourceReportData?.recognizedPensionAdjustments || null;
 
-  const section28Data =
-    findFirstMeaningfulValueByPath(data, [
-      "section28",
-      "section28Data",
-      "section28Summary",
-      "section28Result",
-      "section28Calculation",
-      "taxSection28",
-      "tax.section28",
-      "tax.section28Data",
-      "pension.section28",
-      "sourceReportData.section28",
-    ]) ||
-    (data.hasSection28 ? { hasSection28: true, note: "קיים סימון שיש נתוני סעיף 28 בדוח, אך לא אותר אובייקט מפורט תחת reportData." } : null) ||
-    findFirstObjectByKeyHints(data, ["section28", "section_28", "hassection28", "סעיף28", "סעיף 28"]);
+  const section28Groups = safeArray(section28Capping?.groups);
+  const vestedRows = safeArray(vestedBalanceTable?.rows);
+  const recognizedAdjustments = safeArray(recognizedPensionAdjustments);
 
-  const recognizedPensionData =
-    findFirstMeaningfulValueByPath(data, [
-      "recognizedPension",
-      "recognizedPensionData",
-      "recognizedPensionSummary",
-      "recognizedPensionResult",
-      "exemptPayments",
-      "exemptPaymentsTotal",
-      "recognizedPension.exemptPayments",
-      "recognizedPension.exemptPaymentsTotal",
-      "kitzbaMuzeret",
-      "kizbaMukeret",
-      "tax.recognizedPension",
-      "tax.exemptPayments",
-      "sourceReportData.recognizedPension",
-    ]) ||
-    (data.hasRecognizedPension || data.hasExemptPayments
-      ? { hasRecognizedPension: true, note: "קיים סימון שיש נתוני קצבה מוכרת בדוח, אך לא אותר אובייקט מפורט תחת reportData." }
-      : null) ||
-    findFirstObjectByKeyHints(data, ["recognizedpension", "exemptpayments", "קצבה", "מוכרת", "פטור"]);
-
-  const hasSection28 = hasMeaningfulValue(section28Data);
-  const hasRecognizedPension = hasMeaningfulValue(recognizedPensionData);
-
-  let label = "סעיף 28 וקצבה מוכרת";
-  if (hasSection28 && !hasRecognizedPension) label = "סעיף 28";
-  if (!hasSection28 && hasRecognizedPension) label = "קצבה מוכרת";
+  const hasSection28 = section28Groups.length > 0;
+  const hasRecognizedPension = vestedRows.length > 0 || recognizedAdjustments.length > 0;
 
   return {
     hasSection28,
     hasRecognizedPension,
     hasAny: hasSection28 || hasRecognizedPension,
-    label,
-    section28Data,
-    recognizedPensionData,
+    section28Capping,
+    vestedBalanceTable,
+    recognizedPensionAdjustments,
+    section28Data: section28Capping,
+    recognizedPensionData: {
+      vestedBalanceTable,
+      recognizedPensionAdjustments,
+    },
   };
 }
 
@@ -744,16 +715,15 @@ function buildNavItems(specialSections) {
   if (!specialSections?.hasAny) return BASE_NAV_ITEMS;
 
   const summaryIndex = BASE_NAV_ITEMS.findIndex((item) => item.id === "summary");
-  const specialItem = {
-    id: "section28RecognizedPension",
-    label: specialSections.label || "סעיף 28 וקצבה מוכרת",
-    icon: "§",
-  };
+  const specialItems = [
+    specialSections.hasSection28 ? { id: "section28", label: "קיטום סעיף 28", icon: "§" } : null,
+    specialSections.hasRecognizedPension ? { id: "recognizedPension", label: "קצבה מוכרת", icon: "₪" } : null,
+  ].filter(Boolean);
 
-  if (summaryIndex < 0) return [...BASE_NAV_ITEMS, specialItem];
+  if (summaryIndex < 0) return [...BASE_NAV_ITEMS, ...specialItems];
   return [
     ...BASE_NAV_ITEMS.slice(0, summaryIndex),
-    specialItem,
+    ...specialItems,
     ...BASE_NAV_ITEMS.slice(summaryIndex),
   ];
 }
@@ -855,7 +825,8 @@ export default function ClientDashboardPage({
           {activeSection === "allocation" ? <AllocationSection scope={scope} onSegmentClick={handleOpenPieDrawer} /> : null}
           {activeSection === "insurance" ? <InsuranceSection scope={scope} /> : null}
           {activeSection === "loans" ? <LoansSection scope={scope} /> : null}
-          {activeSection === "section28RecognizedPension" ? <Section28RecognizedPensionSection model={specialSections} /> : null}
+          {activeSection === "section28" ? <Section28Section section28Capping={specialSections.section28Capping} /> : null}
+          {activeSection === "recognizedPension" ? <RecognizedPensionSection vestedBalanceTable={specialSections.vestedBalanceTable} recognizedPensionAdjustments={specialSections.recognizedPensionAdjustments} /> : null}
           {activeSection === "summary" ? <ConversationSummarySection scope={scope} clientModel={clientModel} reportData={reportData} /> : null}
         </section>
       </main>
@@ -1170,11 +1141,13 @@ function LoansSection({ scope }) {
 }
 
 
-function Section28RecognizedPensionSection({ model }) {
-  if (!model?.hasAny) {
+function Section28Section({ section28Capping }) {
+  const groups = safeArray(section28Capping?.groups);
+
+  if (!groups.length) {
     return (
       <div>
-        <SectionTitle title="סעיף 28 וקצבה מוכרת" subtitle="בדוח הנוכחי לא נמצאו נתונים להצגה עבור סעיף 28 או קצבה מוכרת." />
+        <SectionTitle title="קיטום סעיף 28" subtitle="בדוח הנוכחי לא נמצאו נתוני קיטום סעיף 28 להצגה." />
         <div className="client-empty-state">אין נתונים להצגה באזור זה.</div>
       </div>
     );
@@ -1183,30 +1156,46 @@ function Section28RecognizedPensionSection({ model }) {
   return (
     <div>
       <SectionTitle
-        title={model.label || "סעיף 28 וקצבה מוכרת"}
-        subtitle="אזור זה מופיע אוטומטית רק כאשר נתוני סעיף 28 ו/או קצבה מוכרת קיימים ב־reportData שהגיע מה־REPORT."
+        title="קיטום סעיף 28"
+        subtitle="ריכוז נתוני סעיף 28 כפי שהועברו מה־REPORT. החוצץ מוצג רק כאשר section28Capping.groups כולל נתונים."
       />
-
-      <div className="client-special-grid">
-        {model.hasSection28 ? (
-          <SpecialDataPanel
-            title="סעיף 28"
-            subtitle="ריכוז נתוני סעיף 28 כפי שהועברו מה־REPORT."
-            data={model.section28Data}
-          />
-        ) : null}
-
-        {model.hasRecognizedPension ? (
-          <SpecialDataPanel
-            title="קצבה מוכרת"
-            subtitle="ריכוז נתוני קצבה מוכרת / exemptPayments כפי שנקראו מה־PDF ומה־REPORT."
-            data={model.recognizedPensionData}
-          />
-        ) : null}
-      </div>
+      <SpecialDataPanel
+        title="קיטום סעיף 28"
+        subtitle="פירוט נתוני הקיטום והחישוב לפי הקבוצות שהועברו מהדוח."
+        data={section28Capping}
+      />
     </div>
   );
 }
+
+function RecognizedPensionSection({ vestedBalanceTable, recognizedPensionAdjustments }) {
+  const rows = safeArray(vestedBalanceTable?.rows);
+  const adjustments = safeArray(recognizedPensionAdjustments);
+
+  if (!rows.length && !adjustments.length) {
+    return (
+      <div>
+        <SectionTitle title="קצבה מוכרת" subtitle="בדוח הנוכחי לא נמצאו נתוני קצבה מוכרת להצגה." />
+        <div className="client-empty-state">אין נתונים להצגה באזור זה.</div>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <SectionTitle
+        title="קצבה מוכרת"
+        subtitle="ריכוז נתוני קצבה מוכרת כפי שהועברו מה־REPORT. החוצץ מוצג רק כאשר קיימות שורות vestedBalanceTable או התאמות recognizedPensionAdjustments."
+      />
+      <SpecialDataPanel
+        title="קצבה מוכרת"
+        subtitle="פירוט נתוני טבלת היתרות וההתאמות הידניות/חברת הביטוח."
+        data={{ vestedBalanceTable, recognizedPensionAdjustments }}
+      />
+    </div>
+  );
+}
+
 
 function SpecialDataPanel({ title, subtitle, data }) {
   const primitiveRows = extractPrimitiveRows(data);
@@ -1261,19 +1250,127 @@ function SpecialDataPanel({ title, subtitle, data }) {
 }
 
 
+function splitActionRecommendations(text) {
+  const raw = String(text || "").trim();
+  if (!raw) return [];
+
+  const lines = raw
+    .split(/\n+/)
+    .map((line) => line.replace(/^[-•*\d.)א-ת\s]+/, "").trim())
+    .filter(Boolean);
+
+  if (lines.length > 1) return lines;
+
+  return raw
+    .split(/(?<=[.!?])\s+/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+}
+
+function getHebrewListMarker(index) {
+  const letters = ["א׳", "ב׳", "ג׳", "ד׳", "ה׳", "ו׳", "ז׳", "ח׳", "ט׳", "י׳", "י״א", "י״ב", "י״ג", "י״ד", "ט״ו", "ט״ז", "י״ז", "י״ח", "י״ט", "כ׳"];
+  return letters[index] || `${index + 1}.`;
+}
+
+function escapeHtml(value) {
+  return String(value || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+function downloadActionsPdf(actionsText) {
+  const actions = splitActionRecommendations(actionsText);
+  const printWindow = window.open("", "_blank", "width=900,height=700");
+
+  if (!printWindow) {
+    alert("הדפדפן חסם את חלון ההדפסה. יש לאפשר popups ולנסות שוב.");
+    return;
+  }
+
+  const actionsHtml = actions.length
+    ? actions.map((action, index) => `<li><span>${getHebrewListMarker(index)}</span><p>${escapeHtml(action)}</p></li>`).join("")
+    : `<li><span>א׳</span><p>לא הוזנו המלצות פעולה בדוח זה.</p></li>`;
+
+  printWindow.document.open();
+  printWindow.document.write(`<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <title>פעולות אופרטיביות לביצוע</title>
+  <style>
+    @page { size: A4 portrait; margin: 14mm; }
+    * { box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    body { margin: 0; direction: rtl; font-family: Calibri, Arial, sans-serif; color: #102A43; background: #ffffff; }
+    .actions-pdf-page { min-height: 269mm; padding: 0; }
+    .actions-brand { display: flex; align-items: center; gap: 14px; padding-bottom: 18px; border-bottom: 3px solid #00215D; margin-bottom: 28px; }
+    .actions-logo { width: 62px; height: 62px; border-radius: 50%; background: #00215D; position: relative; box-shadow: 0 8px 20px rgba(0,33,93,.16); }
+    .actions-logo::before, .actions-logo::after { content: ""; position: absolute; width: 30px; height: 9px; border-radius: 999px; right: 16px; transform: rotate(-35deg); }
+    .actions-logo::before { top: 19px; background: #FF2756; }
+    .actions-logo::after { top: 31px; background: #ffffff; }
+    .actions-brand-title { color: #00215D; font-size: 24px; font-weight: 900; line-height: 1.15; }
+    .actions-brand-subtitle { color: #627D98; font-size: 13px; font-weight: 700; margin-top: 4px; }
+    h1 { margin: 0 0 22px; color: #00215D; font-size: 30px; line-height: 1.25; font-weight: 900; }
+    .actions-intro { color: #627D98; font-size: 14px; line-height: 1.7; margin: 0 0 18px; }
+    ol { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 14px; }
+    li { display: grid; grid-template-columns: 48px minmax(0, 1fr); gap: 12px; align-items: start; border: 1px solid #E2D1BF; border-radius: 16px; padding: 14px 16px; background: #FCFBF8; break-inside: avoid; page-break-inside: avoid; }
+    li span { width: 38px; height: 38px; border-radius: 14px; background: #00215D; color: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 900; }
+    li p { margin: 0; color: #102A43; font-size: 15px; line-height: 1.75; white-space: pre-wrap; }
+  </style>
+</head>
+<body>
+  <main class="actions-pdf-page">
+    <header class="actions-brand">
+      <div class="actions-logo" aria-hidden="true"></div>
+      <div>
+        <div class="actions-brand-title">צבירן</div>
+        <div class="actions-brand-subtitle">דוח פנסיוני משפחתי מאוחד</div>
+      </div>
+    </header>
+    <h1>פעולות אופרטיביות לביצוע</h1>
+    <p class="actions-intro">רשימת הפעולות להמשך טיפול כפי שהוגדרה באזור המלצות הפעולה בדוח הלקוח.</p>
+    <ol>${actionsHtml}</ol>
+  </main>
+  <script>
+    window.onload = function () {
+      window.focus();
+      window.print();
+    };
+  </script>
+</body>
+</html>`);
+  printWindow.document.close();
+}
+
+function handleMockEmailSend() {
+  alert("שליחת מייל תתווסף בהמשך. כרגע זה כפתור דמה בלבד.");
+}
+
 function ConversationSummarySection({ scope, clientModel, reportData }) {
   const savedSummary = reportData?.conversationSummary || reportData?.clientConversationSummary || clientModel?.conversationSummary || "";
   const savedActions = reportData?.actionRecommendations || reportData?.recommendationsText || clientModel?.actionRecommendations || "";
+  const fallbackSummary = `כאן יוצג סיכום השיחה עם הלקוח עבור ${scope.name}. בשלב זה זהו אזור הכנה, וניתן לחבר אליו בהמשך שדה טקסט מה־REPORT או ממנגנון שמירת הדוח.`;
+  const fallbackActions = "כאן יוצגו המלצות פעולה, נקודות לבדיקה, החלטות שהתקבלו או משימות להמשך טיפול.";
+  const actionsForPdf = savedActions || fallbackActions;
+
   return (
     <div>
       <SectionTitle title="סיכום שיחה והמלצות פעולה" subtitle="אזור ייעודי להצגת סיכום פגישה, תובנות והמלצות פעולה ללקוח." />
       <div className="client-grid-2">
-        <TextPanel title="סיכום שיחה" text={savedSummary || `כאן יוצג סיכום השיחה עם הלקוח עבור ${scope.name}. בשלב זה זהו אזור הכנה, וניתן לחבר אליו בהמשך שדה טקסט מה־REPORT או ממנגנון שמירת הדוח.`} />
-        <TextPanel title="המלצות פעולה" text={savedActions || "כאן יוצגו המלצות פעולה, נקודות לבדיקה, החלטות שהתקבלו או משימות להמשך טיפול."} />
+        <TextPanel title="סיכום שיחה" text={savedSummary || fallbackSummary} />
+        <TextPanel title="המלצות פעולה" text={savedActions || fallbackActions}>
+          <div className="client-action-buttons">
+            <button type="button" className="client-action-button primary" onClick={() => downloadActionsPdf(actionsForPdf)}>הורדת PDF</button>
+            <button type="button" className="client-action-button" onClick={handleMockEmailSend}>שליחת מייל</button>
+          </div>
+        </TextPanel>
       </div>
     </div>
   );
 }
+
 
 function SectionTitle({ title, subtitle }) {
   return <div className="client-section-title-row"><div><h2>{title}</h2>{subtitle ? <p>{subtitle}</p> : null}</div></div>;
@@ -1614,8 +1711,8 @@ function PieSegmentDrawer({ selected, onClose }) {
 }
 
 
-function TextPanel({ title, text }) {
-  return <div className="client-panel"><h3>{title}</h3><div className="client-text-panel">{text}</div></div>;
+function TextPanel({ title, text, children }) {
+  return <div className="client-panel"><h3>{title}</h3><div className="client-text-panel">{text}</div>{children}</div>;
 }
 
 function buildSegments(items) {
@@ -1787,6 +1884,11 @@ const clientDashboardCss = `
   .client-special-metric strong { color: ${theme.navy}; font-size: 16px; font-weight: 900; line-height: 1.25; direction: rtl; word-break: break-word; }
   .client-special-table { min-width: 760px; }
   .client-special-note { margin-top: 14px; background: #EEF2FA; border: 1px solid #D8DEE9; border-radius: 14px; padding: 12px 14px; color: ${theme.textSoft}; font-size: 12px; line-height: 1.7; }
+
+  .client-action-buttons { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 14px; }
+  .client-action-button { min-height: 42px; border-radius: 14px; border: 1px solid #D8DEE9; background: #FFFFFF; color: ${theme.navy}; padding: 0 18px; font-family: Calibri, Arial, sans-serif; font-size: 13px; font-weight: 900; cursor: pointer; transition: .18s ease; }
+  .client-action-button:hover { transform: translateY(-1px); box-shadow: 0 8px 18px rgba(0,33,93,.10); }
+  .client-action-button.primary { border-color: ${theme.navy}; background: ${theme.navy}; color: #FFFFFF; }
 
   @media print { .client-web-shell { display: none !important; } }
   @media (max-width: 1180px) { .client-product-summary { grid-template-columns: 28px minmax(0, 1fr) repeat(2, minmax(110px, .8fr)); } .client-product-strip-item { border-right: 0; padding-right: 0; } .client-web-shell { grid-template-columns: 1fr; } .client-sidebar { position: relative; height: auto; display: block; border-left: 0; border-bottom: 1px solid rgba(255,255,255,0.12); } .client-sidebar-nav { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); } .client-main { padding: 18px; } .client-topbar { flex-direction: column; align-items: stretch; } .client-topbar-actions { justify-content: flex-start; } .client-kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .client-grid-3, .client-grid-2, .client-personal-grid, .client-allocation-top-pies, .client-special-grid { grid-template-columns: 1fr; } }

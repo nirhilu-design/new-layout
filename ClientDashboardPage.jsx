@@ -81,6 +81,212 @@ function getFirstText(values) {
     .find((value) => value && value !== "—" && value !== "-") || "";
 }
 
+
+function hasMeaningfulValue(value, depth = 0) {
+  if (value === null || value === undefined || depth > 5) return false;
+  if (typeof value === "number") return Number.isFinite(value) && value !== 0;
+  if (typeof value === "string") {
+    const clean = value.trim();
+    if (!clean || clean === "—" || clean === "-") return false;
+    const numeric = Number(clean.replace(/[₪,%\s,]/g, ""));
+    return clean.length > 0 && (Number.isNaN(numeric) || numeric !== 0);
+  }
+  if (typeof value === "boolean") return value === true;
+  if (Array.isArray(value)) return value.some((item) => hasMeaningfulValue(item, depth + 1));
+  if (typeof value === "object") return Object.values(value).some((item) => hasMeaningfulValue(item, depth + 1));
+  return false;
+}
+
+function findFirstMeaningfulValueByPath(source, paths) {
+  for (const path of paths) {
+    const value = path.split(".").reduce((acc, key) => (acc && acc[key] !== undefined ? acc[key] : undefined), source);
+    if (hasMeaningfulValue(value)) return value;
+  }
+  return null;
+}
+
+function findFirstObjectByKeyHints(source, keyHints, depth = 0, visited = new Set()) {
+  if (!source || typeof source !== "object" || depth > 5 || visited.has(source)) return null;
+  visited.add(source);
+
+  if (!Array.isArray(source)) {
+    for (const [key, value] of Object.entries(source)) {
+      const normalizedKey = String(key || "").toLowerCase();
+      if (keyHints.some((hint) => normalizedKey.includes(String(hint).toLowerCase())) && hasMeaningfulValue(value)) {
+        return value;
+      }
+    }
+  }
+
+  const children = Array.isArray(source) ? source : Object.values(source);
+  for (const child of children) {
+    const found = findFirstObjectByKeyHints(child, keyHints, depth + 1, visited);
+    if (found) return found;
+  }
+
+  return null;
+}
+
+function buildSpecialSectionsModel(reportData) {
+  const data = reportData || {};
+
+  const section28Data =
+    findFirstMeaningfulValueByPath(data, [
+      "section28",
+      "section28Data",
+      "section28Summary",
+      "section28Result",
+      "section28Calculation",
+      "taxSection28",
+      "tax.section28",
+      "tax.section28Data",
+      "pension.section28",
+      "sourceReportData.section28",
+    ]) ||
+    (data.hasSection28 ? { hasSection28: true, note: "קיים סימון שיש נתוני סעיף 28 בדוח, אך לא אותר אובייקט מפורט תחת reportData." } : null) ||
+    findFirstObjectByKeyHints(data, ["section28", "section_28", "hassection28", "סעיף28", "סעיף 28"]);
+
+  const recognizedPensionData =
+    findFirstMeaningfulValueByPath(data, [
+      "recognizedPension",
+      "recognizedPensionData",
+      "recognizedPensionSummary",
+      "recognizedPensionResult",
+      "exemptPayments",
+      "exemptPaymentsTotal",
+      "recognizedPension.exemptPayments",
+      "recognizedPension.exemptPaymentsTotal",
+      "kitzbaMuzeret",
+      "kizbaMukeret",
+      "tax.recognizedPension",
+      "tax.exemptPayments",
+      "sourceReportData.recognizedPension",
+    ]) ||
+    (data.hasRecognizedPension || data.hasExemptPayments
+      ? { hasRecognizedPension: true, note: "קיים סימון שיש נתוני קצבה מוכרת בדוח, אך לא אותר אובייקט מפורט תחת reportData." }
+      : null) ||
+    findFirstObjectByKeyHints(data, ["recognizedpension", "exemptpayments", "קצבה", "מוכרת", "פטור"]);
+
+  const hasSection28 = hasMeaningfulValue(section28Data);
+  const hasRecognizedPension = hasMeaningfulValue(recognizedPensionData);
+
+  let label = "סעיף 28 וקצבה מוכרת";
+  if (hasSection28 && !hasRecognizedPension) label = "סעיף 28";
+  if (!hasSection28 && hasRecognizedPension) label = "קצבה מוכרת";
+
+  return {
+    hasSection28,
+    hasRecognizedPension,
+    hasAny: hasSection28 || hasRecognizedPension,
+    label,
+    section28Data,
+    recognizedPensionData,
+  };
+}
+
+function formatTechnicalLabel(key) {
+  const labels = {
+    exemptPayments: "תשלומים פטורים",
+    exemptPaymentsTotal: "סה״כ תשלומים פטורים",
+    recognizedPension: "קצבה מוכרת",
+    section28: "סעיף 28",
+    employee: "עובד",
+    employer: "מעסיק",
+    total: "סה״כ",
+    gap: "פער",
+    difference: "הפרש",
+    company: "חברה",
+    insuranceCompany: "חברת ביטוח",
+    manualValue: "נתון ידני",
+    calculatedValue: "נתון מחושב",
+    hasSection28: "קיים סעיף 28",
+    hasRecognizedPension: "קיימת קצבה מוכרת",
+    note: "הערה",
+  };
+
+  return labels[key] || String(key || "")
+    .replace(/([A-Z])/g, " $1")
+    .replace(/_/g, " ")
+    .trim();
+}
+
+function formatDisplayValue(value) {
+  if (value === null || value === undefined || value === "") return "—";
+  if (typeof value === "boolean") return value ? "כן" : "לא";
+  if (typeof value === "number") {
+    if (!Number.isFinite(value)) return "—";
+    return Math.abs(value) >= 1000 ? formatCurrency(value) : value.toLocaleString("he-IL");
+  }
+  if (typeof value === "string") return value;
+  return "";
+}
+
+function extractPrimitiveRows(data, maxRows = 14) {
+  const rows = [];
+
+  function walk(value, prefix = "", depth = 0) {
+    if (rows.length >= maxRows || value === null || value === undefined || depth > 3) return;
+
+    if (typeof value !== "object") {
+      if (hasMeaningfulValue(value)) rows.push({ key: prefix || "value", value });
+      return;
+    }
+
+    if (Array.isArray(value)) {
+      value.slice(0, 4).forEach((item, index) => walk(item, `${prefix} ${index + 1}`.trim(), depth + 1));
+      return;
+    }
+
+    Object.entries(value).forEach(([key, child]) => {
+      const nextKey = prefix ? `${prefix} · ${formatTechnicalLabel(key)}` : formatTechnicalLabel(key);
+      if (child !== null && typeof child === "object") {
+        walk(child, nextKey, depth + 1);
+      } else if (hasMeaningfulValue(child)) {
+        rows.push({ key: nextKey, value: child });
+      }
+    });
+  }
+
+  walk(data);
+  return rows;
+}
+
+function extractArrayTables(data) {
+  const tables = [];
+
+  function walk(value, prefix = "", depth = 0) {
+    if (!value || depth > 3) return;
+
+    if (Array.isArray(value) && value.length && value.some((item) => item && typeof item === "object")) {
+      const rows = value.filter((item) => item && typeof item === "object").slice(0, 12);
+      const columns = Array.from(
+        new Set(rows.flatMap((row) => Object.keys(row || {}).filter((key) => typeof row[key] !== "object").slice(0, 8)))
+      ).slice(0, 8);
+
+      if (columns.length) {
+        tables.push({
+          title: prefix || "פירוט",
+          columns,
+          rows,
+        });
+      }
+      return;
+    }
+
+    if (typeof value === "object" && !Array.isArray(value)) {
+      Object.entries(value).forEach(([key, child]) => {
+        if (Array.isArray(child) || (child && typeof child === "object")) {
+          walk(child, prefix ? `${prefix} · ${formatTechnicalLabel(key)}` : formatTechnicalLabel(key), depth + 1);
+        }
+      });
+    }
+  }
+
+  walk(data);
+  return tables.slice(0, 4);
+}
+
+
 function getPolicyDeathCoverage(policy) {
   return getFirstPositiveNumber([
     policy?.insurance?.deathCoverage,
@@ -525,7 +731,7 @@ function EmptyDashboardState({ onBack }) {
   );
 }
 
-const NAV_ITEMS = [
+const BASE_NAV_ITEMS = [
   { id: "pension", label: "סיכום פנסיוני", icon: "▥" },
   { id: "personal", label: "פרטים אישיים", icon: "☷" },
   { id: "allocation", label: "התפלגות נכסים", icon: "◔" },
@@ -533,6 +739,24 @@ const NAV_ITEMS = [
   { id: "loans", label: "הלוואות", icon: "🏦" },
   { id: "summary", label: "סיכום שיחה והמלצות פעולה", icon: "✎" },
 ];
+
+function buildNavItems(specialSections) {
+  if (!specialSections?.hasAny) return BASE_NAV_ITEMS;
+
+  const summaryIndex = BASE_NAV_ITEMS.findIndex((item) => item.id === "summary");
+  const specialItem = {
+    id: "section28RecognizedPension",
+    label: specialSections.label || "סעיף 28 וקצבה מוכרת",
+    icon: "§",
+  };
+
+  if (summaryIndex < 0) return [...BASE_NAV_ITEMS, specialItem];
+  return [
+    ...BASE_NAV_ITEMS.slice(0, summaryIndex),
+    specialItem,
+    ...BASE_NAV_ITEMS.slice(summaryIndex),
+  ];
+}
 
 export default function ClientDashboardPage({
   reportData,
@@ -550,6 +774,8 @@ export default function ClientDashboardPage({
 
   const clientModel = useMemo(() => buildClientModelFromReportData(reportData), [reportData]);
   const detailedMembers = useMemo(() => buildDetailedMembers(reportData, clientModel), [reportData, clientModel]);
+  const specialSections = useMemo(() => buildSpecialSectionsModel(reportData), [reportData]);
+  const navItems = useMemo(() => buildNavItems(specialSections), [specialSections]);
   const scope = getSelectedScope(clientModel, detailedMembers, localScopeId);
 
   const handleOpenPieDrawer = (payload) => {
@@ -586,7 +812,7 @@ export default function ClientDashboardPage({
         </div>
 
         <nav className="client-sidebar-nav" aria-label="ניווט במסך הלקוח">
-          {NAV_ITEMS.map((item) => (
+          {navItems.map((item) => (
             <button key={item.id} type="button" onClick={() => setActiveSection(item.id)} className={activeSection === item.id ? "client-nav-item active" : "client-nav-item"}>
               <span className="client-nav-icon">{item.icon}</span>
               <span>{item.label}</span>
@@ -629,6 +855,7 @@ export default function ClientDashboardPage({
           {activeSection === "allocation" ? <AllocationSection scope={scope} onSegmentClick={handleOpenPieDrawer} /> : null}
           {activeSection === "insurance" ? <InsuranceSection scope={scope} /> : null}
           {activeSection === "loans" ? <LoansSection scope={scope} /> : null}
+          {activeSection === "section28RecognizedPension" ? <Section28RecognizedPensionSection model={specialSections} /> : null}
           {activeSection === "summary" ? <ConversationSummarySection scope={scope} clientModel={clientModel} reportData={reportData} /> : null}
         </section>
       </main>
@@ -941,6 +1168,98 @@ function LoansSection({ scope }) {
     </div>
   );
 }
+
+
+function Section28RecognizedPensionSection({ model }) {
+  if (!model?.hasAny) {
+    return (
+      <div>
+        <SectionTitle title="סעיף 28 וקצבה מוכרת" subtitle="בדוח הנוכחי לא נמצאו נתונים להצגה עבור סעיף 28 או קצבה מוכרת." />
+        <div className="client-empty-state">אין נתונים להצגה באזור זה.</div>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <SectionTitle
+        title={model.label || "סעיף 28 וקצבה מוכרת"}
+        subtitle="אזור זה מופיע אוטומטית רק כאשר נתוני סעיף 28 ו/או קצבה מוכרת קיימים ב־reportData שהגיע מה־REPORT."
+      />
+
+      <div className="client-special-grid">
+        {model.hasSection28 ? (
+          <SpecialDataPanel
+            title="סעיף 28"
+            subtitle="ריכוז נתוני סעיף 28 כפי שהועברו מה־REPORT."
+            data={model.section28Data}
+          />
+        ) : null}
+
+        {model.hasRecognizedPension ? (
+          <SpecialDataPanel
+            title="קצבה מוכרת"
+            subtitle="ריכוז נתוני קצבה מוכרת / exemptPayments כפי שנקראו מה־PDF ומה־REPORT."
+            data={model.recognizedPensionData}
+          />
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+function SpecialDataPanel({ title, subtitle, data }) {
+  const primitiveRows = extractPrimitiveRows(data);
+  const tables = extractArrayTables(data);
+
+  return (
+    <div className="client-panel client-special-panel">
+      <h3>{title}</h3>
+      {subtitle ? <p className="client-panel-subtitle">{subtitle}</p> : null}
+
+      {primitiveRows.length ? (
+        <div className="client-special-metrics">
+          {primitiveRows.map((row, index) => (
+            <div key={`${row.key}-${index}`} className="client-special-metric">
+              <span>{row.key}</span>
+              <strong>{formatDisplayValue(row.value)}</strong>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="client-empty-state client-margin-top">קיימים נתונים, אך לא אותרו שדות פשוטים להצגה. מומלץ לוודא שה־REPORT מעביר פירוט מובנה.</div>
+      )}
+
+      {tables.map((table, tableIndex) => (
+        <div key={`${table.title}-${tableIndex}`} className="client-table-wrap client-margin-top">
+          <table className="client-table client-special-table">
+            <thead>
+              <tr>
+                {table.columns.map((column) => (
+                  <th key={column}>{formatTechnicalLabel(column)}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {table.rows.map((row, rowIndex) => (
+                <tr key={row.id || rowIndex}>
+                  {table.columns.map((column) => (
+                    <td key={column}>{formatDisplayValue(row[column])}</td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ))}
+
+      <div className="client-special-note">
+        אם רוצים תצוגה מעוצבת יותר לשדות ספציפיים, יש לחבר את שמות השדות המדויקים מתוך reportData ולעצב אותם כ־KPI/טבלאות ייעודיות.
+      </div>
+    </div>
+  );
+}
+
 
 function ConversationSummarySection({ scope, clientModel, reportData }) {
   const savedSummary = reportData?.conversationSummary || reportData?.clientConversationSummary || clientModel?.conversationSummary || "";
@@ -1459,9 +1778,19 @@ const clientDashboardCss = `
   .client-drawer-table { min-width: 900px; }
   .client-drawer-note { margin-top: 14px; background: #EEF2FA; border: 1px solid #D8DEE9; border-radius: 14px; padding: 13px; color: ${theme.textSoft}; font-size: 12px; line-height: 1.7; }
 
+
+  .client-special-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; align-items: start; }
+  .client-special-panel { min-height: 260px; }
+  .client-special-metrics { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-top: 14px; }
+  .client-special-metric { min-height: 72px; border: 1px solid ${theme.divider}; border-radius: 16px; background: #FFFFFF; padding: 12px 14px; display: flex; flex-direction: column; justify-content: center; gap: 6px; }
+  .client-special-metric span { color: ${theme.textSoft}; font-size: 11px; font-weight: 800; line-height: 1.25; }
+  .client-special-metric strong { color: ${theme.navy}; font-size: 16px; font-weight: 900; line-height: 1.25; direction: rtl; word-break: break-word; }
+  .client-special-table { min-width: 760px; }
+  .client-special-note { margin-top: 14px; background: #EEF2FA; border: 1px solid #D8DEE9; border-radius: 14px; padding: 12px 14px; color: ${theme.textSoft}; font-size: 12px; line-height: 1.7; }
+
   @media print { .client-web-shell { display: none !important; } }
-  @media (max-width: 1180px) { .client-product-summary { grid-template-columns: 28px minmax(0, 1fr) repeat(2, minmax(110px, .8fr)); } .client-product-strip-item { border-right: 0; padding-right: 0; } .client-web-shell { grid-template-columns: 1fr; } .client-sidebar { position: relative; height: auto; display: block; border-left: 0; border-bottom: 1px solid rgba(255,255,255,0.12); } .client-sidebar-nav { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); } .client-main { padding: 18px; } .client-topbar { flex-direction: column; align-items: stretch; } .client-topbar-actions { justify-content: flex-start; } .client-kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .client-grid-3, .client-grid-2, .client-personal-grid, .client-allocation-top-pies { grid-template-columns: 1fr; } }
-  @media (max-width: 720px) { .client-product-summary { grid-template-columns: 28px minmax(0, 1fr); align-items: start; } .client-product-strip-item { grid-column: 1 / -1; min-height: auto; } .client-main { padding: 12px; } .client-sidebar { padding: 16px 12px; } .client-sidebar-nav { grid-template-columns: 1fr; } .client-kpi-grid { grid-template-columns: 1fr; } .client-content-card { padding: 16px; border-radius: 18px; } .client-topbar { padding: 16px; border-radius: 18px; } .client-page-title { font-size: 22px; } .client-donut-layout, .client-donut-layout.wide { grid-template-columns: 1fr; justify-items: center; } .client-drawer-stats { grid-template-columns: 1fr; } .client-donut-panel.wide .client-legend { grid-template-columns: 1fr; } .client-scope-select-wrap, .client-history-button { grid-template-columns: 1fr; width: 100%; } .client-personal-fields { grid-template-columns: 1fr; } }
+  @media (max-width: 1180px) { .client-product-summary { grid-template-columns: 28px minmax(0, 1fr) repeat(2, minmax(110px, .8fr)); } .client-product-strip-item { border-right: 0; padding-right: 0; } .client-web-shell { grid-template-columns: 1fr; } .client-sidebar { position: relative; height: auto; display: block; border-left: 0; border-bottom: 1px solid rgba(255,255,255,0.12); } .client-sidebar-nav { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); } .client-main { padding: 18px; } .client-topbar { flex-direction: column; align-items: stretch; } .client-topbar-actions { justify-content: flex-start; } .client-kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .client-grid-3, .client-grid-2, .client-personal-grid, .client-allocation-top-pies, .client-special-grid { grid-template-columns: 1fr; } }
+  @media (max-width: 720px) { .client-product-summary { grid-template-columns: 28px minmax(0, 1fr); align-items: start; } .client-product-strip-item { grid-column: 1 / -1; min-height: auto; } .client-main { padding: 12px; } .client-sidebar { padding: 16px 12px; } .client-sidebar-nav { grid-template-columns: 1fr; } .client-kpi-grid { grid-template-columns: 1fr; } .client-content-card { padding: 16px; border-radius: 18px; } .client-topbar { padding: 16px; border-radius: 18px; } .client-page-title { font-size: 22px; } .client-donut-layout, .client-donut-layout.wide { grid-template-columns: 1fr; justify-items: center; } .client-drawer-stats { grid-template-columns: 1fr; } .client-donut-panel.wide .client-legend { grid-template-columns: 1fr; } .client-scope-select-wrap, .client-history-button { grid-template-columns: 1fr; width: 100%; } .client-personal-fields, .client-special-metrics { grid-template-columns: 1fr; } }
 `;
 
 const styles = {

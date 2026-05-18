@@ -117,6 +117,12 @@ function ClientFamilyView({ clientModel }) {
   const closePieDrawer = () => {
     setSelectedPieSegment(null);
   };
+
+  const section28Capping =
+    clientModel.section28Capping || sourceReportData.section28Capping || null;
+  const hasSection28Data =
+    Array.isArray(section28Capping?.groups) && section28Capping.groups.length > 0;
+
   const vestedBalanceTable =
     clientModel.vestedBalanceTable || sourceReportData.vestedBalanceTable || null;
   const recognizedPensionAdjustments =
@@ -469,11 +475,22 @@ function ClientFamilyView({ clientModel }) {
           />
         </section>
 
-        {hasVestedBalanceData ? (
-          <SectionCard title="צבירה מוכרת לפי תגמולים ופיצויים" icon="📋">
+        {hasSection28Data ? (
+          <SectionCard title="קיטום על פי סעיף 28" icon="§">
             <div className="family-explanation" style={explanation}>
-              טבלה זו מוצגת כאשר הועלו נתוני צבירה מוכרת או כאשר הוזנה קצבה
-              מוכרת ידנית לפי חברת ביטוח.
+              אזור זה מוצג רק כאשר קיימים נתוני קיטום סעיף 28 שהועברו מה־REPORT.
+            </div>
+
+            <ClientSection28CappingSection data={section28Capping} />
+          </SectionCard>
+        ) : null}
+      </div>
+
+      <div className="family-print-page family-print-page-2">
+        {hasVestedBalanceData ? (
+          <SectionCard title="קצבה מוכרת" icon="📋">
+            <div className="family-explanation" style={explanation}>
+              אזור זה מוצג רק כאשר קיימים נתוני קצבה מוכרת מתוך PDF או הזנה ידנית.
             </div>
 
             <ClientVestedBalanceSection
@@ -482,9 +499,6 @@ function ClientFamilyView({ clientModel }) {
             />
           </SectionCard>
         ) : null}
-      </div>
-
-      <div className="family-print-page family-print-page-2">
         <section className="family-lower-grid" style={lowerTwoGrid}>
           <SectionCard title='חשיפה לחו"ל' icon="🌍">
             <ExposureMetricBlock
@@ -641,7 +655,25 @@ function ClientFamilyView({ clientModel }) {
             <div>
               <div style={readonlyBlockTitle}>המלצות לפעולה</div>
               {recommendationsText ? (
-                <ReadOnlyRecommendations text={recommendationsText} />
+                <>
+                  <ReadOnlyRecommendations text={recommendationsText} />
+                  <div style={recommendationsActionsRow} className="no-print">
+                    <button
+                      type="button"
+                      style={recommendationsPrimaryButton}
+                      onClick={() => downloadOperationalActionsPdf(recommendationsText)}
+                    >
+                      הורדת PDF
+                    </button>
+                    <button
+                      type="button"
+                      style={recommendationsSecondaryButton}
+                      onClick={handleMockSendEmail}
+                    >
+                      שליחת מייל
+                    </button>
+                  </div>
+                </>
               ) : (
                 <EmptyText>לא הוזנו המלצות לפעולה בדוח.</EmptyText>
               )}
@@ -657,6 +689,336 @@ function ClientFamilyView({ clientModel }) {
       />
     </div>
   );
+}
+
+
+function normalizeSection28Text(value) {
+  return String(value || "")
+    .replace(/[״”"]/g, '"')
+    .replace(/[׳’']/g, "'")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function parseFamilyReportNumber(value) {
+  if (typeof value === "number") {
+    return Number.isFinite(value) ? value : 0;
+  }
+
+  const clean = String(value || "")
+    .replace(/[₪,%\s]/g, "")
+    .replace(/,/g, "")
+    .replace(/[^\d.-]/g, "");
+
+  const number = Number(clean);
+  return Number.isFinite(number) ? number : 0;
+}
+
+function formatFamilyReportCurrency(value) {
+  return `₪${Math.round(parseFamilyReportNumber(value)).toLocaleString("en-US")}`;
+}
+
+function formatFamilyReportValue(value) {
+  if (value === null || value === undefined || String(value).trim() === "") return "—";
+  const text = String(value).trim();
+  if (text.includes("%")) return text;
+
+  const numeric = parseFamilyReportNumber(value);
+  if (numeric !== 0 || /^-?[\d,.\s₪]+$/.test(text)) {
+    return formatFamilyReportCurrency(numeric);
+  }
+
+  return text;
+}
+
+function getClientSection28Group(groups, id, titlePart) {
+  return Array.isArray(groups)
+    ? groups.find(
+        (group) =>
+          group?.id === id ||
+          normalizeSection28Text(group?.title).includes(titlePart)
+      )
+    : null;
+}
+
+function pickClientSection28Rows(rows, labelParts) {
+  return labelParts
+    .map((part) => rows.find((row) => normalizeSection28Text(row?.label).includes(part)))
+    .filter(Boolean);
+}
+
+function isSection28DisplayValue(value) {
+  if (value === null || value === undefined) return false;
+  const text = String(value).trim();
+  if (!text || text === "—" || text === "-") return false;
+  return parseFamilyReportNumber(value) !== 0 || /[^₪,%\s0.,-]/.test(text);
+}
+
+function ClientSection28CappingSection({ data }) {
+  const groups = Array.isArray(data?.groups) ? data.groups : [];
+
+  if (!groups.length) {
+    return <EmptyText>קיימים נתוני סעיף 28 אך לא נמצאו קבוצות להצגה.</EmptyText>;
+  }
+
+  const costGroup = getClientSection28Group(groups, "employer-cost", "עלויות") || groups[0];
+  const savingGroup = getClientSection28Group(groups, "saving-simulation", "סימולציה לחיסכון");
+  const retirementGroup = getClientSection28Group(groups, "retirement", "סימולציה לגיל פרישה");
+  const comparisonRows = Array.isArray(data?.comparisonRows) ? data.comparisonRows : [];
+  const costRows = Array.isArray(costGroup?.rows)
+    ? costGroup.rows.filter((row) => isSection28DisplayValue(row?.value))
+    : [];
+
+  const monthlyRow = costRows.find((row) =>
+    normalizeSection28Text(row?.label).includes("סכום חודשי נטו שמועבר לחיסכון אישי")
+  );
+
+  const employerRows = pickClientSection28Rows(costRows, [
+    "השתלמות מעל תקרה",
+    "פיצויים מעל לתקרה",
+    "תגמולים מעל לתקרה",
+  ]);
+
+  const employerSummaryRows = pickClientSection28Rows(costRows, [
+    "סכום קיטום מעל לסעיף 28 ברוטו",
+    "סכום נטו לאחר ניכוי מס שולי",
+  ]);
+
+  const employeeRows = pickClientSection28Rows(costRows, [
+    "גידול בנטו בעקבות קיטום בפיצויים",
+    "גידול בנטו בעקבות קיטום תגמולים",
+    "גידול בנטו בעקבות קיטום קה\"ל מעל לתקרה",
+    "הפרשות עובד קה\"ל מעל תקרה",
+    "הפרשות עובד תגמולים",
+  ]);
+
+  const employeeSummaryRows = pickClientSection28Rows(costRows, [
+    'סה"כ גידול נטו',
+    "סה״כ גידול נטו",
+    "סך הכל גידול נטו",
+  ]);
+
+  return (
+    <div>
+      <div style={section28SplitGrid}>
+        <ClientSection28SideBox
+          title="חלק מעסיק"
+          rows={employerRows}
+          summaryRows={employerSummaryRows}
+        />
+
+        <ClientSection28SideBox
+          title="חלק עובד"
+          rows={employeeRows}
+          summaryRows={employeeSummaryRows}
+        />
+      </div>
+
+      {monthlyRow ? (
+        <div style={section28MonthlyBox}>
+          <div style={section28MonthlyLabel}>{monthlyRow.label}</div>
+          <div style={section28MonthlyValue}>{formatFamilyReportValue(monthlyRow.value)}</div>
+        </div>
+      ) : null}
+
+      <div style={section28SmallCardsGrid}>
+        {savingGroup ? <ClientSection28SimpleGroup title="סימולציה לחיסכון" group={savingGroup} /> : null}
+        {retirementGroup ? <ClientSection28SimpleGroup title="סימולציה לגיל פרישה" group={retirementGroup} /> : null}
+      </div>
+
+      {comparisonRows.length ? (
+        <ClientSection28ComparisonTable rows={comparisonRows} />
+      ) : null}
+    </div>
+  );
+}
+
+function ClientSection28SideBox({ title, rows, summaryRows }) {
+  const allRows = [...(Array.isArray(rows) ? rows : []), ...(Array.isArray(summaryRows) ? summaryRows : [])];
+
+  return (
+    <div style={section28SideBox}>
+      <div style={section28SideTitle}>{title}</div>
+
+      {allRows.length ? (
+        allRows.map((row, index) => (
+          <div
+            key={`${row.label}-${index}`}
+            style={index >= (rows?.length || 0) ? section28RowHighlight : section28Row}
+          >
+            <span style={section28RowLabel}>{row.label}</span>
+            <strong style={section28RowValue}>{formatFamilyReportValue(row.value)}</strong>
+          </div>
+        ))
+      ) : (
+        <EmptyText>אין נתונים להצגה</EmptyText>
+      )}
+    </div>
+  );
+}
+
+function ClientSection28SimpleGroup({ title, group }) {
+  const rows = Array.isArray(group?.rows)
+    ? group.rows.filter((row) => isSection28DisplayValue(row?.value)).slice(0, 6)
+    : [];
+
+  if (!rows.length) return null;
+
+  return (
+    <div style={section28MiniCard}>
+      <div style={section28SideTitle}>{title}</div>
+      {rows.map((row, index) => (
+        <div
+          key={`${row.label}-${index}`}
+          style={normalizeSection28Text(row.label).includes("צבירת סכום נטו") ? section28RowHighlight : section28Row}
+        >
+          <span style={section28RowLabel}>{row.label}</span>
+          <strong style={section28RowValue}>{formatFamilyReportValue(row.value)}</strong>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function ClientSection28ComparisonTable({ rows }) {
+  return (
+    <div style={{ marginTop: 16 }}>
+      <div style={clientVestedTitle}>השוואה בין תרחישים</div>
+      <div style={clientVestedTableWrap}>
+        <table style={{ ...clientVestedTable, minWidth: 760 }}>
+          <thead>
+            <tr>
+              <th style={clientVestedTh}>סעיף</th>
+              <th style={clientVestedTh}>לפני קיטום</th>
+              <th style={clientVestedTh}>אחרי קיטום</th>
+              <th style={clientVestedTh}>פער בין תרחישים</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row, index) => (
+              <tr key={`${row.label}-${index}`}>
+                <td style={clientVestedTd}>{row.label || "—"}</td>
+                <td style={clientVestedTd}>{formatFamilyReportValue(row.before)}</td>
+                <td style={clientVestedTd}>{formatFamilyReportValue(row.after)}</td>
+                <td style={clientVestedTotalTd}>{formatFamilyReportValue(row.gap)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+function splitOperationalActionItems(text) {
+  const clean = String(text || "").trim();
+  if (!clean) return [];
+
+  const lines = clean
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+
+  if (lines.length > 1) {
+    return lines
+      .map((line) =>
+        line
+          .replace(/^\d+[\).\-\s]+/, "")
+          .replace(/^[א-ת][\).\-\s]+/, "")
+          .replace(/^[-•*]\s*/, "")
+          .trim()
+      )
+      .filter(Boolean);
+  }
+
+  return clean
+    .split(/(?:\s*;\s*)|(?:\s*\|\s*)/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function getHebrewListLetter(index) {
+  const letters = ["א", "ב", "ג", "ד", "ה", "ו", "ז", "ח", "ט", "י", "יא", "יב", "יג", "יד", "טו", "טז", "יז", "יח", "יט", "כ"];
+  return letters[index] || String(index + 1);
+}
+
+function escapeOperationalHtml(value) {
+  return String(value || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+function buildOperationalActionsPdfHtml(text) {
+  const items = splitOperationalActionItems(text);
+  const rows = items.length
+    ? items.map((item, index) => `<li><span>${getHebrewListLetter(index)}.</span><p>${escapeOperationalHtml(item)}</p></li>`).join("")
+    : `<li><span>א.</span><p>לא הוזנו המלצות פעולה בדוח.</p></li>`;
+
+  return `<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <title>פעולות אופרטיביות לביצוע</title>
+  <style>
+    @page { size: A4; margin: 18mm; }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: #fff; color: #102A43; font-family: Calibri, Arial, sans-serif; direction: rtl; }
+    .page { min-height: 257mm; border: 1px solid #E2D1BF; border-radius: 18px; padding: 26px 30px; background: linear-gradient(180deg, #FFFFFF 0%, #FCFBF8 100%); }
+    .header { display: flex; align-items: center; justify-content: space-between; gap: 18px; border-bottom: 2px solid #EEE4D8; padding-bottom: 18px; margin-bottom: 24px; }
+    .brand { display: flex; align-items: center; gap: 12px; direction: ltr; }
+    .logo { width: 54px; height: 54px; border-radius: 50%; background: #00215D; position: relative; }
+    .logo:before, .logo:after { content: ""; position: absolute; width: 24px; height: 8px; border-radius: 999px; left: 15px; transform: rotate(-35deg); }
+    .logo:before { top: 15px; background: #FF2756; }
+    .logo:after { top: 26px; background: #FFFFFF; }
+    .brand-text strong { display: block; color: #00215D; font-size: 22px; line-height: 1.1; }
+    .brand-text span { display: block; color: #627D98; font-size: 12px; margin-top: 4px; }
+    h1 { margin: 0; color: #00215D; font-size: 30px; line-height: 1.2; font-weight: 900; }
+    .subtitle { margin: 8px 0 0; color: #627D98; font-size: 14px; }
+    .actions { margin: 0; padding: 0; list-style: none; }
+    .actions li { display: grid; grid-template-columns: 42px minmax(0, 1fr); gap: 12px; align-items: start; border: 1px solid #EEE4D8; border-radius: 14px; padding: 14px 16px; margin-bottom: 12px; background: #FFFFFF; break-inside: avoid; }
+    .actions span { width: 34px; height: 34px; border-radius: 12px; background: #00215D; color: #FFFFFF; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 15px; }
+    .actions p { margin: 4px 0 0; font-size: 15px; line-height: 1.75; color: #102A43; white-space: pre-wrap; }
+    .footer { margin-top: 28px; padding-top: 14px; border-top: 1px solid #EEE4D8; color: #627D98; font-size: 11px; text-align: center; }
+    @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } .page { border-radius: 0; min-height: auto; } }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <header class="header">
+      <div>
+        <h1>פעולות אופרטיביות לביצוע</h1>
+        <p class="subtitle">ריכוז משימות והמלצות פעולה מתוך הדוח הפנסיוני המשפחתי המאוחד</p>
+      </div>
+      <div class="brand">
+        <div class="logo" aria-hidden="true"></div>
+        <div class="brand-text"><strong>צבירן</strong><span>Total Rewards Experts</span></div>
+      </div>
+    </header>
+    <ol class="actions">${rows}</ol>
+    <div class="footer">מסמך זה הופק מתוך מערכת הדוח הפנסיוני המשפחתי המאוחד</div>
+  </main>
+  <script>window.onload = function () { setTimeout(function () { window.print(); }, 250); };</script>
+</body>
+</html>`;
+}
+
+function downloadOperationalActionsPdf(text) {
+  const printWindow = window.open("", "_blank", "width=900,height=1100");
+
+  if (!printWindow) {
+    alert("הדפדפן חסם פתיחת חלון חדש. יש לאפשר Popups כדי להפיק PDF.");
+    return;
+  }
+
+  printWindow.document.open();
+  printWindow.document.write(buildOperationalActionsPdfHtml(text));
+  printWindow.document.close();
+}
+
+function handleMockSendEmail() {
+  alert("כפתור דמה: בשלב הבא ניתן לחבר שליחת מייל דרך Backend / CRM / שירות מייל.");
 }
 
 function getClientConversationSummaryText(clientModel, linkedReportData = null) {
@@ -2504,6 +2866,138 @@ const clientGapValue = {
   direction: "ltr",
   whiteSpace: "nowrap",
 };
+
+
+const section28SplitGrid = {
+  display: "grid",
+  gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+  gap: 14,
+  alignItems: "start",
+};
+
+const section28SideBox = {
+  background: "#FFFFFF",
+  border: `1px solid ${theme.divider}`,
+  borderRadius: 16,
+  padding: 14,
+};
+
+const section28SideTitle = {
+  color: theme.navy,
+  fontSize: 14,
+  fontWeight: 900,
+  marginBottom: 10,
+  paddingBottom: 8,
+  borderBottom: `1px solid ${theme.divider}`,
+};
+
+const section28Row = {
+  display: "grid",
+  gridTemplateColumns: "minmax(0, 1fr) minmax(110px, .42fr)",
+  gap: 10,
+  alignItems: "center",
+  padding: "9px 0",
+  borderBottom: "1px solid #F0E6DA",
+};
+
+const section28RowHighlight = {
+  ...section28Row,
+  border: `1px solid ${theme.border}`,
+  borderRadius: 14,
+  padding: "10px 12px",
+  marginTop: 8,
+  background: "linear-gradient(135deg, #FFF7E8 0%, #EEF2FA 100%)",
+};
+
+const section28RowLabel = {
+  color: theme.textSoft,
+  fontSize: 12,
+  fontWeight: 800,
+  lineHeight: 1.45,
+};
+
+const section28RowValue = {
+  color: theme.navy,
+  fontSize: 13,
+  fontWeight: 900,
+  direction: "ltr",
+  textAlign: "left",
+  whiteSpace: "nowrap",
+};
+
+const section28MonthlyBox = {
+  marginTop: 14,
+  border: "1px solid #D8DEE9",
+  borderRadius: 16,
+  background: `linear-gradient(135deg, ${theme.navy} 0%, ${theme.navyDark} 100%)`,
+  color: "#fff",
+  padding: "12px 16px",
+  textAlign: "center",
+};
+
+const section28MonthlyLabel = {
+  fontSize: 12,
+  fontWeight: 800,
+  color: "rgba(255,255,255,0.82)",
+  marginBottom: 5,
+};
+
+const section28MonthlyValue = {
+  fontSize: 17,
+  fontWeight: 900,
+  direction: "ltr",
+};
+
+const section28SmallCardsGrid = {
+  display: "grid",
+  gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+  gap: 14,
+  marginTop: 14,
+};
+
+const section28MiniCard = {
+  background: "#FFFFFF",
+  border: `1px solid ${theme.divider}`,
+  borderRadius: 16,
+  padding: 14,
+};
+
+const recommendationsActionsRow = {
+  marginTop: 12,
+  paddingTop: 12,
+  borderTop: `1px solid ${theme.divider}`,
+  display: "flex",
+  justifyContent: "flex-start",
+  gap: 8,
+  alignItems: "center",
+};
+
+const recommendationsPrimaryButton = {
+  minHeight: 34,
+  borderRadius: 11,
+  padding: "0 13px",
+  fontFamily: 'Calibri, "Arial", sans-serif',
+  fontSize: 12,
+  fontWeight: 900,
+  cursor: "pointer",
+  border: `1px solid ${theme.navy}`,
+  background: theme.navy,
+  color: "#fff",
+};
+
+const recommendationsSecondaryButton = {
+  minHeight: 34,
+  borderRadius: 11,
+  padding: "0 13px",
+  fontFamily: 'Calibri, "Arial", sans-serif',
+  fontSize: 12,
+  fontWeight: 900,
+  cursor: "pointer",
+  border: "1px solid #D8DEE9",
+  background: "#FFFFFF",
+  color: theme.navy,
+};
+
 
 
 export default ClientFamilyView;

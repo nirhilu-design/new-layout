@@ -135,10 +135,9 @@ function buildActionRecommendationsText(manualText, topics) {
     .map(formatTopicActionBlock)
     .filter(Boolean);
 
-  const manualBlock = manualActions.length
-    ? `פעולות כלליות\n${manualActions
-        .map((line, index) => `${index + 1}. ${line}`)
-        .join("\n")}`
+  const cleanManual = cleanManualActionText(manualText).trim();
+  const manualBlock = cleanManual
+    ? `פעולות ידניות כלליות\n${cleanManual}`
     : "";
 
   return [manualBlock, ...topicActionBlocks].filter(Boolean).join("\n\n");
@@ -1472,7 +1471,9 @@ export default function ReportPage({
       resize: "vertical",
       border: `1px solid ${border}`,
       borderRadius: "14px",
-      padding: "16px",
+      padding: "16px 22px",
+      textAlign: "right",
+      direction: "rtl",
       fontSize: "12px",
       lineHeight: 1.8,
       color: text,
@@ -1554,7 +1555,9 @@ export default function ReportPage({
       resize: "vertical",
       border: `1px solid ${border}`,
       borderRadius: "14px",
-      padding: "12px",
+      padding: "12px 18px",
+      textAlign: "right",
+      direction: "rtl",
       color: text,
       background: "#FFFDFB",
       fontSize: "12px",
@@ -1569,7 +1572,9 @@ export default function ReportPage({
       resize: "vertical",
       border: `1px solid ${border}`,
       borderRadius: "14px",
-      padding: "12px",
+      padding: "12px 18px",
+      textAlign: "right",
+      direction: "rtl",
       color: text,
       background: "#FFFDFB",
       fontSize: "12px",
@@ -5584,7 +5589,30 @@ function PrintReportA4({ reportData, conversationSummary = "", actionRecommendat
                 <div style={{ display: "flex", flexDirection: "column", gap: "1.8mm" }}>
                   {block.lines.length ? (
                     block.lines.map((line, lineIndex) => {
+                      const isManualFreeText = block.title === "פעולות ידניות כלליות";
                       const isPersonHeader = ["בן זוג", "בת זוג", "כללי"].includes(line);
+                      const isNumberedAction = /^\s*\d+\s*[.)\-–:]\s+/.test(line);
+
+                      if (isManualFreeText) {
+                        return (
+                          <div
+                            key={`${block.title}-${line}-${lineIndex}`}
+                            style={{
+                              border: "1px solid #EEE4D8",
+                              borderRadius: "4mm",
+                              background: "#FFFFFF",
+                              padding: "2.2mm 3mm",
+                              fontSize: 10.5,
+                              lineHeight: 1.7,
+                              whiteSpace: "pre-wrap",
+                              wordBreak: "break-word",
+                            }}
+                          >
+                            {line}
+                          </div>
+                        );
+                      }
+
                       return isPersonHeader ? (
                         <div
                           key={`${block.title}-${line}-${lineIndex}`}
@@ -5611,7 +5639,7 @@ function PrintReportA4({ reportData, conversationSummary = "", actionRecommendat
                             wordBreak: "break-word",
                           }}
                         >
-                          {line}
+                          {isNumberedAction ? line : line}
                         </div>
                       );
                     })

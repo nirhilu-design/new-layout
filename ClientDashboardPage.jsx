@@ -1141,8 +1141,89 @@ function LoansSection({ scope }) {
 }
 
 
+
+function normalizeSection28Text(value) {
+  return String(value || "")
+    .replace(/[״”"]/g, '"')
+    .replace(/[׳’']/g, "'")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function section28NumericValue(value) {
+  if (typeof value === "number") return Number.isFinite(value) ? value : 0;
+
+  const clean = String(value || "")
+    .replace(/[₪,%\s]/g, "")
+    .replace(/,/g, "")
+    .replace(/[^\d.-]/g, "");
+
+  const number = Number(clean);
+  return Number.isFinite(number) ? number : 0;
+}
+
+function isMeaningfulSection28Value(value) {
+  if (value === null || value === undefined) return false;
+  const text = String(value).trim();
+  if (!text || text === "—" || text === "-") return false;
+  return section28NumericValue(value) !== 0 || /[^₪,%\s0.,-]/.test(text);
+}
+
+function formatSection28DisplayValue(value) {
+  if (value === null || value === undefined || String(value).trim() === "") return "—";
+
+  if (typeof value === "number" && Number.isFinite(value)) {
+    const abs = Math.abs(value);
+    if (abs > 0 && abs < 1) {
+      return `${(value * 100).toLocaleString("he-IL", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}%`;
+    }
+    return `₪${Math.round(value).toLocaleString("en-US")}`;
+  }
+
+  const text = String(value).trim();
+  if (/^-?\d+(\.\d+)?$/.test(text)) {
+    const number = Number(text);
+    if (Math.abs(number) > 0 && Math.abs(number) < 1) {
+      return `${(number * 100).toLocaleString("he-IL", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}%`;
+    }
+    return `₪${Math.round(number).toLocaleString("en-US")}`;
+  }
+
+  return text;
+}
+
+function isSection28ImportantRow(label) {
+  const text = normalizeSection28Text(label);
+  return (
+    text.includes("סכום קיטום מעל לסעיף 28 ברוטו") ||
+    text.includes("סכום נטו לאחר ניכוי מס שולי") ||
+    text.includes('סה"כ גידול נטו') ||
+    text.includes("סה״כ גידול נטו") ||
+    text.includes("סך הכל גידול נטו") ||
+    text.includes("צבירת סכום נטו בחיסכון אישי")
+  );
+}
+
+function isSection28MonthlySavingRow(label) {
+  return normalizeSection28Text(label).includes("סכום חודשי נטו שמועבר לחיסכון אישי");
+}
+
+function getSection28Group(groups, id, titlePart) {
+  return groups.find(
+    (group) =>
+      group?.id === id || normalizeSection28Text(group?.title).includes(titlePart)
+  );
+}
+
+function pickSection28Rows(rows, labelParts) {
+  return labelParts
+    .map((part) => rows.find((row) => normalizeSection28Text(row.label).includes(part)))
+    .filter(Boolean);
+}
+
 function Section28Section({ section28Capping }) {
   const groups = safeArray(section28Capping?.groups);
+  const comparisonRows = safeArray(section28Capping?.comparisonRows);
 
   if (!groups.length) {
     return (
@@ -1153,26 +1234,350 @@ function Section28Section({ section28Capping }) {
     );
   }
 
+  const costGroup = getSection28Group(groups, "employer-cost", "עלויות");
+  const savingGroup = getSection28Group(groups, "saving-simulation", "סימולציה לחיסכון");
+  const retirementGroup = getSection28Group(groups, "retirement", "סימולציה לגיל פרישה");
+  const renderedGroupIds = new Set([costGroup?.id, savingGroup?.id, retirementGroup?.id, "base"].filter(Boolean));
+  const otherGroups = groups.filter(
+    (group) => !renderedGroupIds.has(group?.id) && !normalizeSection28Text(group?.title).includes("נתוני בסיס")
+  );
+
   return (
     <div>
       <SectionTitle
         title="קיטום סעיף 28"
-        subtitle="ריכוז נתוני סעיף 28 כפי שהועברו מה־REPORT. החוצץ מוצג רק כאשר section28Capping.groups כולל נתונים."
+        subtitle="תצוגת לקוח מעוצבת לפי מבנה ה־REPORT: חלוקת עובד/מעסיק, סימולציות, השוואת תרחישים וסיכומי קיטום מרכזיים."
       />
-      <SpecialDataPanel
-        title="קיטום סעיף 28"
-        subtitle="פירוט נתוני הקיטום והחישוב לפי הקבוצות שהועברו מהדוח."
-        data={section28Capping}
-      />
+
+      <div className="client-report-like-shell">
+        {section28Capping?.sourceFileName || section28Capping?.sheetName ? (
+          <div className="client-source-strip">
+            {section28Capping?.sourceFileName ? <span>מקור נתונים: <strong>{section28Capping.sourceFileName}</strong></span> : null}
+            {section28Capping?.sheetName ? <span>גיליון: <strong>{section28Capping.sheetName}</strong></span> : null}
+          </div>
+        ) : null}
+
+        {costGroup ? <Section28CostSplit group={costGroup} /> : null}
+        {savingGroup ? <Section28SavingSimulation group={savingGroup} /> : null}
+        {comparisonRows.length ? <Section28ComparisonTable rows={comparisonRows} /> : null}
+        {retirementGroup ? <Section28RetirementSimulation group={retirementGroup} /> : null}
+
+        {otherGroups.length ? (
+          <div className="client-special-grid client-margin-top">
+            {otherGroups.map((group) => (
+              <Section28GenericGroup key={group.id || group.title} group={group} />
+            ))}
+          </div>
+        ) : null}
+      </div>
     </div>
   );
 }
 
-function RecognizedPensionSection({ vestedBalanceTable, recognizedPensionAdjustments }) {
-  const rows = safeArray(vestedBalanceTable?.rows);
-  const adjustments = safeArray(recognizedPensionAdjustments);
+function Section28CostSplit({ group }) {
+  const rows = safeArray(group?.rows).filter((row) => isMeaningfulSection28Value(row.value));
+  const monthlyRow = rows.find((row) => isSection28MonthlySavingRow(row.label));
 
-  if (!rows.length && !adjustments.length) {
+  const employerRows = pickSection28Rows(rows, [
+    "השתלמות מעל תקרה",
+    "פיצויים מעל לתקרה",
+    "תגמולים מעל לתקרה",
+  ]);
+
+  const employerSummaryRows = pickSection28Rows(rows, [
+    "סכום קיטום מעל לסעיף 28 ברוטו",
+    "סכום נטו לאחר ניכוי מס שולי",
+  ]);
+
+  const employeeRows = pickSection28Rows(rows, [
+    "גידול בנטו בעקבות קיטום בפיצויים",
+    "גידול בנטו בעקבות קיטום תגמולים",
+    "גידול בנטו בעקבות קיטום קה\"ל מעל לתקרה",
+    "הפרשות עובד קה\"ל מעל תקרה",
+    "הפרשות עובד תגמולים",
+  ]);
+
+  const employeeSummaryRows = pickSection28Rows(rows, [
+    'סה"כ גידול נטו',
+    "סה״כ גידול נטו",
+    "סך הכל גידול נטו",
+  ]);
+
+  return (
+    <div className="client-report-panel">
+      <div className="client-report-panel-title">פירוט עלויות עובד / מעסיק</div>
+      <div className="client-section28-two-cols">
+        <div className="client-section28-subcard">
+          <div className="client-section28-subtitle">חלק מעסיק</div>
+          {employerRows.map((row, index) => <Section28DataRow key={`${row.label}-${index}`} row={row} />)}
+          {employerSummaryRows.map((row, index) => <Section28DataRow key={`${row.label}-summary-${index}`} row={row} forceHighlight />)}
+          {!employerRows.length && !employerSummaryRows.length ? <Section28EmptyNote /> : null}
+        </div>
+
+        <div className="client-section28-subcard">
+          <div className="client-section28-subtitle">חלק עובד</div>
+          {employeeRows.map((row, index) => <Section28DataRow key={`${row.label}-${index}`} row={row} />)}
+          {employeeSummaryRows.map((row, index) => <Section28DataRow key={`${row.label}-summary-${index}`} row={row} forceHighlight />)}
+          {!employeeRows.length && !employeeSummaryRows.length ? <Section28EmptyNote /> : null}
+        </div>
+      </div>
+
+      {monthlyRow ? <Section28MonthlySavingRow row={monthlyRow} /> : null}
+    </div>
+  );
+}
+
+function Section28SavingSimulation({ group }) {
+  const rows = safeArray(group?.rows).filter((row) => isMeaningfulSection28Value(row.value));
+  const wanted = ["סכום צבירה ברוטו", "הפקדות נומינליות", "צבירת סכום נטו בחיסכון אישי"];
+  const selectedRows = wanted
+    .map((label) => rows.find((row) => normalizeSection28Text(row.label).includes(label)))
+    .filter(Boolean);
+
+  if (!selectedRows.length) return null;
+
+  return (
+    <div className="client-report-panel client-margin-top">
+      <div className="client-report-panel-title">סימולציה לחיסכון</div>
+      <div className="client-section28-metric-grid">
+        {selectedRows.map((row, index) => (
+          <Section28KpiBox
+            key={`${row.label}-${index}`}
+            row={row}
+            highlight={normalizeSection28Text(row.label).includes("צבירת סכום נטו בחיסכון אישי")}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function Section28RetirementSimulation({ group }) {
+  const rows = safeArray(group?.rows).filter((row) => isMeaningfulSection28Value(row.value));
+  const interestRow = rows.find((row) => normalizeSection28Text(row.label).includes("ריבית שנתית"));
+  const yearsRow = rows.find((row) => normalizeSection28Text(row.label).includes("תקופת משיכה בשנים"));
+  const displayRows = rows
+    .filter((row) => {
+      const label = normalizeSection28Text(row.label);
+      return !label.includes("תגמול נדחה") && !label.includes("ריבית שנתית") && !label.includes("תקופת משיכה בשנים");
+    })
+    .map((row) => ({
+      ...row,
+      label: normalizeSection28Text(row.label).includes("סכום משיכה") ? "קצבה מחושבת" : row.label,
+    }));
+
+  if (!displayRows.length) return null;
+
+  const meta = [
+    interestRow ? `ריבית ${formatSection28DisplayValue(interestRow.value)}` : "",
+    yearsRow ? `${formatSection28DisplayValue(yearsRow.value)} שנים` : "",
+  ].filter(Boolean).join(" · ");
+
+  return (
+    <div className="client-report-panel client-margin-top">
+      <div className="client-report-panel-title">סימולציה לגיל פרישה{meta ? ` (${meta})` : ""}</div>
+      <div className="client-section28-metric-grid">
+        {displayRows.map((row, index) => <Section28KpiBox key={`${row.label}-${index}`} row={row} />)}
+      </div>
+    </div>
+  );
+}
+
+function Section28GenericGroup({ group }) {
+  const rows = safeArray(group?.rows).filter((row) => isMeaningfulSection28Value(row.value));
+  if (!rows.length) return null;
+
+  return (
+    <div className="client-report-panel">
+      <div className="client-report-panel-title">{group.title || "פירוט נוסף"}</div>
+      {rows.map((row, index) => (
+        <Section28DataRow key={`${row.label}-${index}`} row={row} forceHighlight={isSection28ImportantRow(row.label)} />
+      ))}
+    </div>
+  );
+}
+
+function Section28DataRow({ row, forceHighlight = false }) {
+  const isHighlighted = forceHighlight || isSection28ImportantRow(row.label);
+  return (
+    <div className={isHighlighted ? "client-section28-row highlighted" : "client-section28-row"}>
+      <div className="client-section28-row-label">{row.label || "—"}</div>
+      <div className="client-section28-row-value">{formatSection28DisplayValue(row.value)}</div>
+    </div>
+  );
+}
+
+function Section28KpiBox({ row, highlight = false }) {
+  return (
+    <div className={highlight ? "client-report-kpi-box highlighted" : "client-report-kpi-box"}>
+      <span>{row.label || "—"}</span>
+      <strong>{formatSection28DisplayValue(row.value)}</strong>
+    </div>
+  );
+}
+
+function Section28MonthlySavingRow({ row }) {
+  return (
+    <div className="client-section28-monthly">
+      <span>{row.label}</span>
+      <strong>{formatSection28DisplayValue(row.value)}</strong>
+    </div>
+  );
+}
+
+function Section28EmptyNote() {
+  return <div className="client-empty-state compact">אין נתון להצגה</div>;
+}
+
+function Section28ComparisonTable({ rows }) {
+  return (
+    <div className="client-report-panel client-margin-top">
+      <div className="client-report-panel-title">השוואה בין תרחישים</div>
+      <div className="client-section28-comparison-layout">
+        <div className="client-table-wrap">
+          <table className="client-table client-section28-table">
+            <thead>
+              <tr>
+                <th>סעיף</th>
+                <th>לפני קיטום</th>
+                <th>אחרי קיטום</th>
+                <th>פער בין תרחישים</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((row, index) => {
+                const isTotal = normalizeSection28Text(row.label).includes('סה"כ') || normalizeSection28Text(row.label).includes("סה״כ");
+                return (
+                  <tr key={`${row.label}-${index}`} className={isTotal ? "total-row" : ""}>
+                    <td>{row.label || "—"}</td>
+                    <td>{formatSection28DisplayValue(row.before)}</td>
+                    <td>{formatSection28DisplayValue(row.after)}</td>
+                    <td>{formatSection28DisplayValue(row.gap)}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+        <Section28ComparisonBars rows={rows} />
+      </div>
+    </div>
+  );
+}
+
+function Section28ComparisonBars({ rows }) {
+  const chartRows = rows.filter((row) => {
+    const label = normalizeSection28Text(row.label).replace(/סהכ/g, 'סה"כ');
+    const isWantedRow = label === "קצבה" || label.includes('סה"כ הון') || label.includes("סה״כ הון");
+    return isWantedRow && (isMeaningfulSection28Value(row.before) || isMeaningfulSection28Value(row.after));
+  });
+
+  if (!chartRows.length) return <div className="client-empty-state">אין נתונים לגרף השוואה.</div>;
+
+  return (
+    <div className="client-section28-bars-card">
+      <div className="client-report-panel-title small">גרף השוואה</div>
+      {chartRows.map((row, index) => {
+        const before = Math.abs(section28NumericValue(row.before));
+        const after = Math.abs(section28NumericValue(row.after));
+        const rowMaxValue = Math.max(before, after, 1);
+        const isPensionRow = normalizeSection28Text(row.label) === "קצבה";
+        const beforeBar = { value: before, displayValue: row.before, className: "muted" };
+        const afterBar = { value: after, displayValue: row.after, className: "primary" };
+        const orderedBars = isPensionRow && before > after ? [afterBar, beforeBar] : [beforeBar, afterBar];
+
+        return (
+          <div className="client-section28-bar-group" key={`${row.label}-${index}`}>
+            <div className="client-section28-bar-title">{row.label}</div>
+            {orderedBars.map((bar, barIndex) => (
+              <div key={barIndex} className="client-section28-bar-row">
+                <strong>{formatSection28DisplayValue(bar.displayValue)}</strong>
+                <div className="client-section28-bar-track">
+                  <div className={`client-section28-bar-fill ${bar.className}`} style={{ width: `${Math.max((bar.value / rowMaxValue) * 100, bar.value ? 4 : 0)}%` }} />
+                </div>
+              </div>
+            ))}
+          </div>
+        );
+      })}
+      <div className="client-section28-bar-legend"><span>■ לפני</span><span>■ אחרי</span></div>
+    </div>
+  );
+}
+
+function normalizeInsuranceName(value) {
+  const text = String(value || "")
+    .replace(/[״"]/g, "")
+    .replace(/[׳']/g, "")
+    .replace(/בע"מ/g, "")
+    .replace(/בעמ/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  if (text.includes("כלל")) return "כלל";
+  if (text.includes("מגדל")) return "מגדל";
+  if (text.includes("הראל")) return "הראל";
+  if (text.includes("מנורה")) return "מנורה מבטחים";
+  if (text.includes("הפניקס") || text.includes("פניקס")) return "הפניקס";
+  if (text.includes("איילון")) return "איילון";
+  if (text.includes("הכשרה")) return "הכשרה";
+  if (text.includes("ביטוח ישיר")) return "ביטוח ישיר";
+  return text || "—";
+}
+
+function parseReportNumber(value) {
+  if (typeof value === "number") return Number.isFinite(value) ? value : 0;
+  const clean = String(value || "").replace(/[₪,\s]/g, "").replace(/[^\d.-]/g, "");
+  const number = Number(clean);
+  return Number.isFinite(number) ? number : 0;
+}
+
+function formatReportNumber(value, decimals = 0) {
+  const number = Number(value || 0);
+  if (!Number.isFinite(number)) return "—";
+  return number.toLocaleString("he-IL", { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+}
+
+function isVestedTotalRow(row) {
+  const name = String(row?.fundName || "").replace(/[״"]/g, "");
+  return name.includes("סהכ") || name.includes('סה"כ') || name.includes("סה״כ");
+}
+
+function getPdfExemptPaymentsTotal(rows) {
+  const pdfRows = safeArray(rows);
+  if (!pdfRows.length) return 0;
+
+  const totalRowValues = pdfRows
+    .filter(isVestedTotalRow)
+    .map((row) => parseReportNumber(row.exemptPayments))
+    .filter((value) => value > 0);
+
+  if (totalRowValues.length) return Math.max(...totalRowValues);
+
+  return pdfRows
+    .filter((row) => !isVestedTotalRow(row))
+    .map((row) => parseReportNumber(row.exemptPayments))
+    .filter((value) => value > 0)
+    .reduce((sum, value) => sum + value, 0);
+}
+
+function getManualRecognizedPensionRows(adjustments) {
+  return safeArray(adjustments)
+    .filter((item) => item?.companyName && Number(item?.amount || 0) > 0)
+    .map((item, index) => ({
+      id: `manual-recognized-pension-${index}`,
+      companyName: normalizeInsuranceName(item.companyName),
+      amount: Number(item.amount || 0),
+    }));
+}
+
+function RecognizedPensionSection({ vestedBalanceTable, recognizedPensionAdjustments }) {
+  const pdfRows = safeArray(vestedBalanceTable?.rows);
+  const manualRows = getManualRecognizedPensionRows(recognizedPensionAdjustments);
+  const pdfTotal = getPdfExemptPaymentsTotal(pdfRows);
+  const manualTotal = manualRows.reduce((sum, row) => sum + Number(row.amount || 0), 0);
+
+  if (!pdfRows.length && !manualRows.length) {
     return (
       <div>
         <SectionTitle title="קצבה מוכרת" subtitle="בדוח הנוכחי לא נמצאו נתוני קצבה מוכרת להצגה." />
@@ -1185,70 +1590,106 @@ function RecognizedPensionSection({ vestedBalanceTable, recognizedPensionAdjustm
     <div>
       <SectionTitle
         title="קצבה מוכרת"
-        subtitle="ריכוז נתוני קצבה מוכרת כפי שהועברו מה־REPORT. החוצץ מוצג רק כאשר קיימות שורות vestedBalanceTable או התאמות recognizedPensionAdjustments."
+        subtitle="תצוגת לקוח לפי מבנה ה־REPORT: טבלת חישוב PDF, הזנה ידנית לפי חברת ביטוח ופער הצבירה לחיסכון במס."
       />
-      <SpecialDataPanel
-        title="קצבה מוכרת"
-        subtitle="פירוט נתוני טבלת היתרות וההתאמות הידניות/חברת הביטוח."
-        data={{ vestedBalanceTable, recognizedPensionAdjustments }}
-      />
-    </div>
-  );
-}
 
+      <div className="client-report-like-shell">
+        {vestedBalanceTable?.sourceFileName ? (
+          <div className="client-source-strip"><span>מקור נתונים: <strong>{vestedBalanceTable.sourceFileName}</strong></span></div>
+        ) : null}
 
-function SpecialDataPanel({ title, subtitle, data }) {
-  const primitiveRows = extractPrimitiveRows(data);
-  const tables = extractArrayTables(data);
-
-  return (
-    <div className="client-panel client-special-panel">
-      <h3>{title}</h3>
-      {subtitle ? <p className="client-panel-subtitle">{subtitle}</p> : null}
-
-      {primitiveRows.length ? (
-        <div className="client-special-metrics">
-          {primitiveRows.map((row, index) => (
-            <div key={`${row.key}-${index}`} className="client-special-metric">
-              <span>{row.key}</span>
-              <strong>{formatDisplayValue(row.value)}</strong>
-            </div>
-          ))}
-        </div>
-      ) : (
-        <div className="client-empty-state client-margin-top">קיימים נתונים, אך לא אותרו שדות פשוטים להצגה. מומלץ לוודא שה־REPORT מעביר פירוט מובנה.</div>
-      )}
-
-      {tables.map((table, tableIndex) => (
-        <div key={`${table.title}-${tableIndex}`} className="client-table-wrap client-margin-top">
-          <table className="client-table client-special-table">
-            <thead>
-              <tr>
-                {table.columns.map((column) => (
-                  <th key={column}>{formatTechnicalLabel(column)}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {table.rows.map((row, rowIndex) => (
-                <tr key={row.id || rowIndex}>
-                  {table.columns.map((column) => (
-                    <td key={column}>{formatDisplayValue(row[column])}</td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      ))}
-
-      <div className="client-special-note">
-        אם רוצים תצוגה מעוצבת יותר לשדות ספציפיים, יש לחבר את שמות השדות המדויקים מתוך reportData ולעצב אותם כ־KPI/טבלאות ייעודיות.
+        {pdfRows.length ? <VestedPdfCalculationTable rows={pdfRows} pdfTotal={pdfTotal} /> : null}
+        {manualRows.length ? <ManualRecognizedPensionTable rows={manualRows} manualTotal={manualTotal} /> : null}
+        {pdfTotal > 0 && manualTotal > 0 ? <TaxSavingGapSummary pdfTotal={pdfTotal} manualTotal={manualTotal} /> : null}
       </div>
     </div>
   );
 }
 
+function VestedPdfCalculationTable({ rows, pdfTotal }) {
+  const columns = [
+    { key: "fundName", label: "שם הקופה" },
+    { key: "balanceFee", label: "% דמי ניהול על הצבירה" },
+    { key: "depositFee", label: "% דמי ניהול על ההפקדות" },
+    { key: "rewardsUntil2011", label: "תגמולים עד 2011" },
+    { key: "rewardsFrom2012", label: "תגמולים מ־2012" },
+    { key: "severanceFrom2017", label: "פיצויים מ־2017" },
+    { key: "exemptPayments", label: "סכום תשלומים פטורים" },
+    { key: "coefficient", label: "מקדם" },
+    { key: "pension", label: "קצבה מוכרת" },
+  ];
+
+  return (
+    <div className="client-report-panel">
+      <div className="client-report-table-heading">
+        <div>
+          <div className="client-report-panel-title">טבלת חישוב מתוך PDF</div>
+          <p>הטבלה מציגה את נתוני הצבירה המוכרת כפי שנקראו מהמסמך.</p>
+        </div>
+        <div className="client-report-pill">סה״כ תשלומים פטורים: {formatReportNumber(pdfTotal)}</div>
+      </div>
+
+      <div className="client-table-wrap">
+        <table className="client-table client-vested-table">
+          <thead>
+            <tr>{columns.map((column) => <th key={column.key}>{column.label}</th>)}</tr>
+          </thead>
+          <tbody>
+            {rows.map((row, index) => (
+              <tr key={row.id || index} className={isVestedTotalRow(row) ? "total-row" : ""}>
+                {columns.map((column) => <td key={column.key}>{row[column.key] || "—"}</td>)}
+              </tr>
+            ))}
+            <tr className="total-row">
+              {columns.map((column) => (
+                <td key={column.key}>{column.key === "fundName" ? "סה״כ טבלת PDF" : column.key === "exemptPayments" ? formatReportNumber(pdfTotal) : "—"}</td>
+              ))}
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+function ManualRecognizedPensionTable({ rows, manualTotal }) {
+  return (
+    <div className="client-report-panel client-margin-top">
+      <div className="client-report-table-heading">
+        <div>
+          <div className="client-report-panel-title">קצבה מוכרת שהוזנה ידנית</div>
+          <p>הטבלה מציגה את הסכומים שהוזנו במסך ההעלאה לפי חברת ביטוח.</p>
+        </div>
+        <div className="client-report-pill gold">סה״כ קצבה מוכרת: {formatReportNumber(manualTotal)}</div>
+      </div>
+
+      <div className="client-table-wrap client-manual-table-wrap">
+        <table className="client-table client-manual-recognized-table">
+          <thead><tr><th>חברת ביטוח</th><th>קצבה מוכרת שהוזנה</th></tr></thead>
+          <tbody>
+            {rows.map((row) => (
+              <tr key={row.id}><td>{row.companyName}</td><td>{formatReportNumber(row.amount)}</td></tr>
+            ))}
+            <tr className="total-row"><td>סה״כ</td><td>{formatReportNumber(manualTotal)}</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+function TaxSavingGapSummary({ pdfTotal, manualTotal }) {
+  const gap = pdfTotal - manualTotal;
+  return (
+    <div className="client-tax-gap-summary">
+      <div>
+        <h3>פער הצבירה לחיסכון במס</h3>
+        <p>חישוב לפי סה״כ טבלת ה־PDF פחות סה״כ הקצבה המוכרת שהוזנה ידנית.</p>
+      </div>
+      <strong>{formatReportNumber(gap)}</strong>
+    </div>
+  );
+}
 
 function splitActionRecommendations(text) {
   const raw = String(text || "").trim();
@@ -1889,6 +2330,60 @@ const clientDashboardCss = `
   .client-action-button { min-height: 42px; border-radius: 14px; border: 1px solid #D8DEE9; background: #FFFFFF; color: ${theme.navy}; padding: 0 18px; font-family: Calibri, Arial, sans-serif; font-size: 13px; font-weight: 900; cursor: pointer; transition: .18s ease; }
   .client-action-button:hover { transform: translateY(-1px); box-shadow: 0 8px 18px rgba(0,33,93,.10); }
   .client-action-button.primary { border-color: ${theme.navy}; background: ${theme.navy}; color: #FFFFFF; }
+
+
+  .client-report-like-shell { display: flex; flex-direction: column; gap: 14px; }
+  .client-source-strip { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: flex-start; border: 1px solid #E2D1BF; border-radius: 18px; background: #FCFBF8; padding: 12px 14px; color: #627D98; font-size: 12px; font-weight: 800; }
+  .client-source-strip strong { color: #00215D; font-size: 13px; }
+  .client-report-panel { border: 1px solid #E7D9CA; border-radius: 20px; background: linear-gradient(180deg, #FFFFFF 0%, #FCFBF8 100%); box-shadow: 0 2px 10px rgba(16,42,67,0.04); padding: 18px; min-width: 0; }
+  .client-report-panel-title { color: #00215D; font-size: 16px; line-height: 1.3; font-weight: 900; margin-bottom: 12px; }
+  .client-report-panel-title.small { font-size: 13px; margin-bottom: 10px; }
+  .client-section28-two-cols { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; align-items: start; }
+  .client-section28-subcard { background: #FFFFFF; border: 1px solid #EEE4D8; border-radius: 18px; padding: 14px; min-width: 0; }
+  .client-section28-subtitle { color: #00215D; font-size: 13px; font-weight: 900; margin-bottom: 10px; padding-bottom: 8px; border-bottom: 1px solid #EEE4D8; }
+  .client-section28-row { display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(96px, 0.55fr); gap: 10px; align-items: center; padding: 9px 0; border-bottom: 1px solid #F0E6DA; }
+  .client-section28-row.highlighted { border: 1px solid #E2D1BF; border-radius: 16px; padding: 11px 12px; margin-top: 10px; background: linear-gradient(135deg, #FFF7E8 0%, #EEF2FA 100%); box-shadow: 0 4px 12px rgba(0,33,93,0.05); }
+  .client-section28-row-label { color: #627D98; font-size: 12px; font-weight: 800; line-height: 1.45; }
+  .client-section28-row.highlighted .client-section28-row-label { color: #00215D; font-weight: 900; }
+  .client-section28-row-value { color: #00215D; font-size: 13px; font-weight: 900; text-align: left; direction: ltr; white-space: nowrap; }
+  .client-section28-row.highlighted .client-section28-row-value { color: #FF2756; }
+  .client-section28-monthly { margin-top: 14px; border: 1px solid #D8DEE9; border-radius: 18px; background: linear-gradient(135deg, #00215D 0%, #001845 100%); color: #fff; padding: 14px 16px; text-align: center; box-shadow: 0 6px 14px rgba(0,33,93,0.10); }
+  .client-section28-monthly span { display: block; color: rgba(255,255,255,.82); font-size: 12px; font-weight: 800; margin-bottom: 5px; }
+  .client-section28-monthly strong { display: block; color: #fff; font-size: 17px; font-weight: 900; direction: ltr; }
+  .client-section28-metric-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+  .client-report-kpi-box { min-height: 92px; border: 1px solid #EEE4D8; border-radius: 18px; background: #FFFFFF; padding: 14px; display: flex; flex-direction: column; justify-content: center; gap: 8px; }
+  .client-report-kpi-box.highlighted { background: linear-gradient(135deg, #FFF7E8 0%, #EEF2FA 100%); border-color: #E2D1BF; }
+  .client-report-kpi-box span { color: #627D98; font-size: 12px; font-weight: 800; line-height: 1.35; }
+  .client-report-kpi-box strong { color: #00215D; font-size: 18px; font-weight: 900; direction: ltr; text-align: right; }
+  .client-report-kpi-box.highlighted strong { color: #FF2756; }
+  .client-section28-comparison-layout { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(280px, 0.75fr); gap: 14px; align-items: stretch; }
+  .client-section28-table { min-width: 680px; }
+  .client-section28-table th, .client-section28-table td { text-align: center; }
+  .client-table tr.total-row td { background: #EEF2FA; color: #00215D; font-weight: 900; }
+  .client-section28-bars-card { background: #FFFFFF; border: 1px solid #EEE4D8; border-radius: 18px; padding: 14px; min-width: 0; }
+  .client-section28-bar-group { margin-top: 12px; }
+  .client-section28-bar-title { color: #627D98; font-size: 12px; font-weight: 900; margin-bottom: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .client-section28-bar-row { margin-bottom: 8px; }
+  .client-section28-bar-row strong { display: block; color: #00215D; font-size: 12px; font-weight: 900; margin-bottom: 4px; direction: ltr; text-align: left; }
+  .client-section28-bar-track { height: 10px; border-radius: 999px; background: #EAF1FB; overflow: hidden; }
+  .client-section28-bar-fill { height: 100%; border-radius: 999px; }
+  .client-section28-bar-fill.primary { background: linear-gradient(90deg, #FF2756, #00215D); }
+  .client-section28-bar-fill.muted { background: linear-gradient(90deg, #C7D1E2, #EAF1FB); }
+  .client-section28-bar-legend { display: flex; gap: 12px; margin-top: 12px; color: #627D98; font-size: 11px; font-weight: 800; }
+  .client-report-table-heading { display: flex; justify-content: space-between; gap: 14px; align-items: flex-start; flex-wrap: wrap; margin-bottom: 12px; }
+  .client-report-table-heading p { margin: 4px 0 0; color: #627D98; font-size: 12px; line-height: 1.55; }
+  .client-report-pill { background: #EEF2FA; color: #00215D; border: 1px solid #D8DEE9; border-radius: 999px; padding: 8px 14px; font-size: 12px; font-weight: 900; white-space: nowrap; }
+  .client-report-pill.gold { background: #FFF7E8; border-color: #E2D1BF; }
+  .client-vested-table { min-width: 1080px; table-layout: auto; }
+  .client-vested-table th, .client-vested-table td { text-align: center; }
+  .client-manual-table-wrap { max-width: 680px; }
+  .client-manual-recognized-table { min-width: 520px; }
+  .client-manual-recognized-table th, .client-manual-recognized-table td { text-align: center; }
+  .client-tax-gap-summary { margin-top: 14px; padding: 18px 20px; border-radius: 20px; border: 1px solid #E2D1BF; background: linear-gradient(135deg, rgba(255,255,255,1) 0%, rgba(255,247,232,1) 100%); display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap; }
+  .client-tax-gap-summary h3 { margin: 0; color: #00215D; font-size: 17px; font-weight: 900; }
+  .client-tax-gap-summary p { margin: 6px 0 0; color: #627D98; font-size: 12px; line-height: 1.55; }
+  .client-tax-gap-summary strong { color: #00215D; font-size: 26px; font-weight: 900; direction: ltr; white-space: nowrap; }
+  .client-empty-state.compact { padding: 12px; font-size: 12px; }
 
   @media print { .client-web-shell { display: none !important; } }
   @media (max-width: 1180px) { .client-product-summary { grid-template-columns: 28px minmax(0, 1fr) repeat(2, minmax(110px, .8fr)); } .client-product-strip-item { border-right: 0; padding-right: 0; } .client-web-shell { grid-template-columns: 1fr; } .client-sidebar { position: relative; height: auto; display: block; border-left: 0; border-bottom: 1px solid rgba(255,255,255,0.12); } .client-sidebar-nav { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); } .client-main { padding: 18px; } .client-topbar { flex-direction: column; align-items: stretch; } .client-topbar-actions { justify-content: flex-start; } .client-kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .client-grid-3, .client-grid-2, .client-personal-grid, .client-allocation-top-pies, .client-special-grid { grid-template-columns: 1fr; } }

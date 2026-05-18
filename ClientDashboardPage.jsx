@@ -1751,8 +1751,8 @@ function downloadActionsPdf(actionsText) {
   }
 
   const actionsHtml = actions.length
-    ? actions.map((action, index) => `<li><span>${getActionListMarker(index)}</span><p>${escapeHtml(action)}</p></li>`).join("")
-    : `<li><span>1</span><p>לא הוזנו המלצות פעולה בדוח זה.</p></li>`;
+    ? actions.map((action, index) => `<li class="action-row"><span class="action-number">${getActionListMarker(index)}</span><p class="action-text">${escapeHtml(action)}</p></li>`).join("")
+    : `<li class="action-row"><span class="action-number">1</span><p class="action-text">לא הוזנו המלצות פעולה בדוח זה.</p></li>`;
 
   printWindow.document.open();
   printWindow.document.write(`<!doctype html>
@@ -1761,23 +1761,24 @@ function downloadActionsPdf(actionsText) {
   <meta charset="utf-8" />
   <title>פעולות אופרטיביות לביצוע</title>
   <style>
-    @page { size: A4 portrait; margin: 14mm; }
+    @page { size: A4 portrait; margin: 12mm; }
     * { box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-    body { margin: 0; direction: rtl; font-family: Calibri, Arial, sans-serif; color: #102A43; background: #ffffff; }
-    .actions-pdf-page { min-height: 269mm; padding: 0; }
-    .actions-brand { display: flex; align-items: center; gap: 14px; padding-bottom: 18px; border-bottom: 3px solid #00215D; margin-bottom: 28px; }
-    .actions-logo { width: 62px; height: 62px; border-radius: 50%; background: #00215D; position: relative; box-shadow: 0 8px 20px rgba(0,33,93,.16); }
-    .actions-logo::before, .actions-logo::after { content: ""; position: absolute; width: 30px; height: 9px; border-radius: 999px; right: 16px; transform: rotate(-35deg); }
-    .actions-logo::before { top: 19px; background: #FF2756; }
-    .actions-logo::after { top: 31px; background: #ffffff; }
-    .actions-brand-title { color: #00215D; font-size: 24px; font-weight: 900; line-height: 1.15; }
-    .actions-brand-subtitle { color: #627D98; font-size: 13px; font-weight: 700; margin-top: 4px; }
-    h1 { margin: 0 0 22px; color: #00215D; font-size: 30px; line-height: 1.25; font-weight: 900; }
-    .actions-intro { color: #627D98; font-size: 14px; line-height: 1.7; margin: 0 0 18px; }
-    ol { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 14px; }
-    li { display: grid; grid-template-columns: 48px minmax(0, 1fr); gap: 12px; align-items: start; border: 1px solid #E2D1BF; border-radius: 16px; padding: 14px 16px; background: #FCFBF8; break-inside: avoid; page-break-inside: avoid; }
-    li span { width: 38px; height: 38px; border-radius: 14px; background: #00215D; color: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: 900; direction: ltr; }
-    li p { margin: 0; color: #102A43; font-size: 15px; line-height: 1.75; white-space: pre-wrap; }
+    html, body { margin: 0; padding: 0; direction: rtl; font-family: Calibri, Arial, sans-serif; color: #102A43; background: #ffffff; }
+    body { overflow: visible; }
+    .actions-pdf-page { width: 100%; min-height: auto; padding: 0; }
+    .actions-brand { display: flex; align-items: center; gap: 14px; padding-bottom: 16px; border-bottom: 3px solid #00215D; margin-bottom: 22px; }
+    .actions-logo { width: 54px; height: 54px; border-radius: 50%; background: #00215D; position: relative; box-shadow: 0 8px 20px rgba(0,33,93,.16); flex: 0 0 54px; }
+    .actions-logo::before, .actions-logo::after { content: ""; position: absolute; width: 26px; height: 8px; border-radius: 999px; right: 14px; transform: rotate(-35deg); }
+    .actions-logo::before { top: 17px; background: #FF2756; }
+    .actions-logo::after { top: 28px; background: #ffffff; }
+    .actions-brand-title { color: #00215D; font-size: 22px; font-weight: 900; line-height: 1.15; }
+    .actions-brand-subtitle { color: #627D98; font-size: 12px; font-weight: 700; margin-top: 4px; }
+    h1 { margin: 0 0 16px; color: #00215D; font-size: 28px; line-height: 1.25; font-weight: 900; }
+    .actions-intro { color: #627D98; font-size: 13px; line-height: 1.65; margin: 0 0 16px; }
+    ol { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 10px; }
+    .action-row { display: flex; flex-direction: row; align-items: flex-start; gap: 14px; border: 1px solid #E2D1BF; border-radius: 14px; padding: 12px 14px; background: #FCFBF8; break-inside: avoid; page-break-inside: avoid; width: 100%; min-width: 0; overflow: visible; }
+    .action-number { width: 34px; height: 34px; min-width: 34px; border-radius: 12px; background: #00215D; color: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 900; direction: ltr; line-height: 1; }
+    .action-text { flex: 1 1 auto; min-width: 0; margin: 2px 0 0; color: #102A43; font-size: 14.5px; line-height: 1.72; white-space: pre-wrap; overflow-wrap: anywhere; word-break: normal; text-align: right; padding-inline-start: 2px; }
   </style>
 </head>
 <body>

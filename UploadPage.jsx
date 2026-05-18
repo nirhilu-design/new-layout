@@ -1036,7 +1036,8 @@ export default function UploadPage({ setReportData }) {
         direction: "rtl",
         background: "#f7f8fc",
         padding: "40px 20px",
-        fontFamily: "Arial, sans-serif",
+        fontFamily: "Calibri, sans-serif",
+        fontSize: 12,
       }}
     >
       <div
@@ -1055,7 +1056,7 @@ export default function UploadPage({ setReportData }) {
             style={{
               margin: 0,
               color: "#0d2c6c",
-              fontSize: 36,
+              fontSize: 32,
               fontWeight: 900,
             }}
           >
@@ -1067,7 +1068,7 @@ export default function UploadPage({ setReportData }) {
               marginTop: 12,
               marginBottom: 0,
               color: "#5f6b85",
-              fontSize: 16,
+              fontSize: 12,
               lineHeight: 1.8,
             }}
           >
@@ -1116,7 +1117,7 @@ export default function UploadPage({ setReportData }) {
               <div
                 style={{
                   color: "#69758e",
-                  fontSize: 14,
+                  fontSize: 12,
                   lineHeight: 1.7,
                 }}
               >
@@ -1128,7 +1129,7 @@ export default function UploadPage({ setReportData }) {
                 <div
                   style={{
                     color: "#0d2c6c",
-                    fontSize: 13,
+                    fontSize: 12,
                     fontWeight: 700,
                     marginTop: 8,
                     wordBreak: "break-word",
@@ -1142,7 +1143,7 @@ export default function UploadPage({ setReportData }) {
                 <div
                   style={{
                     color: "#b42318",
-                    fontSize: 13,
+                    fontSize: 12,
                     fontWeight: 700,
                     marginTop: 8,
                   }}
@@ -1209,7 +1210,7 @@ export default function UploadPage({ setReportData }) {
                     border: "1px solid #cbd4e6",
                     borderRadius: 12,
                     padding: "10px 14px",
-                    fontSize: 14,
+                    fontSize: 12,
                     fontWeight: 800,
                     cursor: "pointer",
                     minWidth: 120,
@@ -1282,7 +1283,7 @@ export default function UploadPage({ setReportData }) {
               <div
                 style={{
                   color: "#69758e",
-                  fontSize: 14,
+                  fontSize: 12,
                   lineHeight: 1.7,
                 }}
               >
@@ -1294,7 +1295,7 @@ export default function UploadPage({ setReportData }) {
                 <div
                   style={{
                     color: "#0d2c6c",
-                    fontSize: 13,
+                    fontSize: 12,
                     fontWeight: 700,
                     marginTop: 8,
                     wordBreak: "break-word",
@@ -1308,7 +1309,7 @@ export default function UploadPage({ setReportData }) {
                 <div
                   style={{
                     color: "#247a3d",
-                    fontSize: 13,
+                    fontSize: 12,
                     fontWeight: 800,
                     marginTop: 8,
                   }}
@@ -1321,7 +1322,7 @@ export default function UploadPage({ setReportData }) {
                 <div
                   style={{
                     color: "#b42318",
-                    fontSize: 13,
+                    fontSize: 12,
                     fontWeight: 700,
                     marginTop: 8,
                   }}
@@ -1388,7 +1389,7 @@ export default function UploadPage({ setReportData }) {
                     border: "1px solid #cbd4e6",
                     borderRadius: 12,
                     padding: "10px 14px",
-                    fontSize: 14,
+                    fontSize: 12,
                     fontWeight: 800,
                     cursor: section28ExcelLoading ? "not-allowed" : "pointer",
                     minWidth: 120,
@@ -1462,7 +1463,7 @@ export default function UploadPage({ setReportData }) {
               <div
                 style={{
                   color: "#69758e",
-                  fontSize: 14,
+                  fontSize: 12,
                   lineHeight: 1.7,
                 }}
               >
@@ -1474,7 +1475,7 @@ export default function UploadPage({ setReportData }) {
                 <div
                   style={{
                     color: "#0d2c6c",
-                    fontSize: 13,
+                    fontSize: 12,
                     fontWeight: 700,
                     marginTop: 8,
                     wordBreak: "break-word",
@@ -1488,7 +1489,7 @@ export default function UploadPage({ setReportData }) {
                 <div
                   style={{
                     color: "#247a3d",
-                    fontSize: 13,
+                    fontSize: 12,
                     fontWeight: 800,
                     marginTop: 8,
                   }}
@@ -1501,7 +1502,7 @@ export default function UploadPage({ setReportData }) {
                 <div
                   style={{
                     color: "#b42318",
-                    fontSize: 13,
+                    fontSize: 12,
                     fontWeight: 700,
                     marginTop: 8,
                   }}
@@ -1520,7 +1521,7 @@ export default function UploadPage({ setReportData }) {
                 <div
                   style={{
                     color: "#0d2c6c",
-                    fontSize: 15,
+                    fontSize: 14,
                     fontWeight: 900,
                     marginBottom: 8,
                   }}
@@ -1531,7 +1532,7 @@ export default function UploadPage({ setReportData }) {
                 <div
                   style={{
                     color: "#69758e",
-                    fontSize: 13,
+                    fontSize: 12,
                     lineHeight: 1.7,
                     marginBottom: 12,
                   }}
@@ -1569,7 +1570,7 @@ export default function UploadPage({ setReportData }) {
                           color: "#0d2c6c",
                           fontWeight: 800,
                           background: "#fff",
-                          fontFamily: "Arial, sans-serif",
+                          fontFamily: "Calibri, sans-serif",
                         }}
                       >
                         <option value="">בחר חברת ביטוח</option>
@@ -1600,7 +1601,7 @@ export default function UploadPage({ setReportData }) {
                           color: "#0d2c6c",
                           fontWeight: 800,
                           background: "#fff",
-                          fontFamily: "Arial, sans-serif",
+                          fontFamily: "Calibri, sans-serif",
                         }}
                       />
 
@@ -1626,7 +1627,7 @@ export default function UploadPage({ setReportData }) {
                             recognizedPensionAdjustments.length <= 1
                               ? "not-allowed"
                               : "pointer",
-                          fontFamily: "Arial, sans-serif",
+                          fontFamily: "Calibri, sans-serif",
                         }}
                       >
                         הסר
@@ -1645,10 +1646,10 @@ export default function UploadPage({ setReportData }) {
                     border: "1px solid #cbd4e6",
                     borderRadius: 12,
                     padding: "10px 14px",
-                    fontSize: 14,
+                    fontSize: 12,
                     fontWeight: 800,
                     cursor: "pointer",
-                    fontFamily: "Arial, sans-serif",
+                    fontFamily: "Calibri, sans-serif",
                   }}
                 >
                   הוסף חברה נוספת
@@ -1707,7 +1708,7 @@ export default function UploadPage({ setReportData }) {
                     border: "1px solid #cbd4e6",
                     borderRadius: 12,
                     padding: "10px 14px",
-                    fontSize: 14,
+                    fontSize: 12,
                     fontWeight: 800,
                     cursor: vestedPdfLoading ? "not-allowed" : "pointer",
                     minWidth: 120,
@@ -1782,7 +1783,7 @@ export default function UploadPage({ setReportData }) {
           <div
             style={{
               color: "#69758e",
-              fontSize: 15,
+              fontSize: 12,
               marginBottom: 18,
             }}
           >
@@ -1798,7 +1799,7 @@ export default function UploadPage({ setReportData }) {
               border: "none",
               borderRadius: 14,
               padding: "12px 20px",
-              fontSize: 15,
+              fontSize: 12,
               fontWeight: 700,
               cursor: "pointer",
             }}
@@ -1821,7 +1822,7 @@ export default function UploadPage({ setReportData }) {
             style={{
               color: "#0d2c6c",
               fontWeight: 800,
-              fontSize: 16,
+              fontSize: 12,
             }}
           >
             {selectedFiles.length
@@ -1889,7 +1890,7 @@ export default function UploadPage({ setReportData }) {
                   <div
                     style={{
                       color: "#6b7280",
-                      fontSize: 13,
+                      fontSize: 12,
                     }}
                   >
                     {(file.size / 1024).toFixed(1)} KB
@@ -1905,7 +1906,7 @@ export default function UploadPage({ setReportData }) {
                     border: "1px solid #f3c2c2",
                     borderRadius: 10,
                     padding: "8px 12px",
-                    fontSize: 13,
+                    fontSize: 12,
                     fontWeight: 700,
                     cursor: "pointer",
                     flexShrink: 0,
@@ -1930,7 +1931,7 @@ export default function UploadPage({ setReportData }) {
             color: "#fff",
             border: "none",
             borderRadius: 16,
-            fontSize: 17,
+            fontSize: 12,
             fontWeight: 800,
             cursor:
               loading || selectedFiles.length === 0 ? "not-allowed" : "pointer",
@@ -1965,7 +1966,7 @@ export default function UploadPage({ setReportData }) {
                 padding: 12,
                 color: "#0d2c6c",
                 fontWeight: 700,
-                fontSize: 14,
+                fontSize: 12,
               }}
             >
               הקבצים נטענים ומנותחים...

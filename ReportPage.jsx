@@ -5501,6 +5501,134 @@ function PrintReportA4({ reportData, conversationSummary = "", actionRecommendat
     </div>
   );
 
+
+
+  const splitPrintParagraphs = (text) =>
+    String(text || "")
+      .split(/\n{2,}/)
+      .map((block) => block.trim())
+      .filter(Boolean);
+
+  const parsePrintActionBlocks = (text) =>
+    String(text || "")
+      .split(/\n{2,}/)
+      .map((block) => {
+        const lines = block
+          .split(/\n+/)
+          .map((line) => line.trim())
+          .filter(Boolean);
+
+        if (!lines.length) return null;
+
+        return {
+          title: lines[0],
+          lines: lines.slice(1),
+        };
+      })
+      .filter(Boolean)
+      .filter((block) => block.title || block.lines.length);
+
+  const printSummaryBlocks = splitPrintParagraphs(printConversationSummary);
+  const printActionBlocks = parsePrintActionBlocks(printActionRecommendations);
+
+  const PrintSummaryActionsPage = ({ page }) => (
+    <section className="print-a4-page print-summary-actions-page">
+      <PrintHeader title="סיכום שיחה ופעולות אופרטיביות" page={page} />
+
+      <div className="print-card" style={{ marginBottom: "5mm" }}>
+        <h3 className="print-section-heading">סיכום שיחה</h3>
+        {printSummaryBlocks.length ? (
+          <div style={{ display: "flex", flexDirection: "column", gap: "3mm" }}>
+            {printSummaryBlocks.map((block, index) => {
+              const lines = block.split(/\n+/).map((line) => line.trim()).filter(Boolean);
+              const isTopicBlock = lines.length > 1;
+              return (
+                <div
+                  key={`summary-print-block-${index}`}
+                  className="print-card-soft"
+                  style={{
+                    whiteSpace: "pre-wrap",
+                    fontSize: 10.8,
+                    lineHeight: 1.75,
+                    borderColor: isTopicBlock ? "#E2D1BF" : "#EEE4D8",
+                  }}
+                >
+                  {isTopicBlock ? (
+                    <>
+                      <div style={{ color: "#00215D", fontSize: 11.5, fontWeight: 900, marginBottom: "1.5mm" }}>
+                        {lines[0]}
+                      </div>
+                      <div>{lines.slice(1).join("\n")}</div>
+                    </>
+                  ) : (
+                    block
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="print-muted">לא הוזן סיכום בדוח.</div>
+        )}
+      </div>
+
+      <div className="print-card">
+        <h3 className="print-section-heading">פעולות אופרטיביות לביצוע</h3>
+        {printActionBlocks.length ? (
+          <div style={{ display: "flex", flexDirection: "column", gap: "3mm" }}>
+            {printActionBlocks.map((block, blockIndex) => (
+              <div key={`action-print-block-${blockIndex}`} className="print-card-soft" style={{ borderColor: "#E2D1BF" }}>
+                <div style={{ color: "#00215D", fontSize: 11.5, fontWeight: 900, marginBottom: "2mm" }}>
+                  {block.title}
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: "1.8mm" }}>
+                  {block.lines.length ? (
+                    block.lines.map((line, lineIndex) => {
+                      const isPersonHeader = ["בן זוג", "בת זוג", "כללי"].includes(line);
+                      return isPersonHeader ? (
+                        <div
+                          key={`${block.title}-${line}-${lineIndex}`}
+                          style={{
+                            color: "#627D98",
+                            fontSize: 9.6,
+                            fontWeight: 900,
+                            marginTop: lineIndex ? "1.5mm" : 0,
+                          }}
+                        >
+                          {line}
+                        </div>
+                      ) : (
+                        <div
+                          key={`${block.title}-${line}-${lineIndex}`}
+                          style={{
+                            border: "1px solid #EEE4D8",
+                            borderRadius: "4mm",
+                            background: "#FFFFFF",
+                            padding: "2.2mm 3mm",
+                            fontSize: 10.5,
+                            lineHeight: 1.7,
+                            whiteSpace: "pre-wrap",
+                            wordBreak: "break-word",
+                          }}
+                        >
+                          {line}
+                        </div>
+                      );
+                    })
+                  ) : (
+                    <div className="print-muted">לא הוזנו פעולות לנושא זה.</div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="print-muted">לא הוזנו המלצות לפעולה בדוח.</div>
+        )}
+      </div>
+    </section>
+  );
+
   return (
     <div className="print-report-root" aria-hidden="true">
       <style>{css}</style>
@@ -5613,7 +5741,7 @@ function PrintReportA4({ reportData, conversationSummary = "", actionRecommendat
       ))}
 
       <section className="print-a4-page">
-        <PrintHeader title="הלוואות, סיכום והמלצות" page={loansPageNumber} />
+        <PrintHeader title="הלוואות וסיכום מהיר" page={loansPageNumber} />
         <div className="print-grid-2" style={{ marginBottom: "5mm" }}>
           <div className="print-card">
             <h3 className="print-section-heading">הלוואות על חשבון מוצרים פנסיוניים</h3>
@@ -5631,13 +5759,16 @@ function PrintReportA4({ reportData, conversationSummary = "", actionRecommendat
               <Kpi label="בני משפחה" value={members.length} />
               <Kpi label="יחס הלוואות לנכסים" value={`${loanRatioToAssets.toFixed(1)}%`} />
             </div>
-            <h3 className="print-section-heading">סיכום</h3>
-            <div className="print-card-soft" style={{ whiteSpace: "pre-wrap", fontSize: 10.5, lineHeight: 1.75, minHeight: "25mm", marginBottom: "3mm" }}>{printConversationSummary || "—"}</div>
-            <h3 className="print-section-heading">המלצות לפעולה</h3>
-            <div className="print-card-soft" style={{ whiteSpace: "pre-wrap", fontSize: 10.5, lineHeight: 1.75, minHeight: "28mm" }}>{printActionRecommendations || "—"}</div>
+            <Kpi label="קצבה חודשית צפויה" value={fmtCurrency(family.monthlyPensionWithDeposits)} />
+            <div style={{ height: 12 }} />
+            <Kpi label="צבירה צפויה בגיל פרישה" value={fmtCurrency(family.projectedLumpSumWithDeposits)} />
           </div>
         </div>
       </section>
+
+      {(printConversationSummary || printActionRecommendations) ? (
+        <PrintSummaryActionsPage page={loansPageNumber + 1} />
+      ) : null}
     </div>
   );
 }

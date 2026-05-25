@@ -135,6 +135,19 @@ function ClientFamilyView({ clientModel }) {
     (Array.isArray(recognizedPensionAdjustments) &&
       recognizedPensionAdjustments.length > 0);
 
+  const capitalClassification = normalizeClientCapitalClassification(
+    sourceReportData?.capitalClassification ||
+      model?.capitalClassification ||
+      clientModel?.capitalClassification ||
+      null
+  );
+
+  const hasCapitalClassificationData = capitalClassification.some(
+    (section) =>
+      section.pensionPolicies.length > 0 ||
+      section.studyFunds.length > 0
+  );
+
   const summaryText = getClientConversationSummaryText(model, sourceReportData);
   const recommendationsText = getClientRecommendationsText(model, sourceReportData);
 
@@ -555,6 +568,22 @@ function ClientFamilyView({ clientModel }) {
         </SectionCard>
       </div>
 
+      {hasCapitalClassificationData ? (
+        <div className="family-print-page family-print-page-capital">
+          <SectionCard title="פירוק נכסים" icon="📑">
+            <div className="family-explanation" style={explanation}>
+              פירוט זה מציג את אותו מידע שעבר מה־REPORT: פוליסות / גמל / פנסיה,
+              קרנות השתלמות, סיכומי הון וקצבה ומקרא סיווג כספים.
+            </div>
+
+            <ClientCapitalClassificationSection
+              sections={capitalClassification}
+              formatCurrency={formatCurrency}
+            />
+          </SectionCard>
+        </div>
+      ) : null}
+
       <div className="family-print-page family-print-page-3">
         <SectionCard title="הלוואות על חשבון מוצרים פנסיוניים" icon="💳">
           <div className="family-explanation" style={explanation}>
@@ -687,6 +716,386 @@ function ClientFamilyView({ clientModel }) {
         onClose={closePieDrawer}
         formatCurrency={formatCurrency}
       />
+    </div>
+  );
+}
+
+
+function normalizeClientCapitalClassification(value) {
+  const rawSections = Array.isArray(value) ? value : [];
+
+  return rawSections
+    .map((section, index) => {
+      const pensionPolicies = Array.isArray(section?.pensionPolicies)
+        ? section.pensionPolicies
+        : Array.isArray(section?.pensionFunds)
+        ? section.pensionFunds
+        : Array.isArray(section?.policies)
+        ? section.policies
+        : [];
+
+      const studyFunds = Array.isArray(section?.studyFunds)
+        ? section.studyFunds
+        : Array.isArray(section?.trainingFunds)
+        ? section.trainingFunds
+        : [];
+
+      return {
+        id: section?.id || section?.owner || `capital-section-${index}`,
+        owner: section?.owner || "",
+        ownerLabel:
+          section?.ownerLabel ||
+          section?.memberLabel ||
+          (section?.owner === "spouseB" ? "בת זוג" : "בן זוג"),
+        sourceFileName: section?.sourceFileName || "",
+        pensionPolicies,
+        studyFunds,
+      };
+    })
+    .filter((section) => section.pensionPolicies.length || section.studyFunds.length);
+}
+
+function clientCapitalNumber(value) {
+  if (typeof value === "number") return Number.isFinite(value) ? value : 0;
+
+  const clean = String(value || "")
+    .replace(/[₪,\s]/g, "")
+    .replace(/[^\d.-]/g, "");
+
+  const number = Number(clean);
+  return Number.isFinite(number) ? number : 0;
+}
+
+function pickClientCapitalValue(row, keys) {
+  for (const key of keys) {
+    const value = row?.[key];
+    if (value !== null && value !== undefined && String(value).trim() !== "") {
+      return clientCapitalNumber(value);
+    }
+  }
+
+  return 0;
+}
+
+function pickClientCapitalText(row, keys, fallback = "—") {
+  for (const key of keys) {
+    const value = row?.[key];
+    if (value !== null && value !== undefined && String(value).trim() !== "") {
+      return String(value);
+    }
+  }
+
+  return fallback;
+}
+
+function formatClientCapitalCurrency(value) {
+  const number = clientCapitalNumber(value);
+  if (!number) return "-";
+  return `₪${Math.round(number).toLocaleString("en-US")}`;
+}
+
+function getClientCapitalRowValues(row) {
+  const capitalRewards = pickClientCapitalValue(row, [
+    "capitalRewards",
+    "rewardsCapital",
+    "totalRewardsCapital",
+    "תגמולים הוניים",
+  ]);
+
+  const pensionRewards = pickClientCapitalValue(row, [
+    "pensionRewards",
+    "rewardsPension",
+    "totalRewardsPension",
+    "תגמולים קצבתיים",
+  ]);
+
+  const pre2000Rewards = pickClientCapitalValue(row, [
+    "pre2000Rewards",
+    "rewardsUntil2000",
+    "pensionRewardsUntil2000",
+    "תגמולים קצבתיים עד 1.1.2000",
+  ]);
+
+  const previousEmployerSeverance = pickClientCapitalValue(row, [
+    "previousEmployerSeverance",
+    "previousEmployerSeverancePension",
+    "severancePreviousEmployerPension",
+    "פיצויים ממעסיקים קודמים ברצף זכויות",
+  ]);
+
+  const currentEmployerSeveranceTaxable = pickClientCapitalValue(row, [
+    "currentEmployerSeveranceTaxable",
+    "currentEmployerSeverance",
+    "currentEmployerSeveranceForTax",
+    "פיצויים מעסיק נוכחי למס",
+  ]);
+
+  const exemptSeverance = pickClientCapitalValue(row, [
+    "exemptSeverance",
+    "liquidSeverance",
+    "capitalCompensation",
+    "severanceCapital",
+    "פיצויים הוניים פטורים",
+    "פיצויים הוניים",
+  ]);
+
+  const totalPension = pickClientCapitalValue(row, ["totalPension", "סהכ קצבה", "סה״כ קצבה"]);
+  const totalCapital = pickClientCapitalValue(row, ["totalCapital", "סהכ הון", "סה״כ הון"]);
+
+  return {
+    capitalRewards,
+    pensionRewards,
+    pre2000Rewards,
+    previousEmployerSeverance,
+    currentEmployerSeveranceTaxable,
+    exemptSeverance,
+    totalPension:
+      totalPension ||
+      pensionRewards + previousEmployerSeverance,
+    totalCapital:
+      totalCapital ||
+      capitalRewards + pre2000Rewards + exemptSeverance,
+  };
+}
+
+function getClientStudyFundValue(row) {
+  return pickClientCapitalValue(row, [
+    "totalFund",
+    "fundValue",
+    "accumulation",
+    "value",
+    "totalAssets",
+    "balance",
+    "סהכ קופה",
+    "סה״כ קופה",
+  ]);
+}
+
+function ClientCapitalClassificationSection({ sections, formatCurrency }) {
+  const safeSections = Array.isArray(sections) ? sections : [];
+
+  const allPensionRows = safeSections.flatMap((section) => section.pensionPolicies || []);
+  const allStudyRows = safeSections.flatMap((section) => section.studyFunds || []);
+
+  const totals = allPensionRows.reduce(
+    (acc, row) => {
+      const values = getClientCapitalRowValues(row);
+      acc.totalCapital += values.totalCapital;
+      acc.totalPension += values.totalPension;
+      acc.totalRewards += values.capitalRewards + values.pensionRewards + values.pre2000Rewards;
+      acc.totalSeverance +=
+        values.previousEmployerSeverance +
+        values.currentEmployerSeveranceTaxable +
+        values.exemptSeverance;
+      return acc;
+    },
+    { totalCapital: 0, totalPension: 0, totalRewards: 0, totalSeverance: 0 }
+  );
+
+  const studyTotal = allStudyRows.reduce(
+    (sum, row) => sum + getClientStudyFundValue(row),
+    0
+  );
+
+  const totalFund = totals.totalCapital + totals.totalPension + studyTotal;
+
+  return (
+    <div style={clientCapitalWrap}>
+      <div style={clientCapitalKpiGrid}>
+        <ClientCapitalKpi title="סה״כ קופה" value={formatCurrency(totalFund)} />
+        <ClientCapitalKpi title="סה״כ תגמולים" value={formatCurrency(totals.totalRewards)} />
+        <ClientCapitalKpi title="סה״כ פיצויים" value={formatCurrency(totals.totalSeverance)} />
+        <ClientCapitalKpi title="סה״כ הון" value={formatCurrency(totals.totalCapital + studyTotal)} tone="capital" />
+        <ClientCapitalKpi title="סה״כ קצבה" value={formatCurrency(totals.totalPension)} tone="pension" />
+      </div>
+
+      <div style={clientCapitalLegendBox}>
+        <div style={clientCapitalLegendTitle}>מקרא סיווג כספים</div>
+        <div style={clientCapitalLegendItems}>
+          <ClientCapitalLegendItem
+            color="#F8FBFF"
+            border="#DCEAFE"
+            label="כספים קצבתיים"
+            text="מיועדים לקצבה חודשית"
+          />
+          <ClientCapitalLegendItem
+            color="#FFFDF7"
+            border="#F3E7C3"
+            label="כספים הוניים"
+            text="במעמד הון / נזילים / עד 1.1.2000"
+          />
+        </div>
+      </div>
+
+      {safeSections.map((section, index) => (
+        <div key={section.id || index} style={clientCapitalOwnerBlock}>
+          <div style={clientCapitalOwnerHeader}>
+            <div>
+              <div style={clientCapitalOwnerTitle}>{section.ownerLabel}</div>
+              {section.sourceFileName ? (
+                <div style={clientCapitalOwnerSub}>מקור הנתונים: {section.sourceFileName}</div>
+              ) : null}
+            </div>
+          </div>
+
+          <ClientCapitalPensionTable rows={section.pensionPolicies} />
+          <ClientCapitalStudyFundsTable rows={section.studyFunds} />
+        </div>
+      ))}
+
+      <div style={clientCapitalNoteBox}>
+        כספים הוניים כוללים רכיבי הון, תגמולים הוניים ותגמולים קצבתיים עד שנת 1.1.2000.
+        כספים קצבתיים כוללים רכיבים המיועדים לקצבה חודשית. קרנות השתלמות מוצגות כצבירה בלבד.
+      </div>
+    </div>
+  );
+}
+
+function ClientCapitalKpi({ title, value, tone }) {
+  const style = {
+    ...clientCapitalKpi,
+    ...(tone === "capital" ? clientCapitalKpiCapital : {}),
+    ...(tone === "pension" ? clientCapitalKpiPension : {}),
+  };
+
+  return (
+    <div style={style}>
+      <div style={clientCapitalKpiLabel}>{title}</div>
+      <div style={clientCapitalKpiValue}>{value}</div>
+    </div>
+  );
+}
+
+function ClientCapitalLegendItem({ color, border, label, text }) {
+  return (
+    <div style={clientCapitalLegendItem}>
+      <span style={{ ...clientCapitalLegendSwatch, background: color, borderColor: border }} />
+      <div>
+        <div style={clientCapitalLegendLabel}>{label}</div>
+        <div style={clientCapitalLegendText}>{text}</div>
+      </div>
+    </div>
+  );
+}
+
+function ClientCapitalPensionTable({ rows }) {
+  const safeRows = Array.isArray(rows) ? rows : [];
+
+  if (!safeRows.length) {
+    return null;
+  }
+
+  const totals = safeRows.reduce(
+    (acc, row) => {
+      const values = getClientCapitalRowValues(row);
+      Object.keys(acc).forEach((key) => {
+        acc[key] += Number(values[key] || 0);
+      });
+      return acc;
+    },
+    {
+      capitalRewards: 0,
+      pensionRewards: 0,
+      pre2000Rewards: 0,
+      previousEmployerSeverance: 0,
+      currentEmployerSeveranceTaxable: 0,
+      exemptSeverance: 0,
+      totalPension: 0,
+      totalCapital: 0,
+    }
+  );
+
+  return (
+    <div style={clientCapitalTableSection}>
+      <div style={clientCapitalTableTitle}>פוליסות / גמל / פנסיה</div>
+      <div style={clientCapitalTableWrap}>
+        <table style={clientCapitalTable}>
+          <thead>
+            <tr>
+              <th style={clientCapitalTh}>מוצר / קבוצה</th>
+              <th style={clientCapitalTh}>חברה מנהלת</th>
+              <th style={clientCapitalTh}>תגמולים הוניים</th>
+              <th style={clientCapitalTh}>תגמולים קצבתיים</th>
+              <th style={clientCapitalTh}>תגמולים קצבתיים עד 1.1.2000</th>
+              <th style={clientCapitalTh}>פיצויים ממעסיקים קודמים ברצף זכויות</th>
+              <th style={clientCapitalTh}>פיצויים מעסיק נוכחי למס</th>
+              <th style={clientCapitalTh}>פיצויים הוניים פטורים</th>
+              <th style={clientCapitalTh}>סה״כ קצבה</th>
+              <th style={clientCapitalTh}>סה״כ הון</th>
+            </tr>
+          </thead>
+          <tbody>
+            {safeRows.map((row, index) => {
+              const values = getClientCapitalRowValues(row);
+              return (
+                <tr key={row.id || index}>
+                  <td style={clientCapitalTdStrong}>{pickClientCapitalText(row, ["productGroup", "groupName", "productType", "productName", "name"], "—")}</td>
+                  <td style={clientCapitalTd}>{pickClientCapitalText(row, ["managingCompany", "companyName", "managerName", "issuerName"], "—")}</td>
+                  <td style={clientCapitalTd}>{formatClientCapitalCurrency(values.capitalRewards)}</td>
+                  <td style={clientCapitalTd}>{formatClientCapitalCurrency(values.pensionRewards)}</td>
+                  <td style={clientCapitalTd}>{formatClientCapitalCurrency(values.pre2000Rewards)}</td>
+                  <td style={clientCapitalTd}>{formatClientCapitalCurrency(values.previousEmployerSeverance)}</td>
+                  <td style={clientCapitalTd}>{formatClientCapitalCurrency(values.currentEmployerSeveranceTaxable)}</td>
+                  <td style={clientCapitalTd}>{formatClientCapitalCurrency(values.exemptSeverance)}</td>
+                  <td style={clientCapitalTdStrong}>{formatClientCapitalCurrency(values.totalPension)}</td>
+                  <td style={clientCapitalTdStrong}>{formatClientCapitalCurrency(values.totalCapital)}</td>
+                </tr>
+              );
+            })}
+            <tr>
+              <td style={clientCapitalTotalLabel} colSpan={2}>סה״כ</td>
+              <td style={clientCapitalTotalTd}>{formatClientCapitalCurrency(totals.capitalRewards)}</td>
+              <td style={clientCapitalTotalTd}>{formatClientCapitalCurrency(totals.pensionRewards)}</td>
+              <td style={clientCapitalTotalTd}>{formatClientCapitalCurrency(totals.pre2000Rewards)}</td>
+              <td style={clientCapitalTotalTd}>{formatClientCapitalCurrency(totals.previousEmployerSeverance)}</td>
+              <td style={clientCapitalTotalTd}>{formatClientCapitalCurrency(totals.currentEmployerSeveranceTaxable)}</td>
+              <td style={clientCapitalTotalTd}>{formatClientCapitalCurrency(totals.exemptSeverance)}</td>
+              <td style={{ ...clientCapitalTotalTd, ...clientCapitalTotalPension }}>{formatClientCapitalCurrency(totals.totalPension)}</td>
+              <td style={{ ...clientCapitalTotalTd, ...clientCapitalTotalCapital }}>{formatClientCapitalCurrency(totals.totalCapital)}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+function ClientCapitalStudyFundsTable({ rows }) {
+  const safeRows = Array.isArray(rows) ? rows : [];
+
+  if (!safeRows.length) {
+    return null;
+  }
+
+  const total = safeRows.reduce((sum, row) => sum + getClientStudyFundValue(row), 0);
+
+  return (
+    <div style={clientCapitalTableSection}>
+      <div style={clientCapitalTableTitle}>קרנות השתלמות</div>
+      <div style={clientCapitalTableWrapNarrow}>
+        <table style={clientCapitalTable}>
+          <thead>
+            <tr>
+              <th style={clientCapitalTh}>חברה מנהלת</th>
+              <th style={clientCapitalTh}>מספר קופה</th>
+              <th style={clientCapitalTh}>צבירה</th>
+            </tr>
+          </thead>
+          <tbody>
+            {safeRows.map((row, index) => (
+              <tr key={row.id || index}>
+                <td style={clientCapitalTd}>{pickClientCapitalText(row, ["managingCompany", "companyName", "managerName", "issuerName"], "—")}</td>
+                <td style={clientCapitalTd}>{pickClientCapitalText(row, ["policyNumber", "fundNumber", "accountNumber", "kupatNumber", "planNumber"], "—")}</td>
+                <td style={clientCapitalTdStrong}>{formatClientCapitalCurrency(getClientStudyFundValue(row))}</td>
+              </tr>
+            ))}
+            <tr>
+              <td style={clientCapitalTotalLabel} colSpan={2}>סה״כ</td>
+              <td style={clientCapitalTotalTd}>{formatClientCapitalCurrency(total)}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
@@ -2960,6 +3369,223 @@ const section28MiniCard = {
   border: `1px solid ${theme.divider}`,
   borderRadius: 16,
   padding: 14,
+};
+
+
+const clientCapitalWrap = {
+  display: "flex",
+  flexDirection: "column",
+  gap: 18,
+};
+
+const clientCapitalKpiGrid = {
+  display: "grid",
+  gridTemplateColumns: "repeat(5, minmax(0, 1fr))",
+  gap: 10,
+};
+
+const clientCapitalKpi = {
+  background: "#FFFFFF",
+  border: "1px solid #D8DEE9",
+  borderRadius: 14,
+  padding: "12px 14px",
+  minHeight: 74,
+  display: "flex",
+  flexDirection: "column",
+  justifyContent: "center",
+};
+
+const clientCapitalKpiCapital = {
+  background: "#FFFDF7",
+  borderColor: "#F3E7C3",
+};
+
+const clientCapitalKpiPension = {
+  background: "#F8FBFF",
+  borderColor: "#DCEAFE",
+};
+
+const clientCapitalKpiLabel = {
+  color: theme.textSoft,
+  fontSize: 11,
+  fontWeight: 900,
+  marginBottom: 6,
+};
+
+const clientCapitalKpiValue = {
+  color: theme.navy,
+  fontSize: 17,
+  fontWeight: 900,
+  direction: "ltr",
+};
+
+const clientCapitalLegendBox = {
+  border: `1px solid ${theme.divider}`,
+  borderRadius: 16,
+  background: "#FFFFFF",
+  padding: "13px 16px",
+};
+
+const clientCapitalLegendTitle = {
+  color: theme.navy,
+  fontSize: 13,
+  fontWeight: 900,
+  marginBottom: 10,
+};
+
+const clientCapitalLegendItems = {
+  display: "flex",
+  gap: 24,
+  flexWrap: "wrap",
+};
+
+const clientCapitalLegendItem = {
+  display: "flex",
+  alignItems: "center",
+  gap: 10,
+};
+
+const clientCapitalLegendSwatch = {
+  width: 18,
+  height: 18,
+  borderRadius: 6,
+  border: "1px solid transparent",
+  flexShrink: 0,
+};
+
+const clientCapitalLegendLabel = {
+  color: theme.navy,
+  fontSize: 12,
+  fontWeight: 900,
+};
+
+const clientCapitalLegendText = {
+  color: theme.textSoft,
+  fontSize: 11,
+  marginTop: 2,
+};
+
+const clientCapitalOwnerBlock = {
+  borderTop: `1px solid ${theme.divider}`,
+  paddingTop: 16,
+};
+
+const clientCapitalOwnerHeader = {
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: "flex-start",
+  gap: 12,
+  marginBottom: 12,
+};
+
+const clientCapitalOwnerTitle = {
+  color: theme.navy,
+  fontSize: 16,
+  fontWeight: 900,
+};
+
+const clientCapitalOwnerSub = {
+  color: theme.textSoft,
+  fontSize: 11,
+  marginTop: 4,
+};
+
+const clientCapitalTableSection = {
+  marginTop: 14,
+};
+
+const clientCapitalTableTitle = {
+  color: theme.navy,
+  fontSize: 14,
+  fontWeight: 900,
+  marginBottom: 9,
+};
+
+const clientCapitalTableWrap = {
+  overflowX: "auto",
+  border: `1px solid ${theme.divider}`,
+  borderRadius: 16,
+  background: "#fff",
+};
+
+const clientCapitalTableWrapNarrow = {
+  overflowX: "auto",
+  border: `1px solid ${theme.divider}`,
+  borderRadius: 16,
+  background: "#fff",
+  maxWidth: 680,
+};
+
+const clientCapitalTable = {
+  width: "100%",
+  borderCollapse: "collapse",
+  minWidth: 760,
+  background: "#fff",
+};
+
+const clientCapitalTh = {
+  textAlign: "center",
+  fontSize: 11,
+  color: theme.navy,
+  background: "#F4F7FB",
+  borderBottom: `1px solid ${theme.divider}`,
+  borderLeft: `1px solid ${theme.divider}`,
+  padding: "10px 8px",
+  fontWeight: 900,
+  whiteSpace: "normal",
+  lineHeight: 1.35,
+};
+
+const clientCapitalTd = {
+  textAlign: "center",
+  fontSize: 11,
+  color: theme.text,
+  borderBottom: "1px solid #F0E6DA",
+  borderLeft: "1px solid #F0E6DA",
+  padding: "10px 8px",
+  whiteSpace: "normal",
+  lineHeight: 1.45,
+};
+
+const clientCapitalTdStrong = {
+  ...clientCapitalTd,
+  color: theme.navy,
+  fontWeight: 900,
+};
+
+const clientCapitalTotalLabel = {
+  ...clientCapitalTd,
+  color: theme.navy,
+  background: "#EEF2FA",
+  fontWeight: 900,
+  textAlign: "right",
+};
+
+const clientCapitalTotalTd = {
+  ...clientCapitalTd,
+  color: theme.navy,
+  background: "#EEF2FA",
+  fontWeight: 900,
+};
+
+const clientCapitalTotalCapital = {
+  background: "#FFFDF7",
+  borderColor: "#F3E7C3",
+};
+
+const clientCapitalTotalPension = {
+  background: "#F8FBFF",
+  borderColor: "#DCEAFE",
+};
+
+const clientCapitalNoteBox = {
+  background: "#FFFFFF",
+  border: `1px solid ${theme.divider}`,
+  borderRadius: 14,
+  padding: "12px 14px",
+  color: theme.textSoft,
+  fontSize: 12,
+  lineHeight: 1.7,
 };
 
 const recommendationsActionsRow = {

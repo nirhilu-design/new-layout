@@ -198,6 +198,47 @@ function normalizeCapitalClassificationReportData(data) {
   return fallbackEntries.filter(hasCapitalReportRows);
 }
 
+function normalizeSection28CappingReportData(data) {
+  const source = data || {};
+  const raw = source.section28Capping;
+
+  const normalizeEntry = (entry, fallbackOwner = "spouseA") => ({
+    ...entry,
+    owner: entry?.owner === "spouseB" ? "spouseB" : fallbackOwner,
+    ownerLabel:
+      entry?.ownerLabel ||
+      (entry?.owner === "spouseB" || fallbackOwner === "spouseB"
+        ? "בת זוג"
+        : "בן זוג"),
+    sourceFileName: entry?.sourceFileName || "",
+    groups: normalizeCapitalReportArray(entry?.groups),
+    comparisonRows: normalizeCapitalReportArray(entry?.comparisonRows),
+  });
+
+  const hasSection28Rows = (entry) =>
+    normalizeCapitalReportArray(entry?.groups).length > 0 ||
+    normalizeCapitalReportArray(entry?.comparisonRows).length > 0;
+
+  if (Array.isArray(raw)) {
+    return raw.map((entry) => normalizeEntry(entry)).filter(hasSection28Rows);
+  }
+
+  if (raw && typeof raw === "object" && hasSection28Rows(raw)) {
+    return [normalizeEntry(raw, raw.owner === "spouseB" ? "spouseB" : "spouseA")];
+  }
+
+  const fallbackEntries = [
+    ...(Array.isArray(source.spouseA_section28Capping)
+      ? source.spouseA_section28Capping.map((entry) => normalizeEntry(entry, "spouseA"))
+      : []),
+    ...(Array.isArray(source.spouseB_section28Capping)
+      ? source.spouseB_section28Capping.map((entry) => normalizeEntry(entry, "spouseB"))
+      : []),
+  ];
+
+  return fallbackEntries.filter(hasSection28Rows);
+}
+
 function getCapitalRowValue(row, key) {
   const value = row?.[key];
   if (value === null || value === undefined || value === "") return "-";
@@ -721,9 +762,8 @@ export default function ReportPage({
       vestedBalanceTable.rows.length > 0) ||
     hasRecognizedPensionAdjustments;
 
-  const section28Capping = safeReportData?.section28Capping || null;
-  const hasSection28Capping =
-    Array.isArray(section28Capping?.groups) && section28Capping.groups.length > 0;
+  const section28CappingEntries = normalizeSection28CappingReportData(safeReportData);
+  const hasSection28Capping = section28CappingEntries.length > 0;
 
   const capitalClassificationEntries = normalizeCapitalClassificationReportData(safeReportData);
   const hasCapitalClassification = capitalClassificationEntries.length > 0;
@@ -3285,19 +3325,50 @@ export default function ReportPage({
               <div style={styles.sectionHeader}>
                 <div style={styles.titleWithIcon}>
                   <span>🧮</span>
-                  <h2 style={styles.h2}>קיטום על פי סעיף 28</h2>
+                  <h2 style={styles.h2}>קיטום על פי סעיף 28 לפי בן/בת זוג</h2>
                 </div>
               </div>
 
               <div style={styles.explanation}>
-                הנתונים מוצגים כפי שנקראו מקובץ האקסל לפי שמות השדות, ללא חישוב
-                נוסף במערכת.
-                {section28Capping?.sourceFileName
-                  ? ` מקור הנתונים: ${section28Capping.sourceFileName}.`
-                  : ""}
+                הנתונים מוצגים כפי שנקראו מקובצי האקסל לפי שמות השדות, ללא חישוב
+                נוסף במערכת. כל קובץ מוצג לפי השיוך שנבחר במסך ההעלאה.
               </div>
 
-              <Section28CappingReport data={section28Capping} styles={styles} />
+              <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+                {section28CappingEntries.map((entry, index) => (
+                  <div
+                    key={`${entry.owner || "owner"}-${entry.sourceFileName || index}`}
+                    style={{
+                      border: "1px solid #EEE4D8",
+                      borderRadius: 18,
+                      background: "linear-gradient(180deg, #FFFFFF 0%, #FCFBF8 100%)",
+                      padding: 16,
+                    }}
+                  >
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        gap: 12,
+                        flexWrap: "wrap",
+                        marginBottom: 12,
+                      }}
+                    >
+                      <div style={{ color: navy, fontSize: 14, fontWeight: 900 }}>
+                        סעיף 28 — {entry.ownerLabel || "בן זוג"}
+                      </div>
+                      {entry.sourceFileName ? (
+                        <div style={{ color: textSoft, fontSize: 11, fontWeight: 800 }}>
+                          מקור: {entry.sourceFileName}
+                        </div>
+                      ) : null}
+                    </div>
+
+                    <Section28CappingReport data={entry} styles={styles} />
+                  </div>
+                ))}
+              </div>
             </section>
           ) : null}
 
@@ -5479,15 +5550,14 @@ function PrintReportA4({ reportData, conversationSummary = "", actionRecommendat
   const foreignExposureAllocation = Array.isArray(data.foreignExposureAllocation) ? data.foreignExposureAllocation : [];
   const loans = data.loans || { hasData: false, details: [] };
   const loanDetails = Array.isArray(loans.details) ? loans.details : [];
-  const section28Capping = data.section28Capping || null;
-  const section28Groups = Array.isArray(section28Capping?.groups) ? section28Capping.groups : [];
+  const section28CappingEntries = normalizeSection28CappingReportData(data);
   const vestedBalanceTable = data.vestedBalanceTable || null;
   const vestedRows = Array.isArray(vestedBalanceTable?.rows) ? vestedBalanceTable.rows : [];
   const recognizedPensionAdjustments = Array.isArray(data.recognizedPensionAdjustments) ? data.recognizedPensionAdjustments : [];
   const manualRecognizedRows = getManualRecognizedPensionRows(recognizedPensionAdjustments);
   const capitalClassificationEntries = normalizeCapitalClassificationReportData(data);
   const hasCapitalClassification = capitalClassificationEntries.length > 0;
-  const hasSection28Capping = section28Groups.length > 0;
+  const hasSection28Capping = section28CappingEntries.length > 0;
   const hasRecognizedPension = vestedRows.length > 0 || manualRecognizedRows.length > 0;
   const shouldShowPensionAppendixPage = hasSection28Capping || hasRecognizedPension;
 
@@ -5739,11 +5809,8 @@ function PrintReportA4({ reportData, conversationSummary = "", actionRecommendat
     );
   };
 
-  const Section28PrintSummary = () => {
-    if (!hasSection28Capping) {
-      return <div className="print-muted">לא קיימים נתוני סעיף 28 בדוח.</div>;
-    }
-
+  const renderSingleSection28PrintSummary = (entry) => {
+    const section28Groups = Array.isArray(entry?.groups) ? entry.groups : [];
     const allSection28Rows = section28Groups.flatMap((group) =>
       Array.isArray(group?.rows) ? group.rows.filter((row) => isMeaningfulSection28Value(row.value)) : []
     );
@@ -5831,12 +5898,19 @@ function PrintReportA4({ reportData, conversationSummary = "", actionRecommendat
       );
     };
 
-    const fallbackRows = allSection28Rows
-      .filter((row) => !employerRows.includes(row) && !employerSummaryRows.includes(row) && !employeeRows.includes(row) && !employeeSummaryRows.includes(row))
-      .slice(0, 8);
-
     return (
-      <div>
+      <div className="print-card-soft" style={{ marginBottom: "4mm" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", gap: "3mm", marginBottom: "2mm" }}>
+          <div style={{ color: "#00215D", fontWeight: 900, fontSize: 11.5 }}>
+            סעיף 28 — {entry?.ownerLabel || "בן זוג"}
+          </div>
+          {entry?.sourceFileName ? (
+            <div style={{ color: "#627D98", fontSize: 9.5, fontWeight: 800 }}>
+              מקור: {entry.sourceFileName}
+            </div>
+          ) : null}
+        </div>
+
         <div className="print-card-soft" style={{ marginBottom: "3mm" }}>
           <div style={{ color: "#00215D", fontWeight: 900, fontSize: 10.5, marginBottom: "2mm" }}>
             פירוט עלויות עובד / מעסיק
@@ -5857,7 +5931,22 @@ function PrintReportA4({ reportData, conversationSummary = "", actionRecommendat
 
         {renderSimpleGroup(savingGroup, "סימולציה לחיסכון", 3)}
         {renderSimpleGroup(retirementGroup, "סימולציה לגיל פרישה", 3)}
+      </div>
+    );
+  };
 
+  const Section28PrintSummary = () => {
+    if (!hasSection28Capping) {
+      return <div className="print-muted">לא קיימים נתוני סעיף 28 בדוח.</div>;
+    }
+
+    return (
+      <div>
+        {section28CappingEntries.map((entry, index) => (
+          <React.Fragment key={`${entry.owner || "owner"}-${entry.sourceFileName || index}`}>
+            {renderSingleSection28PrintSummary(entry)}
+          </React.Fragment>
+        ))}
       </div>
     );
   };

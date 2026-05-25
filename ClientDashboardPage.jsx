@@ -129,24 +129,42 @@ function findFirstObjectByKeyHints(source, keyHints, depth = 0, visited = new Se
 
 function buildSpecialSectionsModel(reportData) {
   const data = reportData || {};
-  const section28Capping = data.section28Capping || data.sourceReportData?.section28Capping || null;
-  const vestedBalanceTable = data.vestedBalanceTable || data.sourceReportData?.vestedBalanceTable || null;
-  const recognizedPensionAdjustments = data.recognizedPensionAdjustments || data.sourceReportData?.recognizedPensionAdjustments || null;
+  const sourceData = data.sourceReportData || {};
+  const section28Capping = data.section28Capping || sourceData.section28Capping || null;
+  const vestedBalanceTable = data.vestedBalanceTable || sourceData.vestedBalanceTable || null;
+  const recognizedPensionAdjustments = data.recognizedPensionAdjustments || sourceData.recognizedPensionAdjustments || null;
+  const capitalClassification = data.capitalClassification || sourceData.capitalClassification || [];
+  const spouseAPensionFunds = data.spouseA_pension_funds || sourceData.spouseA_pension_funds || [];
+  const spouseAStudyFunds = data.spouseA_study_funds || sourceData.spouseA_study_funds || [];
+  const spouseBPensionFunds = data.spouseB_pension_funds || sourceData.spouseB_pension_funds || [];
+  const spouseBStudyFunds = data.spouseB_study_funds || sourceData.spouseB_study_funds || [];
 
   const section28Groups = safeArray(section28Capping?.groups);
   const vestedRows = safeArray(vestedBalanceTable?.rows);
   const recognizedAdjustments = safeArray(recognizedPensionAdjustments);
+  const capitalSections = normalizeCapitalClassificationSections({
+    capitalClassification,
+    spouseAPensionFunds,
+    spouseAStudyFunds,
+    spouseBPensionFunds,
+    spouseBStudyFunds,
+  });
 
   const hasSection28 = section28Groups.length > 0;
   const hasRecognizedPension = vestedRows.length > 0 || recognizedAdjustments.length > 0;
+  const hasCapitalClassification = capitalSections.some(
+    (section) => safeArray(section.pensionPolicies).length > 0 || safeArray(section.studyFunds).length > 0
+  );
 
   return {
     hasSection28,
     hasRecognizedPension,
-    hasAny: hasSection28 || hasRecognizedPension,
+    hasCapitalClassification,
+    hasAny: hasSection28 || hasRecognizedPension || hasCapitalClassification,
     section28Capping,
     vestedBalanceTable,
     recognizedPensionAdjustments,
+    capitalClassification: capitalSections,
     section28Data: section28Capping,
     recognizedPensionData: {
       vestedBalanceTable,
@@ -716,6 +734,7 @@ function buildNavItems(specialSections) {
 
   const summaryIndex = BASE_NAV_ITEMS.findIndex((item) => item.id === "summary");
   const specialItems = [
+    specialSections.hasCapitalClassification ? { id: "capitalClassification", label: "פירוק נכסים", icon: "▦" } : null,
     specialSections.hasSection28 ? { id: "section28", label: "קיטום סעיף 28", icon: "§" } : null,
     specialSections.hasRecognizedPension ? { id: "recognizedPension", label: "קצבה מוכרת", icon: "₪" } : null,
   ].filter(Boolean);
@@ -825,6 +844,7 @@ export default function ClientDashboardPage({
           {activeSection === "allocation" ? <AllocationSection scope={scope} onSegmentClick={handleOpenPieDrawer} /> : null}
           {activeSection === "insurance" ? <InsuranceSection scope={scope} /> : null}
           {activeSection === "loans" ? <LoansSection scope={scope} /> : null}
+          {activeSection === "capitalClassification" ? <CapitalClassificationSection sections={specialSections.capitalClassification} /> : null}
           {activeSection === "section28" ? <Section28Section section28Capping={specialSections.section28Capping} /> : null}
           {activeSection === "recognizedPension" ? <RecognizedPensionSection vestedBalanceTable={specialSections.vestedBalanceTable} recognizedPensionAdjustments={specialSections.recognizedPensionAdjustments} /> : null}
           {activeSection === "summary" ? <ConversationSummarySection scope={scope} clientModel={clientModel} reportData={reportData} /> : null}
@@ -1140,6 +1160,275 @@ function LoansSection({ scope }) {
   );
 }
 
+
+
+function normalizeCapitalClassificationSections(input = {}) {
+  const directSections = safeArray(input.capitalClassification)
+    .map((section, index) => ({
+      owner: section?.owner || section?.ownerKey || section?.memberType || `capital-${index}`,
+      ownerLabel: section?.ownerLabel || getCapitalOwnerLabel(section?.owner || section?.ownerKey || section?.memberType, index),
+      sourceFileName: section?.sourceFileName || section?.fileName || "",
+      pensionPolicies: safeArray(section?.pensionPolicies || section?.pensionFunds || section?.policies || section?.funds),
+      studyFunds: safeArray(section?.studyFunds || section?.trainingFunds || section?.hishtalmutFunds),
+    }))
+    .filter((section) => section.pensionPolicies.length || section.studyFunds.length);
+
+  if (directSections.length) return directSections;
+
+  return [
+    {
+      owner: "spouseA",
+      ownerLabel: "בן זוג",
+      pensionPolicies: safeArray(input.spouseAPensionFunds),
+      studyFunds: safeArray(input.spouseAStudyFunds),
+    },
+    {
+      owner: "spouseB",
+      ownerLabel: "בת זוג",
+      pensionPolicies: safeArray(input.spouseBPensionFunds),
+      studyFunds: safeArray(input.spouseBStudyFunds),
+    },
+  ].filter((section) => section.pensionPolicies.length || section.studyFunds.length);
+}
+
+function getCapitalOwnerLabel(owner, index = 0) {
+  const text = String(owner || "").toLowerCase();
+  if (text.includes("spouseb") || text.includes("wife") || text.includes("female") || text.includes("בת")) return "בת זוג";
+  if (text.includes("spousea") || text.includes("husband") || text.includes("male") || text.includes("בן")) return "בן זוג";
+  return index === 1 ? "בת זוג" : "בן זוג";
+}
+
+function getCapitalNumber(row, keys) {
+  for (const key of keys) {
+    const value = row?.[key];
+    if (value === null || value === undefined || value === "") continue;
+    const number = parseReportNumber(value);
+    if (Number.isFinite(number) && number !== 0) return number;
+  }
+  return 0;
+}
+
+function getCapitalText(row, keys) {
+  return getFirstText(keys.map((key) => row?.[key]));
+}
+
+function getCapitalRowFundValue(row) {
+  return getCapitalNumber(row, [
+    "totalFund",
+    "totalFundValue",
+    "fundValue",
+    "accumulation",
+    "balance",
+    "totalBalance",
+    "סהכ קופה",
+    "סה״כ קופה",
+    "סהכ צבירה",
+    "צבירה",
+  ]);
+}
+
+function getCapitalRowPensionValue(row) {
+  const explicit = getCapitalNumber(row, ["totalPension", "pensionTotal", "סהכ קצבה", "סה״כ קצבה"]);
+  if (explicit) return explicit;
+  return (
+    getCapitalNumber(row, ["pensionRewards", "pensionCompensation", "pension", "annuityRewards", "תגמולים קצבתיים", "פיצויים קצבתיים", "פנסיה"]) +
+    getCapitalNumber(row, ["currentEmployerSeveranceTaxable", "taxableCompensation", "currentEmployerCompensationTax", "פיצויים מעסיק נוכחי למס"])
+  );
+}
+
+function getCapitalRowCapitalValue(row, isStudyFund = false) {
+  const explicit = getCapitalNumber(row, ["totalCapital", "capitalTotal", "סהכ הון", "סה״כ הון"]);
+  if (explicit) return explicit;
+  if (isStudyFund) return getCapitalRowFundValue(row);
+  return getCapitalNumber(row, ["capitalCompensation", "capitalRewards", "pre2000Rewards", "liquidCompensation", "exemptCompensation", "תגמולים הוניים", "תגמולים קצבתיים עד 1.1.2000", "פיצויים הוניים"]);
+}
+
+function getCapitalSummary(sections) {
+  const rows = safeArray(sections).flatMap((section) => [
+    ...safeArray(section.pensionPolicies).map((row) => ({ row, isStudyFund: false })),
+    ...safeArray(section.studyFunds).map((row) => ({ row, isStudyFund: true })),
+  ]);
+
+  return rows.reduce((acc, item) => {
+    const row = item.row || {};
+    acc.totalFund += getCapitalRowFundValue(row);
+    acc.totalRewards += getCapitalNumber(row, ["totalRewards", "rewardsTotal", "תגמולים הוניים", "תגמולים קצבתיים", "תגמולים קצבתיים עד 1.1.2000", "סהכ תגמולים"]);
+    acc.totalCompensation += getCapitalNumber(row, ["totalCompensation", "compensationTotal", "פיצויים הוניים", "פיצויים קצבתיים", "פיצויים מעסיק נוכחי למס", "סהכ פיצוים", "סהכ פיצויים"]);
+    acc.totalCapital += getCapitalRowCapitalValue(row, item.isStudyFund);
+    acc.totalPension += item.isStudyFund ? 0 : getCapitalRowPensionValue(row);
+    return acc;
+  }, { totalFund: 0, totalRewards: 0, totalCompensation: 0, totalCapital: 0, totalPension: 0 });
+}
+
+function CapitalClassificationSection({ sections }) {
+  const capitalSections = safeArray(sections);
+  const summary = getCapitalSummary(capitalSections);
+
+  if (!capitalSections.length) {
+    return (
+      <div>
+        <SectionTitle title="פירוק נכסים" subtitle="בדוח הנוכחי לא נמצאו נתוני פירוק נכסים להצגה." />
+        <div className="client-empty-state">אין נתונים להצגה באזור זה.</div>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <SectionTitle
+        title="פירוק נכסים"
+        subtitle="פירוק מרכז של פוליסות, גמל, פנסיה וקרנות השתלמות לפי סיווג הוני / קצבתי, כפי שהועבר מה־REPORT."
+      />
+
+      <div className="client-report-like-shell client-capital-shell">
+        <div className="client-capital-kpi-row">
+          <CapitalKpi title="סה״כ קופה" value={summary.totalFund} />
+          <CapitalKpi title="סה״כ תגמולים" value={summary.totalRewards} />
+          <CapitalKpi title="סה״כ פיצויים" value={summary.totalCompensation} />
+          <CapitalKpi title="סה״כ הון" value={summary.totalCapital} tone="capital" />
+          <CapitalKpi title="סה״כ קצבה" value={summary.totalPension} tone="pension" />
+        </div>
+
+        <div className="client-capital-legend">
+          <strong>מקרא סיווג כספים</strong>
+          <span><i className="capital-dot pension" /> כספים קצבתיים / מיועדים לקצבה חודשית</span>
+          <span><i className="capital-dot capital" /> כספים הוניים / נזילים / תגמולים עד 1.1.2000</span>
+        </div>
+
+        {capitalSections.map((section, index) => (
+          <CapitalOwnerBlock key={`${section.owner || section.ownerLabel || "owner"}-${index}`} section={section} />
+        ))}
+
+        <div className="client-capital-note">
+          כספים הוניים כוללים רכיבי הון, תגמולים הוניים ותגמולים קצבתיים עד שנת 1.1.2000. קרנות השתלמות מוצגות כצבירה בלבד.
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function CapitalKpi({ title, value, tone = "default" }) {
+  return (
+    <div className={`client-capital-kpi ${tone}`}>
+      <span>{title}</span>
+      <strong>{formatCurrency(value)}</strong>
+    </div>
+  );
+}
+
+function CapitalOwnerBlock({ section }) {
+  const pensionRows = safeArray(section?.pensionPolicies);
+  const studyRows = safeArray(section?.studyFunds);
+  const pensionTotals = pensionRows.reduce((acc, row) => {
+    acc.totalCapital += getCapitalRowCapitalValue(row, false);
+    acc.totalPension += getCapitalRowPensionValue(row);
+    return acc;
+  }, { totalCapital: 0, totalPension: 0 });
+  const studyTotal = studyRows.reduce((sum, row) => sum + getCapitalRowFundValue(row), 0);
+
+  return (
+    <div className="client-report-panel client-capital-owner-panel">
+      <div className="client-report-table-heading">
+        <div>
+          <div className="client-report-panel-title">פירוק נכסים ללקוח {section?.ownerLabel || "—"}</div>
+          <p>{section?.sourceFileName ? `מקור הנתונים: ${section.sourceFileName}` : "חלוקה לפי פוליסות, גמל, פנסיה וקרנות השתלמות."}</p>
+        </div>
+      </div>
+
+      {pensionRows.length ? (
+        <div className="client-margin-top">
+          <div className="client-capital-subtitle">פוליסות / גמל / פנסיה</div>
+          <div className="client-table-wrap">
+            <table className="client-table client-capital-table">
+              <thead>
+                <tr>
+                  <th>מוצר / קבוצה</th>
+                  <th>חברה מנהלת</th>
+                  <th>תגמולים הוניים</th>
+                  <th>תגמולים קצבתיים עד 1.1.2000</th>
+                  <th>פיצויים ממעסיקים קודמים ברצף זכויות</th>
+                  <th>פיצויים מעסיק נוכחי למס</th>
+                  <th>סה״כ קצבה</th>
+                  <th>סה״כ הון</th>
+                </tr>
+              </thead>
+              <tbody>
+                {pensionRows.map((row, index) => <CapitalPensionRow key={row?.id || index} row={row} />)}
+                <tr className="total-row client-capital-total-row">
+                  <td colSpan={6}>סה״כ</td>
+                  <td className="pension-total">{formatCurrency(pensionTotals.totalPension)}</td>
+                  <td className="capital-total">{formatCurrency(pensionTotals.totalCapital)}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ) : null}
+
+      {studyRows.length ? (
+        <div className="client-margin-top">
+          <div className="client-capital-subtitle">קרנות השתלמות</div>
+          <div className="client-table-wrap client-capital-study-wrap">
+            <table className="client-table client-capital-study-table">
+              <thead>
+                <tr>
+                  <th>חברה מנהלת</th>
+                  <th>מספר קופה</th>
+                  <th>צבירה</th>
+                </tr>
+              </thead>
+              <tbody>
+                {studyRows.map((row, index) => <CapitalStudyRow key={row?.id || index} row={row} />)}
+                <tr className="total-row">
+                  <td colSpan={2}>סה״כ</td>
+                  <td>{formatCurrency(studyTotal)}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function CapitalPensionRow({ row }) {
+  const productType = getCapitalText(row, ["productType", "productGroup", "productName", "type", "מוצר / קבוצה", "סוג מוצר"]) || "—";
+  const company = getCapitalText(row, ["managingCompany", "companyName", "managerName", "issuerName", "חברה מנהלת", "שם יצרן"]) || "—";
+  const capitalRewards = getCapitalNumber(row, ["capitalRewards", "תגמולים הוניים"]);
+  const pre2000Rewards = getCapitalNumber(row, ["pre2000Rewards", "rewardsBefore2000", "תגמולים קצבתיים עד 1.1.2000"]);
+  const previousEmployerContinuity = getCapitalNumber(row, ["previousEmployerContinuity", "previousEmployerSeveranceRights", "פיצויים ממעסיקים קודמים ברצף זכויות"]);
+  const currentEmployerTax = getCapitalNumber(row, ["currentEmployerSeveranceTaxable", "taxableCompensation", "currentEmployerCompensationTax", "פיצויים מעסיק נוכחי למס"]);
+  const totalPension = getCapitalRowPensionValue(row);
+  const totalCapital = getCapitalRowCapitalValue(row, false);
+
+  return (
+    <tr>
+      <td>{productType}</td>
+      <td>{company}</td>
+      <td>{capitalRewards ? formatCurrency(capitalRewards) : "—"}</td>
+      <td>{pre2000Rewards ? formatCurrency(pre2000Rewards) : "—"}</td>
+      <td>{previousEmployerContinuity ? formatCurrency(previousEmployerContinuity) : "—"}</td>
+      <td>{currentEmployerTax ? formatCurrency(currentEmployerTax) : "—"}</td>
+      <td>{totalPension ? formatCurrency(totalPension) : "—"}</td>
+      <td>{totalCapital ? formatCurrency(totalCapital) : "—"}</td>
+    </tr>
+  );
+}
+
+function CapitalStudyRow({ row }) {
+  const company = getCapitalText(row, ["managingCompany", "companyName", "managerName", "issuerName", "חברה מנהלת", "שם יצרן"]) || "—";
+  const policyNumber = getCapitalText(row, ["policyNumber", "fundNumber", "policyNo", "מספר קופה", "מספר פוליסה"]) || "—";
+  const totalFund = getCapitalRowFundValue(row);
+
+  return (
+    <tr>
+      <td>{company}</td>
+      <td>{policyNumber}</td>
+      <td>{totalFund ? formatCurrency(totalFund) : "—"}</td>
+    </tr>
+  );
+}
 
 
 function normalizeSection28Text(value) {
@@ -2405,9 +2694,35 @@ const clientDashboardCss = `
   .client-tax-gap-summary strong { color: #00215D; font-size: 26px; font-weight: 900; direction: ltr; white-space: nowrap; }
   .client-empty-state.compact { padding: 12px; font-size: 12px; }
 
+  .client-capital-shell { gap: 16px; }
+  .client-capital-kpi-row { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; }
+  .client-capital-kpi { min-height: 78px; border: 1px solid #E7D9CA; border-radius: 18px; background: #FFFFFF; padding: 13px 14px; display: flex; flex-direction: column; justify-content: center; gap: 7px; }
+  .client-capital-kpi.capital { background: #FFFDF7; border-color: #F1E4C5; }
+  .client-capital-kpi.pension { background: #F8FBFF; border-color: #DCEAFE; }
+  .client-capital-kpi span { color: #627D98; font-size: 12px; font-weight: 900; }
+  .client-capital-kpi strong { color: #00215D; font-size: 19px; font-weight: 900; direction: ltr; text-align: right; }
+  .client-capital-legend { border: 1px solid #E7D9CA; border-radius: 18px; background: #FFFDFB; padding: 13px 16px; display: flex; gap: 20px; align-items: center; flex-wrap: wrap; color: #31445F; font-size: 12px; font-weight: 800; }
+  .client-capital-legend strong { color: #00215D; font-size: 13px; font-weight: 900; }
+  .capital-dot { width: 15px; height: 15px; border-radius: 5px; display: inline-block; vertical-align: middle; margin-left: 7px; border: 1px solid transparent; }
+  .capital-dot.pension { background: #F8FBFF; border-color: #DCEAFE; }
+  .capital-dot.capital { background: #FFFDF7; border-color: #F1E4C5; }
+  .client-capital-owner-panel { padding: 18px; }
+  .client-capital-subtitle { margin-bottom: 10px; color: #00215D; font-size: 15px; font-weight: 900; }
+  .client-capital-table { min-width: 1120px; }
+  .client-capital-table th, .client-capital-table td { text-align: center; white-space: normal; line-height: 1.45; }
+  .client-capital-table th:first-child, .client-capital-table td:first-child,
+  .client-capital-table th:nth-child(2), .client-capital-table td:nth-child(2) { text-align: right; }
+  .client-capital-total-row .capital-total { background: #FFFDF7 !important; border-right: 1px solid #F1E4C5; color: #00215D; font-weight: 900; }
+  .client-capital-total-row .pension-total { background: #F8FBFF !important; border-right: 1px solid #DCEAFE; color: #00215D; font-weight: 900; }
+  .client-capital-study-wrap { max-width: 720px; }
+  .client-capital-study-table { min-width: 560px; }
+  .client-capital-study-table th, .client-capital-study-table td { text-align: center; }
+  .client-capital-study-table th:first-child, .client-capital-study-table td:first-child { text-align: right; }
+  .client-capital-note { border: 1px solid #D8DEE9; border-radius: 16px; background: #F8FBFF; color: #627D98; font-size: 12px; line-height: 1.7; padding: 12px 14px; }
+
   @media print { .client-web-shell { display: none !important; } }
-  @media (max-width: 1180px) { .client-product-summary { grid-template-columns: 28px minmax(0, 1fr) repeat(2, minmax(110px, .8fr)); } .client-product-strip-item { border-right: 0; padding-right: 0; } .client-web-shell { grid-template-columns: 1fr; } .client-sidebar { position: relative; height: auto; display: block; border-left: 0; border-bottom: 1px solid rgba(255,255,255,0.12); } .client-sidebar-nav { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); } .client-main { padding: 18px; } .client-topbar { flex-direction: column; align-items: stretch; } .client-topbar-actions { justify-content: flex-start; } .client-kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .client-grid-3, .client-grid-2, .client-personal-grid, .client-allocation-top-pies, .client-special-grid { grid-template-columns: 1fr; } }
-  @media (max-width: 720px) { .client-product-summary { grid-template-columns: 28px minmax(0, 1fr); align-items: start; } .client-product-strip-item { grid-column: 1 / -1; min-height: auto; } .client-main { padding: 12px; } .client-sidebar { padding: 16px 12px; } .client-sidebar-nav { grid-template-columns: 1fr; } .client-kpi-grid { grid-template-columns: 1fr; } .client-content-card { padding: 16px; border-radius: 18px; } .client-topbar { padding: 16px; border-radius: 18px; } .client-page-title { font-size: 22px; } .client-donut-layout, .client-donut-layout.wide { grid-template-columns: 1fr; justify-items: center; } .client-drawer-stats { grid-template-columns: 1fr; } .client-donut-panel.wide .client-legend { grid-template-columns: 1fr; } .client-scope-select-wrap, .client-history-button { grid-template-columns: 1fr; width: 100%; } .client-personal-fields, .client-special-metrics { grid-template-columns: 1fr; } }
+  @media (max-width: 1180px) { .client-product-summary { grid-template-columns: 28px minmax(0, 1fr) repeat(2, minmax(110px, .8fr)); } .client-product-strip-item { border-right: 0; padding-right: 0; } .client-web-shell { grid-template-columns: 1fr; } .client-sidebar { position: relative; height: auto; display: block; border-left: 0; border-bottom: 1px solid rgba(255,255,255,0.12); } .client-sidebar-nav { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); } .client-main { padding: 18px; } .client-topbar { flex-direction: column; align-items: stretch; } .client-topbar-actions { justify-content: flex-start; } .client-kpi-grid, .client-capital-kpi-row { grid-template-columns: repeat(2, minmax(0, 1fr)); } .client-grid-3, .client-grid-2, .client-personal-grid, .client-allocation-top-pies, .client-special-grid { grid-template-columns: 1fr; } }
+  @media (max-width: 720px) { .client-product-summary { grid-template-columns: 28px minmax(0, 1fr); align-items: start; } .client-product-strip-item { grid-column: 1 / -1; min-height: auto; } .client-main { padding: 12px; } .client-sidebar { padding: 16px 12px; } .client-sidebar-nav { grid-template-columns: 1fr; } .client-kpi-grid { grid-template-columns: 1fr; } .client-content-card { padding: 16px; border-radius: 18px; } .client-topbar { padding: 16px; border-radius: 18px; } .client-page-title { font-size: 22px; } .client-donut-layout, .client-donut-layout.wide { grid-template-columns: 1fr; justify-items: center; } .client-drawer-stats { grid-template-columns: 1fr; } .client-donut-panel.wide .client-legend { grid-template-columns: 1fr; } .client-scope-select-wrap, .client-history-button { grid-template-columns: 1fr; width: 100%; } .client-personal-fields, .client-special-metrics, .client-capital-kpi-row { grid-template-columns: 1fr; } }
 `;
 
 const styles = {

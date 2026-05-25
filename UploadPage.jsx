@@ -95,6 +95,134 @@ const ISRAEL_INSURANCE_COMPANIES = [
   "ווישור",
 ];
 
+
+const CAPITAL_CLASSIFICATION_OWNER_OPTIONS = [
+  { value: "spouseA", label: "בן זוג" },
+  { value: "spouseB", label: "בת זוג" },
+];
+
+const CAPITAL_CLASSIFICATION_NUMERIC_FIELDS = [
+  "totalSeverance",
+  "totalRewards",
+  "totalBalance",
+  "capitalSeverance",
+  "annuitySeverance",
+  "currentEmployerSeveranceTaxable",
+  "previousEmployersSeveranceRightsSequence",
+  "liquidExemptSeverance",
+  "capitalRewards",
+  "annuityRewardsUntil2000",
+  "annuityRewards",
+  "pension",
+  "coefficient",
+  "redemptionValue",
+];
+
+function createCapitalClassificationUpload() {
+  return {
+    id: `capital-classification-${Date.now()}-${Math.random()
+      .toString(16)
+      .slice(2)}`,
+    owner: "spouseA",
+    file: null,
+    fileName: "",
+    loading: false,
+    error: "",
+    data: null,
+  };
+}
+
+function normalizeCapitalClassificationHeader(value) {
+  return String(value || "")
+    .replace(/[״”"]/g, '"')
+    .replace(/[׳’']/g, "'")
+    .replace(/\s+/g, " ")
+    .replace(/[\u200e\u200f]/g, "")
+    .trim();
+}
+
+function normalizeCapitalClassificationKey(value) {
+  return normalizeCapitalClassificationHeader(value)
+    .replace(/[\s_\-:()\/\\.]/g, "")
+    .replace(/[₪,%]/g, "")
+    .toLowerCase();
+}
+
+function parseCapitalClassificationNumber(value) {
+  if (typeof value === "number") {
+    return Number.isFinite(value) ? value : 0;
+  }
+
+  const clean = String(value || "")
+    .replace(/[₪,%\s]/g, "")
+    .replace(/,/g, "")
+    .replace(/[−–—]/g, "-")
+    .replace(/[^\d.-]/g, "");
+
+  const number = Number(clean);
+  return Number.isFinite(number) ? number : 0;
+}
+
+function formatCapitalClassificationCell(value, cell) {
+  if (value === null || value === undefined) return "";
+
+  if (cell?.w && String(cell.w).trim()) {
+    return String(cell.w).replace(/\s+/g, " ").trim();
+  }
+
+  if (typeof value === "number") {
+    return value;
+  }
+
+  return String(value).replace(/\s+/g, " ").trim();
+}
+
+function findCapitalClassificationColumnIndex(headers, candidates) {
+  const normalizedCandidates = candidates.map(normalizeCapitalClassificationKey);
+
+  return headers.findIndex((header) => {
+    const normalizedHeader = normalizeCapitalClassificationKey(header);
+    return normalizedCandidates.some(
+      (candidate) =>
+        normalizedHeader === candidate ||
+        normalizedHeader.includes(candidate) ||
+        candidate.includes(normalizedHeader)
+    );
+  });
+}
+
+function getCapitalClassificationOwnerLabel(owner) {
+  return (
+    CAPITAL_CLASSIFICATION_OWNER_OPTIONS.find((option) => option.value === owner)
+      ?.label || "בן זוג"
+  );
+}
+
+function buildEmptyReportDataForManualInputs() {
+  const today = new Intl.DateTimeFormat("he-IL").format(new Date());
+
+  return {
+    lastUpdated: today,
+    family: {
+      lastUpdated: today,
+      totalAssets: 0,
+      monthlyDeposits: 0,
+      projectedLumpSumWithDeposits: 0,
+      projectedLumpSumWithoutDeposits: 0,
+      monthlyPensionWithDeposits: 0,
+      monthlyPensionWithoutDeposits: 0,
+    },
+    members: [],
+    products: [],
+    managers: [],
+    mainGroupAllocation: [],
+    foreignExposureAllocation: [],
+    weightedForeignExposure: 0,
+    weightedEquityExposure: 0,
+    loans: { hasData: false, details: [] },
+  };
+}
+
 function formatAmountInput(value) {
   const clean = String(value || "").replace(/[^0-9.]/g, "");
   const parts = clean.split(".");
@@ -126,6 +254,10 @@ export default function UploadPage({ setReportData }) {
   const [vestedPdfTable, setVestedPdfTable] = useState(null);
   const [vestedPdfLoading, setVestedPdfLoading] = useState(false);
   const [vestedPdfError, setVestedPdfError] = useState("");
+
+
+  const [capitalClassificationUploads, setCapitalClassificationUploads] =
+    useState([createCapitalClassificationUpload()]);
 
   const [recognizedPensionAdjustments, setRecognizedPensionAdjustments] =
     useState([
@@ -431,6 +563,427 @@ export default function UploadPage({ setReportData }) {
       sheetName,
       groups,
       comparisonRows,
+    };
+  };
+
+
+  const extractCapitalClassificationFromExcel = async (file, owner) => {
+    const XLSX = await loadXlsx();
+    const buffer = await file.arrayBuffer();
+    const workbook = XLSX.read(buffer, {
+      type: "array",
+      cellStyles: true,
+      cellDates: true,
+    });
+
+    const sheetName =
+      workbook.SheetNames.find((name) =>
+        normalizeCapitalClassificationHeader(name).includes("RAW")
+      ) || workbook.SheetNames[0];
+    const worksheet = workbook.Sheets[sheetName];
+
+    if (!worksheet?.["!ref"]) {
+      return null;
+    }
+
+    const range = XLSX.utils.decode_range(worksheet["!ref"]);
+    const rows = [];
+
+    for (let row = range.s.r; row <= range.e.r; row += 1) {
+      const values = [];
+      for (let col = range.s.c; col <= range.e.c; col += 1) {
+        const address = XLSX.utils.encode_cell({ r: row, c: col });
+        const cell = worksheet[address];
+        values.push(formatCapitalClassificationCell(cell?.v, cell));
+      }
+      rows.push(values);
+    }
+
+    const headerCandidates = rows
+      .map((row, index) => {
+        const text = row.map(normalizeCapitalClassificationHeader).join(" ");
+        const score = [
+          /מספר/.test(text) && /(פוליסה|קופה)/.test(text),
+          /(חברה מנהלת|שם יצרן|יצרן)/.test(text),
+          /(סוג מוצר|מוצר)/.test(text),
+          /תגמולים/.test(text),
+          /פיצויים/.test(text) || /פיצוים/.test(text),
+          /סהכ|סה"כ|סה״כ/.test(text),
+        ].filter(Boolean).length;
+        return { row, index, score };
+      })
+      .filter((item) => item.score >= 2)
+      .sort((a, b) => b.score - a.score || a.index - b.index);
+
+    const headerInfo = headerCandidates[0];
+    if (!headerInfo) {
+      return null;
+    }
+
+    const headers = headerInfo.row.map(normalizeCapitalClassificationHeader);
+
+    const columnMap = {
+      policyNumber: findCapitalClassificationColumnIndex(headers, [
+        "מספר פוליסה",
+        "מספר קופה",
+        "מספר תוכנית",
+      ]),
+      managerName: findCapitalClassificationColumnIndex(headers, [
+        "חברה מנהלת",
+        "שם יצרן",
+        "יצרן",
+      ]),
+      planName: findCapitalClassificationColumnIndex(headers, [
+        "שם תוכנית",
+        "שם תכנית",
+        "שם מסלול",
+      ]),
+      productType: findCapitalClassificationColumnIndex(headers, [
+        "סוג מוצר",
+        "מוצר",
+      ]),
+      totalSeverance: findCapitalClassificationColumnIndex(headers, [
+        "סהכ פיצוים",
+        "סהכ פיצויים",
+        "סה\"כ פיצויים",
+      ]),
+      totalRewards: findCapitalClassificationColumnIndex(headers, [
+        "סהכ תגמולים",
+        "סה\"כ תגמולים",
+      ]),
+      totalBalance: findCapitalClassificationColumnIndex(headers, [
+        "סהכ קופה",
+        "סה\"כ קופה",
+        "סהכ צבירה",
+      ]),
+      capitalSeverance: findCapitalClassificationColumnIndex(headers, [
+        "פיצוים הונים",
+        "פיצויים הוניים",
+      ]),
+      annuitySeverance: findCapitalClassificationColumnIndex(headers, [
+        "פיצוים קצבתיים",
+        "פיצויים קצבתיים",
+      ]),
+      currentEmployerSeveranceTaxable: findCapitalClassificationColumnIndex(headers, [
+        "פיצויים למס",
+        "פיצוים למס",
+        "פיצויים מעסיק נוכחי",
+        "פיצוים מעסיק נוכחי",
+        "מעסיק נוכחי",
+      ]),
+      previousEmployersSeveranceRightsSequence: findCapitalClassificationColumnIndex(headers, [
+        "פיצויים ממעסיקים קודמים ברצף זכויות",
+        "פיצוים ממעסיקים קודמים ברצף זכויות",
+        "רצף זכויות",
+      ]),
+      liquidExemptSeverance: findCapitalClassificationColumnIndex(headers, [
+        "פיצויים הוניים פטורים נזילים",
+        "פיצוים הונים פטורים נזילים",
+        "פטורים נזילים",
+      ]),
+      capitalRewards: findCapitalClassificationColumnIndex(headers, [
+        "תגמולים הוניים",
+        "תגמולים הונים",
+      ]),
+      annuityRewardsUntil2000: findCapitalClassificationColumnIndex(headers, [
+        "תגמולים קצבתיים עד 1.1.2000",
+        "תגמולים קצבתיים עד שנת 2000",
+        "עד 1.1.2000",
+        "עד שנת 2000",
+      ]),
+      annuityRewards: findCapitalClassificationColumnIndex(headers, [
+        "תגמולים קצבתיים",
+      ]),
+      pension: findCapitalClassificationColumnIndex(headers, ["פנסיה", "קצבה"]),
+      coefficient: findCapitalClassificationColumnIndex(headers, ["מקדם"]),
+      redemptionValue: findCapitalClassificationColumnIndex(headers, [
+        "ערך פדיון",
+        "פדיון",
+      ]),
+    };
+
+    const getValue = (row, key) => {
+      const index = columnMap[key];
+      if (index < 0 || index === undefined) return "";
+      return row[index] ?? "";
+    };
+
+    const normalizedRows = rows
+      .slice(headerInfo.index + 1)
+      .map((row, index) => {
+        const item = {
+          id: `capital-row-${index}`,
+          owner,
+          ownerLabel: getCapitalClassificationOwnerLabel(owner),
+          policyNumber: getValue(row, "policyNumber"),
+          managerName: getValue(row, "managerName"),
+          planName: getValue(row, "planName"),
+          productType: getValue(row, "productType"),
+          totalSeverance: parseCapitalClassificationNumber(getValue(row, "totalSeverance")),
+          totalRewards: parseCapitalClassificationNumber(getValue(row, "totalRewards")),
+          totalBalance: parseCapitalClassificationNumber(getValue(row, "totalBalance")),
+          capitalSeverance: parseCapitalClassificationNumber(getValue(row, "capitalSeverance")),
+          annuitySeverance: parseCapitalClassificationNumber(getValue(row, "annuitySeverance")),
+          currentEmployerSeveranceTaxable: parseCapitalClassificationNumber(
+            getValue(row, "currentEmployerSeveranceTaxable")
+          ),
+          previousEmployersSeveranceRightsSequence: parseCapitalClassificationNumber(
+            getValue(row, "previousEmployersSeveranceRightsSequence")
+          ),
+          liquidExemptSeverance: parseCapitalClassificationNumber(
+            getValue(row, "liquidExemptSeverance")
+          ),
+          capitalRewards: parseCapitalClassificationNumber(getValue(row, "capitalRewards")),
+          annuityRewardsUntil2000: parseCapitalClassificationNumber(
+            getValue(row, "annuityRewardsUntil2000")
+          ),
+          annuityRewards: parseCapitalClassificationNumber(getValue(row, "annuityRewards")),
+          pension: parseCapitalClassificationNumber(getValue(row, "pension")),
+          coefficient: parseCapitalClassificationNumber(getValue(row, "coefficient")),
+          redemptionValue: parseCapitalClassificationNumber(getValue(row, "redemptionValue")),
+        };
+
+        return item;
+      })
+      .filter((row) => {
+        const hasIdentity =
+          String(row.policyNumber || "").trim() ||
+          String(row.managerName || "").trim() ||
+          String(row.planName || "").trim() ||
+          String(row.productType || "").trim();
+
+        const hasAmount = CAPITAL_CLASSIFICATION_NUMERIC_FIELDS.some(
+          (field) => Number(row[field] || 0) > 0
+        );
+
+        return hasIdentity || hasAmount;
+      });
+
+    if (!normalizedRows.length) {
+      return null;
+    }
+
+    const pensionPolicies = normalizedRows.filter(
+      (row) => !normalizeCapitalClassificationHeader(row.productType).includes("השתלמות")
+    );
+
+    const studyFunds = normalizedRows.filter((row) =>
+      normalizeCapitalClassificationHeader(row.productType).includes("השתלמות")
+    );
+
+    const sumField = (items, field) =>
+      items.reduce((sum, row) => sum + Number(row[field] || 0), 0);
+
+    return {
+      owner,
+      ownerLabel: getCapitalClassificationOwnerLabel(owner),
+      sourceFileName: file.name,
+      sheetName,
+      headers,
+      columnMap,
+      allRows: normalizedRows,
+      pensionPolicies,
+      studyFunds,
+      totals: {
+        totalBalance: sumField(normalizedRows, "totalBalance"),
+        totalRewards: sumField(normalizedRows, "totalRewards"),
+        totalSeverance: sumField(normalizedRows, "totalSeverance"),
+        pensionPoliciesBalance: sumField(pensionPolicies, "totalBalance"),
+        studyFundsBalance: sumField(studyFunds, "redemptionValue") || sumField(studyFunds, "totalBalance"),
+      },
+    };
+  };
+
+  const updateCapitalClassificationOwner = (id, owner) => {
+    setCapitalClassificationUploads((prev) =>
+      prev.map((item) =>
+        item.id === id
+          ? {
+              ...item,
+              owner,
+              data: item.data
+                ? {
+                    ...item.data,
+                    owner,
+                    ownerLabel: getCapitalClassificationOwnerLabel(owner),
+                    allRows: (item.data.allRows || []).map((row) => ({
+                      ...row,
+                      owner,
+                      ownerLabel: getCapitalClassificationOwnerLabel(owner),
+                    })),
+                    pensionPolicies: (item.data.pensionPolicies || []).map((row) => ({
+                      ...row,
+                      owner,
+                      ownerLabel: getCapitalClassificationOwnerLabel(owner),
+                    })),
+                    studyFunds: (item.data.studyFunds || []).map((row) => ({
+                      ...row,
+                      owner,
+                      ownerLabel: getCapitalClassificationOwnerLabel(owner),
+                    })),
+                  }
+                : item.data,
+            }
+          : item
+      )
+    );
+  };
+
+  const handleCapitalClassificationExcelSelection = async (id, event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const fileName = file.name.toLowerCase();
+    const isExcel =
+      fileName.endsWith(".xlsx") ||
+      fileName.endsWith(".xls") ||
+      file.type === "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" ||
+      file.type === "application/vnd.ms-excel";
+
+    if (!isExcel) {
+      setCapitalClassificationUploads((prev) =>
+        prev.map((item) =>
+          item.id === id
+            ? { ...item, error: "יש לבחור קובץ Excel מסוג XLSX / XLS בלבד" }
+            : item
+        )
+      );
+      event.target.value = "";
+      return;
+    }
+
+    const currentOwner =
+      capitalClassificationUploads.find((item) => item.id === id)?.owner || "spouseA";
+
+    setCapitalClassificationUploads((prev) =>
+      prev.map((item) =>
+        item.id === id
+          ? {
+              ...item,
+              file,
+              fileName: file.name,
+              loading: true,
+              error: "",
+              data: null,
+            }
+          : item
+      )
+    );
+
+    try {
+      const parsed = await extractCapitalClassificationFromExcel(file, currentOwner);
+
+      if (!parsed) {
+        setCapitalClassificationUploads((prev) =>
+          prev.map((item) =>
+            item.id === id
+              ? {
+                  ...item,
+                  loading: false,
+                  error: "לא נמצאו נתוני סיווג כספים בקובץ האקסל.",
+                  data: null,
+                }
+              : item
+          )
+        );
+      } else {
+        setCapitalClassificationUploads((prev) =>
+          prev.map((item) =>
+            item.id === id
+              ? {
+                  ...item,
+                  loading: false,
+                  error: "",
+                  data: parsed,
+                }
+              : item
+          )
+        );
+      }
+    } catch (err) {
+      console.error(err);
+      setCapitalClassificationUploads((prev) =>
+        prev.map((item) =>
+          item.id === id
+            ? {
+                ...item,
+                loading: false,
+                error: `שגיאה בקריאת קובץ סיווג הכספים: ${err?.message || err}`,
+                data: null,
+              }
+            : item
+        )
+      );
+    } finally {
+      event.target.value = "";
+    }
+  };
+
+  const addCapitalClassificationUpload = () => {
+    setCapitalClassificationUploads((prev) => [
+      ...prev,
+      {
+        ...createCapitalClassificationUpload(),
+        owner: prev.some((item) => item.owner === "spouseA") ? "spouseB" : "spouseA",
+      },
+    ]);
+  };
+
+  const removeCapitalClassificationUpload = (id) => {
+    setCapitalClassificationUploads((prev) =>
+      prev.length <= 1 ? prev : prev.filter((item) => item.id !== id)
+    );
+  };
+
+  const clearCapitalClassificationUpload = (id) => {
+    setCapitalClassificationUploads((prev) =>
+      prev.map((item) =>
+        item.id === id
+          ? {
+              ...item,
+              file: null,
+              fileName: "",
+              loading: false,
+              error: "",
+              data: null,
+            }
+          : item
+      )
+    );
+  };
+
+  const getCleanCapitalClassificationData = () => {
+    const entries = capitalClassificationUploads
+      .filter((item) => item.data?.allRows?.length)
+      .map((item) => ({
+        ...item.data,
+        owner: item.owner,
+        ownerLabel: getCapitalClassificationOwnerLabel(item.owner),
+      }));
+
+    const byOwner = {
+      spouseA: {
+        pensionPolicies: [],
+        studyFunds: [],
+      },
+      spouseB: {
+        pensionPolicies: [],
+        studyFunds: [],
+      },
+    };
+
+    entries.forEach((entry) => {
+      const owner = entry.owner === "spouseB" ? "spouseB" : "spouseA";
+      byOwner[owner].pensionPolicies.push(...(entry.pensionPolicies || []));
+      byOwner[owner].studyFunds.push(...(entry.studyFunds || []));
+    });
+
+    return {
+      entries,
+      spouseA_pension_funds: byOwner.spouseA.pensionPolicies,
+      spouseA_study_funds: byOwner.spouseA.studyFunds,
+      spouseB_pension_funds: byOwner.spouseB.pensionPolicies,
+      spouseB_study_funds: byOwner.spouseB.studyFunds,
     };
   };
 
@@ -999,15 +1552,23 @@ export default function UploadPage({ setReportData }) {
     try {
       setError("");
 
-      if (!selectedFiles.length) {
-        setError("יש לבחור לפחות קובץ XML אחד");
+      const capitalClassificationData = getCleanCapitalClassificationData();
+      const hasCapitalClassificationData =
+        capitalClassificationData.entries.length > 0;
+
+      if (!selectedFiles.length && !hasCapitalClassificationData) {
+        setError("יש לבחור לפחות קובץ XML אחד או להעלות אקסל סיווג כספים");
         return;
       }
 
       setLoading(true);
 
-      const parsedFiles = await parseMultiplePensionXmlFiles(selectedFiles);
-      const reportData = buildLegacyReportData(parsedFiles);
+      const parsedFiles = selectedFiles.length
+        ? await parseMultiplePensionXmlFiles(selectedFiles)
+        : [];
+      const reportData = selectedFiles.length
+        ? buildLegacyReportData(parsedFiles)
+        : buildEmptyReportDataForManualInputs();
 
       reportData.clientLogo = clientLogoPreview || null;
       reportData.clientLogoFileName = clientLogoFile?.name || "";
@@ -1019,11 +1580,18 @@ export default function UploadPage({ setReportData }) {
         : null;
       reportData.recognizedPensionAdjustments =
         getCleanRecognizedPensionAdjustments();
+      reportData.capitalClassification = capitalClassificationData;
+      reportData.spouseA_pension_funds =
+        capitalClassificationData.spouseA_pension_funds;
+      reportData.spouseA_study_funds = capitalClassificationData.spouseA_study_funds;
+      reportData.spouseB_pension_funds =
+        capitalClassificationData.spouseB_pension_funds;
+      reportData.spouseB_study_funds = capitalClassificationData.spouseB_study_funds;
 
       setReportData(reportData);
     } catch (err) {
       console.error(err);
-      setError(`שגיאה בקריאת קבצי XML: ${err?.message || err}`);
+      setError(`שגיאה בקריאת הקבצים: ${err?.message || err}`);
     } finally {
       setLoading(false);
     }
@@ -1740,6 +2308,235 @@ export default function UploadPage({ setReportData }) {
               </div>
             </div>
           </div>
+        </div>
+
+
+        <div
+          style={{
+            background: "#f9fbff",
+            border: "1px solid #e4e9f5",
+            borderRadius: 24,
+            padding: "22px 24px",
+            marginBottom: 20,
+          }}
+        >
+          <div
+            style={{
+              color: "#0d2c6c",
+              fontSize: 18,
+              fontWeight: 900,
+              marginBottom: 8,
+            }}
+          >
+            פירוט פוליסות וקרנות לפי אקסל סיווג כספים (אופציונלי)
+          </div>
+
+          <div
+            style={{
+              color: "#69758e",
+              fontSize: 12,
+              lineHeight: 1.7,
+              marginBottom: 16,
+            }}
+          >
+            ניתן להעלות אקסל סיווג כספים ולשייך אותו ידנית לבן זוג או בת זוג.
+            הנתון של פיצויים אצל מעסיק נוכחי נשמר במערכת כשדה פיצויים למס.
+          </div>
+
+          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+            {capitalClassificationUploads.map((item, index) => {
+              const pensionCount = item.data?.pensionPolicies?.length || 0;
+              const studyFundCount = item.data?.studyFunds?.length || 0;
+              const hasParsedData = Boolean(item.data?.allRows?.length);
+
+              return (
+                <div
+                  key={item.id}
+                  style={{
+                    border: "1px solid #dce4f2",
+                    background: "#ffffff",
+                    borderRadius: 20,
+                    padding: 16,
+                  }}
+                >
+                  <input
+                    type="file"
+                    accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
+                    onChange={(event) =>
+                      handleCapitalClassificationExcelSelection(item.id, event)
+                    }
+                    style={{ display: "none" }}
+                    id={`${item.id}-input`}
+                  />
+
+                  <div
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns: "minmax(160px, 220px) 1fr auto",
+                      gap: 12,
+                      alignItems: "center",
+                    }}
+                  >
+                    <select
+                      value={item.owner}
+                      onChange={(event) =>
+                        updateCapitalClassificationOwner(item.id, event.target.value)
+                      }
+                      style={{
+                        height: 42,
+                        border: "1px solid #cbd4e6",
+                        borderRadius: 12,
+                        padding: "0 12px",
+                        color: "#0d2c6c",
+                        fontWeight: 800,
+                        background: "#fff",
+                        fontFamily: "Calibri, sans-serif",
+                      }}
+                    >
+                      {CAPITAL_CLASSIFICATION_OWNER_OPTIONS.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+
+                    <div style={{ minWidth: 0 }}>
+                      <div
+                        style={{
+                          color: "#0d2c6c",
+                          fontSize: 13,
+                          fontWeight: 900,
+                          wordBreak: "break-word",
+                        }}
+                      >
+                        {item.fileName || `קובץ סיווג כספים ${index + 1}`}
+                      </div>
+
+                      {item.loading ? (
+                        <div style={{ color: "#69758e", fontSize: 12, marginTop: 4 }}>
+                          קורא Excel...
+                        </div>
+                      ) : hasParsedData ? (
+                        <div style={{ color: "#247a3d", fontSize: 12, fontWeight: 800, marginTop: 4 }}>
+                          נקלטו {pensionCount} פוליסות/קופות ו־{studyFundCount} קרנות השתלמות
+                        </div>
+                      ) : (
+                        <div style={{ color: "#69758e", fontSize: 12, marginTop: 4 }}>
+                          טרם נבחר קובץ
+                        </div>
+                      )}
+
+                      {item.error && (
+                        <div style={{ color: "#b42318", fontSize: 12, fontWeight: 700, marginTop: 4 }}>
+                          {item.error}
+                        </div>
+                      )}
+                    </div>
+
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 8,
+                        flexWrap: "wrap",
+                        justifyContent: "flex-end",
+                      }}
+                    >
+                      <button
+                        type="button"
+                        onClick={() =>
+                          document.getElementById(`${item.id}-input`)?.click()
+                        }
+                        disabled={item.loading}
+                        style={{
+                          background: "#ffffff",
+                          color: "#0d2c6c",
+                          border: "1px solid #cbd4e6",
+                          borderRadius: 12,
+                          padding: "10px 14px",
+                          fontSize: 12,
+                          fontWeight: 800,
+                          cursor: item.loading ? "not-allowed" : "pointer",
+                          minWidth: 110,
+                          fontFamily: "Calibri, sans-serif",
+                        }}
+                      >
+                        בחירת Excel
+                      </button>
+
+                      {item.fileName && (
+                        <button
+                          type="button"
+                          onClick={() => clearCapitalClassificationUpload(item.id)}
+                          disabled={item.loading}
+                          style={{
+                            background: "#fff5f5",
+                            color: "#c81e1e",
+                            border: "1px solid #f3c2c2",
+                            borderRadius: 12,
+                            padding: "10px 14px",
+                            fontSize: 12,
+                            fontWeight: 800,
+                            cursor: item.loading ? "not-allowed" : "pointer",
+                            fontFamily: "Calibri, sans-serif",
+                          }}
+                        >
+                          נקה קובץ
+                        </button>
+                      )}
+
+                      <button
+                        type="button"
+                        onClick={() => removeCapitalClassificationUpload(item.id)}
+                        disabled={capitalClassificationUploads.length <= 1 || item.loading}
+                        style={{
+                          background:
+                            capitalClassificationUploads.length <= 1 || item.loading
+                              ? "#f4f6fb"
+                              : "#fff5f5",
+                          color:
+                            capitalClassificationUploads.length <= 1 || item.loading
+                              ? "#9aa5b8"
+                              : "#c81e1e",
+                          border: "1px solid #f3c2c2",
+                          borderRadius: 12,
+                          padding: "10px 14px",
+                          fontSize: 12,
+                          fontWeight: 800,
+                          cursor:
+                            capitalClassificationUploads.length <= 1 || item.loading
+                              ? "not-allowed"
+                              : "pointer",
+                          fontFamily: "Calibri, sans-serif",
+                        }}
+                      >
+                        הסר ריבוע
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          <button
+            type="button"
+            onClick={addCapitalClassificationUpload}
+            style={{
+              marginTop: 14,
+              background: "#ffffff",
+              color: "#0d2c6c",
+              border: "1px solid #cbd4e6",
+              borderRadius: 12,
+              padding: "10px 14px",
+              fontSize: 12,
+              fontWeight: 800,
+              cursor: "pointer",
+              fontFamily: "Calibri, sans-serif",
+            }}
+          >
+            הוסף ריבוע סיווג כספים נוסף
+          </button>
         </div>
 
         <div

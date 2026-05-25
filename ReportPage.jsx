@@ -273,6 +273,7 @@ function getCapitalTotalCapital(row) {
 
   return (
     getCapitalRowNumber(row, "capitalRewards") +
+    getCapitalRowNumber(row, "annuityRewardsUntil2000") +
     getCapitalRowNumber(row, "capitalSeverance") +
     getCapitalRowNumber(row, "liquidExemptSeverance") +
     getCapitalRowNumber(row, "currentEmployerSeveranceTaxable")
@@ -285,7 +286,6 @@ function getCapitalTotalPension(row) {
 
   return (
     getCapitalRowNumber(row, "annuityRewards") +
-    getCapitalRowNumber(row, "annuityRewardsUntil2000") +
     getCapitalRowNumber(row, "annuitySeverance") +
     getCapitalRowNumber(row, "previousEmployersSeveranceRightsSequence") +
     getCapitalRowNumber(row, "pension")
@@ -419,7 +419,7 @@ function CapitalClassificationOwnerBlock({ entry, styles }) {
           <div style={{ marginTop: pensionRows.length ? 24 : 0 }}>
             <CapitalClassificationTable
               title="קרנות השתלמות"
-              subtitle="פירוט קרנות השתלמות לפי חברה מנהלת, מספר קופה וערך פדיון."
+              subtitle="פירוט קרנות השתלמות לפי חברה מנהלת, מספר קופה וצבירה."
               rows={studyRows}
               type="study"
             />
@@ -431,11 +431,14 @@ function CapitalClassificationOwnerBlock({ entry, styles }) {
 }
 
 function CapitalMiniStat({ label, value }) {
+  const isCapital = String(label || "").includes("הון");
+  const isPension = String(label || "").includes("קצבה");
+
   return (
     <div
       style={{
-        background: "#F4F7FB",
-        border: "1px solid #E2D1BF",
+        background: isCapital ? "#FFFDF7" : isPension ? "#F8FBFF" : "#F7F9FC",
+        border: isCapital ? "1px solid #F1E4C8" : isPension ? "1px solid #DDEAF8" : "1px solid #E2D8CA",
         borderRadius: 14,
         padding: "10px 12px",
         textAlign: "center",
@@ -449,6 +452,100 @@ function CapitalMiniStat({ label, value }) {
       </div>
     </div>
   );
+}
+
+function CapitalLegend() {
+  return (
+    <div
+      style={{
+        margin: "0 0 14px",
+        background: "#FFFFFF",
+        border: "1px solid #EEE4D8",
+        borderRadius: 14,
+        padding: "12px 14px",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        gap: 14,
+        flexWrap: "wrap",
+      }}
+    >
+      <div style={{ color: "#00215D", fontSize: 13, fontWeight: 900 }}>
+        מקרא סיווג כספים
+      </div>
+
+      <div style={{ display: "flex", gap: 18, alignItems: "center", flexWrap: "wrap" }}>
+        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          <span
+            style={{
+              width: 16,
+              height: 16,
+              borderRadius: 5,
+              background: "#FFFDF7",
+              border: "1px solid #F1E4C8",
+              display: "inline-block",
+            }}
+          />
+          <span style={{ color: "#486581", fontSize: 12, fontWeight: 800 }}>
+            כספים הוניים / נזילים / תגמולים עד 1.1.2000
+          </span>
+        </div>
+
+        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          <span
+            style={{
+              width: 16,
+              height: 16,
+              borderRadius: 5,
+              background: "#F8FBFF",
+              border: "1px solid #DDEAF8",
+              display: "inline-block",
+            }}
+          />
+          <span style={{ color: "#486581", fontSize: 12, fontWeight: 800 }}>
+            כספים קצבתיים המיועדים לקצבה חודשית
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function getStudyFundBalance(row) {
+  return (
+    getCapitalRowNumber(row, "redemptionValue") ||
+    getCapitalRowNumber(row, "totalBalance") ||
+    getCapitalRowNumber(row, "totalFund")
+  );
+}
+
+function getCapitalCellTone(column) {
+  const capitalKeys = new Set([
+    "capitalRewards",
+    "annuityRewardsUntil2000",
+    "capitalSeverance",
+    "liquidExemptSeverance",
+    "currentEmployerSeveranceTaxable",
+    "totalCapital",
+  ]);
+
+  const pensionKeys = new Set([
+    "annuityRewards",
+    "previousEmployersSeveranceRightsSequence",
+    "annuitySeverance",
+    "pension",
+    "totalPension",
+  ]);
+
+  if (capitalKeys.has(column.key)) return "capital";
+  if (pensionKeys.has(column.key)) return "pension";
+  return "neutral";
+}
+
+function getCapitalToneBackground(tone, isHeader = false, isTotal = false) {
+  if (tone === "capital") return isHeader ? "#FFF8EA" : isTotal ? "#FFF8EA" : "#FFFDF7";
+  if (tone === "pension") return isHeader ? "#EEF6FF" : isTotal ? "#EEF6FF" : "#F8FBFF";
+  return isHeader ? "#EEF2FA" : isTotal ? "#EEF2FA" : "#FFFFFF";
 }
 
 function CapitalClassificationTable({ title, subtitle, rows, type }) {
@@ -469,19 +566,27 @@ function CapitalClassificationTable({ title, subtitle, rows, type }) {
   ];
 
   const studyColumns = [
-    { key: "planName", label: "מוצר / קבוצה", alwaysVisible: true },
-    { key: "policyNumber", label: "מספר קופה" },
-    { key: "managerName", label: "חברה מנהלת" },
-    { key: "redemptionValue", label: "ערך פדיון", type: "number", alwaysVisible: true },
+    { key: "managerName", label: "חברה מנהלת", alwaysVisible: true },
+    { key: "policyNumber", label: "מספר קופה", alwaysVisible: true },
+    { key: "studyBalance", label: "צבירה", type: "number", alwaysVisible: true },
   ];
 
+  const displayRows = type === "study"
+    ? normalizeCapitalReportArray(rows).map((row) => ({
+        ...row,
+        studyBalance: getStudyFundBalance(row),
+      }))
+    : normalizeCapitalReportArray(rows);
+
   const baseColumns = type === "study" ? studyColumns : pensionColumns;
-  const columns = getCapitalActiveColumns(rows, baseColumns);
+  const columns = getCapitalActiveColumns(displayRows, baseColumns);
   const totalKeys = columns.filter((column) => column.type === "number").map((column) => column.key);
-  const minWidth = type === "study" ? Math.max(520, columns.length * 150) : Math.max(760, columns.length * 126);
+  const minWidth = type === "study" ? Math.max(480, columns.length * 160) : Math.max(760, columns.length * 126);
 
   return (
     <div>
+      {type !== "study" ? <CapitalLegend /> : null}
+
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 12, marginBottom: 10, flexWrap: "wrap" }}>
         <div>
           <div style={{ color: "#00215D", fontSize: 18, fontWeight: 900 }}>{title}</div>
@@ -493,56 +598,66 @@ function CapitalClassificationTable({ title, subtitle, rows, type }) {
         <table style={{ width: "100%", minWidth, borderCollapse: "collapse", tableLayout: "fixed", direction: "rtl" }}>
           <thead>
             <tr>
-              {columns.map((column) => (
-                <th
-                  key={column.key}
-                  style={{
-                    background: column.isTotalColumn ? "#DCEBFF" : "#EEF2FA",
-                    color: "#243B53",
-                    borderLeft: "1px solid #D8E2EF",
-                    borderBottom: "1px solid #D8E2EF",
-                    padding: "12px 8px",
-                    fontSize: 11,
-                    fontWeight: 900,
-                    textAlign: "center",
-                    lineHeight: 1.35,
-                  }}
-                >
-                  {column.label}
-                </th>
-              ))}
+              {columns.map((column) => {
+                const tone = getCapitalCellTone(column);
+                return (
+                  <th
+                    key={column.key}
+                    style={{
+                      background: getCapitalToneBackground(tone, true, column.isTotalColumn),
+                      color: "#243B53",
+                      borderLeft: "1px solid #D8E2EF",
+                      borderBottom: "1px solid #D8E2EF",
+                      padding: "12px 8px",
+                      fontSize: 11,
+                      fontWeight: 900,
+                      textAlign: "center",
+                      lineHeight: 1.35,
+                    }}
+                  >
+                    {column.label}
+                  </th>
+                );
+              })}
             </tr>
           </thead>
 
           <tbody>
-            {rows.map((row, rowIndex) => (
+            {displayRows.map((row, rowIndex) => (
               <tr key={row.id || `${row.policyNumber || row.planName || "row"}-${rowIndex}`}>
-                {columns.map((column) => (
-                  <td
-                    key={column.key}
-                    style={{
-                      borderLeft: "1px solid #E4EAF2",
-                      borderBottom: "1px solid #E4EAF2",
-                      padding: "11px 8px",
-                      textAlign: "center",
-                      fontSize: 11,
-                      fontWeight: column.isTotalColumn ? 900 : 600,
-                      color: column.isTotalColumn ? "#00215D" : "#102A43",
-                      background: column.isTotalColumn ? "#F3F7FF" : rowIndex % 2 ? "#FFFFFF" : "#FCFBF8",
-                      whiteSpace: "normal",
-                      wordBreak: "break-word",
-                      direction: column.type === "number" ? "ltr" : "rtl",
-                    }}
-                  >
-                    {getCapitalDisplayValue(row, column.key)}
-                  </td>
-                ))}
+                {columns.map((column) => {
+                  const tone = getCapitalCellTone(column);
+                  const isTotalColumn = column.isTotalColumn || column.key === "studyBalance";
+                  return (
+                    <td
+                      key={column.key}
+                      style={{
+                        borderLeft: "1px solid #E4EAF2",
+                        borderBottom: "1px solid #E4EAF2",
+                        padding: "11px 8px",
+                        textAlign: "center",
+                        fontSize: 11,
+                        fontWeight: isTotalColumn ? 900 : 600,
+                        color: isTotalColumn ? "#00215D" : "#102A43",
+                        background: type === "study"
+                          ? rowIndex % 2 ? "#FFFFFF" : "#FCFBF8"
+                          : getCapitalToneBackground(tone, false, isTotalColumn),
+                        whiteSpace: "normal",
+                        wordBreak: "break-word",
+                        direction: column.type === "number" ? "ltr" : "rtl",
+                      }}
+                    >
+                      {getCapitalDisplayValue(row, column.key)}
+                    </td>
+                  );
+                })}
               </tr>
             ))}
 
             <tr>
               {columns.map((column, columnIndex) => {
                 const shouldTotal = totalKeys.includes(column.key);
+                const tone = getCapitalCellTone(column);
                 return (
                   <td
                     key={column.key}
@@ -553,11 +668,13 @@ function CapitalClassificationTable({ title, subtitle, rows, type }) {
                       fontSize: 11,
                       fontWeight: 900,
                       color: "#1D4ED8",
-                      background: column.isTotalColumn || columnIndex === columns.length - 1 ? "#DCEBFF" : "#EEF2FA",
+                      background: type === "study"
+                        ? columnIndex === columns.length - 1 ? "#EAF6FF" : "#EEF2FA"
+                        : getCapitalToneBackground(tone, true, column.isTotalColumn),
                       direction: shouldTotal ? "ltr" : "rtl",
                     }}
                   >
-                    {columnIndex === 0 ? 'סה"כ' : shouldTotal ? getCapitalRowValue({ value: summarizeCapitalDerivedRows(rows, column.key) }, "value") : ""}
+                    {columnIndex === 0 ? 'סה"כ' : shouldTotal ? getCapitalRowValue({ value: summarizeCapitalDerivedRows(displayRows, column.key) }, "value") : ""}
                   </td>
                 );
               })}
@@ -565,6 +682,23 @@ function CapitalClassificationTable({ title, subtitle, rows, type }) {
           </tbody>
         </table>
       </div>
+
+      {type !== "study" ? (
+        <div
+          style={{
+            marginTop: 10,
+            border: "1px solid #EEE4D8",
+            borderRadius: 12,
+            background: "#FFFFFF",
+            color: "#627D98",
+            fontSize: 11,
+            lineHeight: 1.65,
+            padding: "10px 12px",
+          }}
+        >
+          כספים הוניים כוללים רכיבי הון, תגמולים הוניים, תגמולים קצבתיים עד 1.1.2000 ורכיבי פיצויים הוניים/נזילים. כספים קצבתיים כוללים רכיבים המיועדים לקצבה חודשית.
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -5726,6 +5860,13 @@ function PrintReportA4({ reportData, conversationSummary = "", actionRecommendat
       .print-capital-stat { background: #F4F7FB; border: 1px solid #D8E2EF; border-radius: 3mm; padding: 1.8mm; text-align: center; }
       .print-capital-stat-label { color: #627D98; font-size: 7.6px; font-weight: 800; }
       .print-capital-stat-value { color: #00215D; font-size: 9.2px; font-weight: 900; direction: ltr; margin-top: .8mm; }
+      .print-capital-legend { display: flex; gap: 12px; align-items: center; justify-content: flex-start; flex-wrap: wrap; margin: 0 0 6px; padding: 6px 8px; border: 1px solid #EEE4D8; border-radius: 8px; background: #FFFFFF; color: #486581; font-size: 8px; font-weight: 700; }
+      .print-capital-legend span { display: inline-flex; align-items: center; gap: 4px; }
+      .print-capital-legend i { width: 9px; height: 9px; border-radius: 3px; display: inline-block; }
+      .print-capital-legend .legend-capital { background: #FFFDF7; border: 1px solid #F1E4C8; }
+      .print-capital-legend .legend-pension { background: #F8FBFF; border: 1px solid #DDEAF8; }
+      .print-capital-table th.tone-capital, .print-capital-table td.tone-capital { background: #FFFDF7 !important; }
+      .print-capital-table th.tone-pension, .print-capital-table td.tone-pension { background: #F8FBFF !important; }
       .print-capital-table-title { color: #00215D; font-size: 10.5px; font-weight: 900; margin: 3mm 0 1.5mm; }
       .print-capital-table { width: 100%; border-collapse: collapse; table-layout: fixed; direction: rtl; }
       .print-capital-table th { background: #EEF2FA; color: #243B53; border: 1px solid #D8E2EF; padding: 1.3mm .9mm; font-size: 6.4px; line-height: 1.2; font-weight: 900; text-align: center; }
@@ -6229,26 +6370,36 @@ function PrintReportA4({ reportData, conversationSummary = "", actionRecommendat
       { key: "totalPension", label: "סה״כ קצבה", type: "number", alwaysVisible: true },
     ];
     const studyColumns = [
-      { key: "planName", label: "מוצר / קבוצה", alwaysVisible: true },
-      { key: "policyNumber", label: "מספר קופה" },
-      { key: "managerName", label: "חברה מנהלת" },
-      { key: "redemptionValue", label: "ערך פדיון", type: "number", alwaysVisible: true },
+      { key: "managerName", label: "חברה מנהלת", alwaysVisible: true },
+      { key: "policyNumber", label: "מספר קופה", alwaysVisible: true },
+      { key: "studyBalance", label: "צבירה", type: "number", alwaysVisible: true },
     ];
-    const columns = getCapitalActiveColumns(rows, type === "study" ? studyColumns : pensionColumns);
+    const displayRows = type === "study"
+      ? normalizeCapitalReportArray(rows).map((row) => ({ ...row, studyBalance: getStudyFundBalance(row) }))
+      : normalizeCapitalReportArray(rows);
+    const columns = getCapitalActiveColumns(displayRows, type === "study" ? studyColumns : pensionColumns);
     const totalKeys = columns.filter((column) => column.type === "number").map((column) => column.key);
 
     return (
       <div>
+        {type !== "study" ? (
+          <div className="print-capital-legend">
+            <span><i className="legend-capital" /> כספים הוניים / נזילים / תגמולים עד 1.1.2000</span>
+            <span><i className="legend-pension" /> כספים קצבתיים</span>
+          </div>
+        ) : null}
         <div className="print-capital-table-title">{title}</div>
         <table className="print-capital-table">
           <thead>
-            <tr>{columns.map((column) => <th key={column.key}>{column.label}</th>)}</tr>
+            <tr>{columns.map((column) => <th key={column.key} className={`tone-${getCapitalCellTone(column)}`}>{column.label}</th>)}</tr>
           </thead>
           <tbody>
-            {rows.slice(0, type === "study" ? 8 : 7).map((row, rowIndex) => (
+            {displayRows.slice(0, type === "study" ? 8 : 7).map((row, rowIndex) => (
               <tr key={row.id || `${row.policyNumber || row.planName || "row"}-${rowIndex}`}>
                 {columns.map((column) => (
-                  <td key={column.key}>{getCapitalDisplayValue(row, column.key)}</td>
+                  <td key={column.key} className={`tone-${type === "study" ? "neutral" : getCapitalCellTone(column)}`}>
+                    {getCapitalDisplayValue(row, column.key)}
+                  </td>
                 ))}
               </tr>
             ))}
@@ -6256,7 +6407,9 @@ function PrintReportA4({ reportData, conversationSummary = "", actionRecommendat
               {columns.map((column, index) => {
                 const shouldTotal = totalKeys.includes(column.key);
                 return (
-                  <td key={column.key}>{index === 0 ? 'סה"כ' : shouldTotal ? getCapitalRowValue({ value: summarizeCapitalDerivedRows(rows, column.key) }, "value") : ""}</td>
+                  <td key={column.key} className={`tone-${type === "study" ? "neutral" : getCapitalCellTone(column)}`}>
+                    {index === 0 ? 'סה"כ' : shouldTotal ? getCapitalRowValue({ value: summarizeCapitalDerivedRows(displayRows, column.key) }, "value") : ""}
+                  </td>
                 );
               })}
             </tr>

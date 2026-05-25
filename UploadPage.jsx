@@ -101,6 +101,25 @@ const CAPITAL_CLASSIFICATION_OWNER_OPTIONS = [
   { value: "spouseB", label: "בת זוג" },
 ];
 
+
+function getFamilyOwnerLabel(owner) {
+  return owner === "spouseB" ? "בת זוג" : "בן זוג";
+}
+
+function createSection28CappingUpload(owner = "spouseA") {
+  return {
+    id: `section-28-capping-${Date.now()}-${Math.random()
+      .toString(16)
+      .slice(2)}`,
+    owner,
+    file: null,
+    fileName: "",
+    loading: false,
+    error: "",
+    data: null,
+  };
+}
+
 const CAPITAL_CLASSIFICATION_NUMERIC_FIELDS = [
   "totalSeverance",
   "totalRewards",
@@ -245,10 +264,9 @@ export default function UploadPage({ setReportData }) {
   const [clientLogoPreview, setClientLogoPreview] = useState(null);
   const [logoError, setLogoError] = useState("");
 
-  const [section28ExcelFile, setSection28ExcelFile] = useState(null);
-  const [section28Capping, setSection28Capping] = useState(null);
-  const [section28ExcelLoading, setSection28ExcelLoading] = useState(false);
-  const [section28ExcelError, setSection28ExcelError] = useState("");
+  const [section28CappingUploads, setSection28CappingUploads] = useState([
+    createSection28CappingUpload("spouseA"),
+  ]);
 
   const [vestedPdfFile, setVestedPdfFile] = useState(null);
   const [vestedPdfTable, setVestedPdfTable] = useState(null);
@@ -270,7 +288,6 @@ export default function UploadPage({ setReportData }) {
 
   const fileInputRef = useRef(null);
   const logoInputRef = useRef(null);
-  const section28ExcelInputRef = useRef(null);
   const vestedPdfInputRef = useRef(null);
   const dragCounterRef = useRef(0);
 
@@ -368,10 +385,6 @@ export default function UploadPage({ setReportData }) {
     vestedPdfInputRef.current?.click();
   };
 
-
-  const openSection28ExcelPicker = () => {
-    section28ExcelInputRef.current?.click();
-  };
 
   const normalizeSection28Label = (value) =>
     String(value || "")
@@ -987,7 +1000,27 @@ export default function UploadPage({ setReportData }) {
     };
   };
 
-  const handleSection28ExcelSelection = async (event) => {
+  const updateSection28CappingOwner = (id, owner) => {
+    setSection28CappingUploads((prev) =>
+      prev.map((item) =>
+        item.id === id
+          ? {
+              ...item,
+              owner,
+              data: item.data
+                ? {
+                    ...item.data,
+                    owner,
+                    ownerLabel: getFamilyOwnerLabel(owner),
+                  }
+                : item.data,
+            }
+          : item
+      )
+    );
+  };
+
+  const handleSection28ExcelSelection = async (id, event) => {
     const file = event.target.files?.[0];
 
     if (!file) return;
@@ -1000,44 +1033,129 @@ export default function UploadPage({ setReportData }) {
       file.type === "application/vnd.ms-excel";
 
     if (!isExcel) {
-      setSection28ExcelError("יש לבחור קובץ Excel מסוג XLSX / XLS בלבד");
+      setSection28CappingUploads((prev) =>
+        prev.map((item) =>
+          item.id === id
+            ? { ...item, error: "יש לבחור קובץ Excel מסוג XLSX / XLS בלבד" }
+            : item
+        )
+      );
       event.target.value = "";
       return;
     }
 
-    setSection28ExcelLoading(true);
-    setSection28ExcelError("");
-    setSection28ExcelFile(file);
-    setSection28Capping(null);
+    const currentOwner =
+      section28CappingUploads.find((item) => item.id === id)?.owner || "spouseA";
+
+    setSection28CappingUploads((prev) =>
+      prev.map((item) =>
+        item.id === id
+          ? {
+              ...item,
+              file,
+              fileName: file.name,
+              loading: true,
+              error: "",
+              data: null,
+            }
+          : item
+      )
+    );
 
     try {
       const parsed = await extractSection28CappingFromExcel(file);
 
       if (!parsed) {
-        setSection28ExcelError(
-          "לא נמצאו שדות קיטום לפי סעיף 28 באקסל. ניתן להפיק דוח ללא החלק הזה."
+        setSection28CappingUploads((prev) =>
+          prev.map((item) =>
+            item.id === id
+              ? {
+                  ...item,
+                  loading: false,
+                  error:
+                    "לא נמצאו שדות קיטום לפי סעיף 28 באקסל. ניתן להפיק דוח ללא החלק הזה.",
+                  data: null,
+                }
+              : item
+          )
         );
-        setSection28Capping(null);
       } else {
-        setSection28Capping(parsed);
+        setSection28CappingUploads((prev) =>
+          prev.map((item) =>
+            item.id === id
+              ? {
+                  ...item,
+                  loading: false,
+                  error: "",
+                  data: {
+                    ...parsed,
+                    owner: currentOwner,
+                    ownerLabel: getFamilyOwnerLabel(currentOwner),
+                  },
+                }
+              : item
+          )
+        );
       }
     } catch (err) {
       console.error(err);
-      setSection28ExcelError(
-        `שגיאה בקריאת קובץ ה־Excel: ${err?.message || err}`
+      setSection28CappingUploads((prev) =>
+        prev.map((item) =>
+          item.id === id
+            ? {
+                ...item,
+                loading: false,
+                error: `שגיאה בקריאת קובץ ה־Excel: ${err?.message || err}`,
+                data: null,
+              }
+            : item
+        )
       );
-      setSection28Capping(null);
     } finally {
-      setSection28ExcelLoading(false);
       event.target.value = "";
     }
   };
 
-  const removeSection28Excel = () => {
-    setSection28ExcelFile(null);
-    setSection28Capping(null);
-    setSection28ExcelError("");
+  const addSection28CappingUpload = () => {
+    setSection28CappingUploads((prev) => [
+      ...prev,
+      createSection28CappingUpload(
+        prev.some((item) => item.owner === "spouseA") ? "spouseB" : "spouseA"
+      ),
+    ]);
   };
+
+  const removeSection28CappingUpload = (id) => {
+    setSection28CappingUploads((prev) =>
+      prev.length <= 1 ? prev : prev.filter((item) => item.id !== id)
+    );
+  };
+
+  const clearSection28CappingUpload = (id) => {
+    setSection28CappingUploads((prev) =>
+      prev.map((item) =>
+        item.id === id
+          ? {
+              ...item,
+              file: null,
+              fileName: "",
+              loading: false,
+              error: "",
+              data: null,
+            }
+          : item
+      )
+    );
+  };
+
+  const getCleanSection28CappingData = () =>
+    section28CappingUploads
+      .filter((item) => item.data?.groups?.length || item.data?.comparisonRows?.length)
+      .map((item) => ({
+        ...item.data,
+        owner: item.owner,
+        ownerLabel: getFamilyOwnerLabel(item.owner),
+      }));
 
   const loadPdfJs = () =>
     new Promise((resolve, reject) => {
@@ -1572,9 +1690,16 @@ export default function UploadPage({ setReportData }) {
 
       reportData.clientLogo = clientLogoPreview || null;
       reportData.clientLogoFileName = clientLogoFile?.name || "";
-      reportData.section28Capping = section28Capping?.groups?.length || section28Capping?.comparisonRows?.length
-        ? section28Capping
+      const section28CappingData = getCleanSection28CappingData();
+      reportData.section28Capping = section28CappingData.length
+        ? section28CappingData
         : null;
+      reportData.spouseA_section28Capping = section28CappingData.filter(
+        (item) => item.owner === "spouseA"
+      );
+      reportData.spouseB_section28Capping = section28CappingData.filter(
+        (item) => item.owner === "spouseB"
+      );
       reportData.vestedBalanceTable = vestedPdfTable?.rows?.length
         ? vestedPdfTable
         : null;
@@ -1820,175 +1945,237 @@ export default function UploadPage({ setReportData }) {
             marginBottom: 20,
           }}
         >
-          <input
-            ref={section28ExcelInputRef}
-            type="file"
-            accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
-            onChange={handleSection28ExcelSelection}
-            style={{ display: "none" }}
-          />
+          <div
+            style={{
+              color: "#0d2c6c",
+              fontSize: 18,
+              fontWeight: 900,
+              marginBottom: 8,
+            }}
+          >
+            דוח קיטום לפי סעיף 28 לפי בן/בת זוג (אופציונלי)
+          </div>
 
           <div
             style={{
-              display: "grid",
-              gridTemplateColumns: "1fr auto",
-              gap: 18,
-              alignItems: "center",
+              color: "#69758e",
+              fontSize: 12,
+              lineHeight: 1.7,
+              marginBottom: 16,
             }}
           >
-            <div>
-              <div
-                style={{
-                  color: "#0d2c6c",
-                  fontSize: 18,
-                  fontWeight: 900,
-                  marginBottom: 8,
-                }}
-              >
-                דוח קיטום לפי סעיף 28 (אופציונלי)
-              </div>
+            ניתן להעלות אקסל קיטום ולשייך אותו ידנית לבן זוג או בת זוג. כל קובץ
+            יישמר בדוח עם שיוך נפרד, כדי שסעיף 28 לא יוצג כנתון משפחתי כללי.
+          </div>
 
-              <div
-                style={{
-                  color: "#69758e",
-                  fontSize: 12,
-                  lineHeight: 1.7,
-                }}
-              >
-                ניתן להעלות אקסל קיטום. המערכת קוראת את הערכים לפי שם השדה
-                באקסל, ללא חישובים נוספים, ומציגה אותם כחלק ייעודי בדוח.
-              </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+            {section28CappingUploads.map((item, index) => {
+              const hasParsedData = Boolean(
+                item.data?.groups?.length || item.data?.comparisonRows?.length
+              );
 
-              {section28ExcelFile && (
+              return (
                 <div
+                  key={item.id}
                   style={{
-                    color: "#0d2c6c",
-                    fontSize: 12,
-                    fontWeight: 700,
-                    marginTop: 8,
-                    wordBreak: "break-word",
-                  }}
-                >
-                  קובץ Excel: {section28ExcelFile.name}
-                </div>
-              )}
-
-              {section28Capping?.groups?.length || section28Capping?.comparisonRows?.length ? (
-                <div
-                  style={{
-                    color: "#247a3d",
-                    fontSize: 12,
-                    fontWeight: 800,
-                    marginTop: 8,
-                  }}
-                >
-                  נמצאו נתוני קיטום לפי סעיף 28 להצגה בדוח
-                </div>
-              ) : null}
-
-              {section28ExcelError && (
-                <div
-                  style={{
-                    color: "#b42318",
-                    fontSize: 12,
-                    fontWeight: 700,
-                    marginTop: 8,
-                  }}
-                >
-                  {section28ExcelError}
-                </div>
-              )}
-            </div>
-
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 14,
-                flexWrap: "wrap",
-                justifyContent: "flex-end",
-              }}
-            >
-              <div
-                style={{
-                  width: 132,
-                  height: 76,
-                  borderRadius: 18,
-                  border: "1px solid #d7deed",
-                  background:
-                    section28Capping?.groups?.length || section28Capping?.comparisonRows?.length
-                      ? "#eefaf1"
-                      : "#eef2fa",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  overflow: "hidden",
-                  color:
-                    section28Capping?.groups?.length || section28Capping?.comparisonRows?.length
-                      ? "#247a3d"
-                      : "#7b879d",
-                  fontSize: 13,
-                  fontWeight: 800,
-                  textAlign: "center",
-                  padding: 8,
-                }}
-              >
-                {section28ExcelLoading
-                  ? "קורא Excel..."
-                  : section28Capping?.groups?.length || section28Capping?.comparisonRows?.length
-                  ? "קיטום מוכן"
-                  : "Excel"}
-              </div>
-
-              <div
-                style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: 8,
-                }}
-              >
-                <button
-                  type="button"
-                  onClick={openSection28ExcelPicker}
-                  disabled={section28ExcelLoading}
-                  style={{
+                    border: "1px solid #dce4f2",
                     background: "#ffffff",
-                    color: "#0d2c6c",
-                    border: "1px solid #cbd4e6",
-                    borderRadius: 12,
-                    padding: "10px 14px",
-                    fontSize: 12,
-                    fontWeight: 800,
-                    cursor: section28ExcelLoading ? "not-allowed" : "pointer",
-                    minWidth: 120,
+                    borderRadius: 20,
+                    padding: 16,
                   }}
                 >
-                  בחירת Excel
-                </button>
+                  <input
+                    type="file"
+                    accept=".xlsx,.xls,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
+                    onChange={(event) =>
+                      handleSection28ExcelSelection(item.id, event)
+                    }
+                    style={{ display: "none" }}
+                    id={`${item.id}-input`}
+                  />
 
-                {section28ExcelFile && (
-                  <button
-                    type="button"
-                    onClick={removeSection28Excel}
-                    disabled={section28ExcelLoading}
+                  <div
                     style={{
-                      background: "#fff5f5",
-                      color: "#c81e1e",
-                      border: "1px solid #f3c2c2",
-                      borderRadius: 12,
-                      padding: "10px 14px",
-                      fontSize: 14,
-                      fontWeight: 800,
-                      cursor: section28ExcelLoading ? "not-allowed" : "pointer",
-                      minWidth: 120,
+                      display: "grid",
+                      gridTemplateColumns: "minmax(160px, 220px) 1fr auto",
+                      gap: 12,
+                      alignItems: "center",
                     }}
                   >
-                    הסר Excel
-                  </button>
-                )}
-              </div>
-            </div>
+                    <select
+                      value={item.owner}
+                      onChange={(event) =>
+                        updateSection28CappingOwner(item.id, event.target.value)
+                      }
+                      style={{
+                        height: 42,
+                        border: "1px solid #cbd4e6",
+                        borderRadius: 12,
+                        padding: "0 12px",
+                        color: "#0d2c6c",
+                        fontWeight: 800,
+                        background: "#fff",
+                        fontFamily: "Calibri, sans-serif",
+                      }}
+                    >
+                      {CAPITAL_CLASSIFICATION_OWNER_OPTIONS.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+
+                    <div style={{ minWidth: 0 }}>
+                      <div
+                        style={{
+                          color: "#0d2c6c",
+                          fontSize: 13,
+                          fontWeight: 900,
+                          wordBreak: "break-word",
+                        }}
+                      >
+                        {item.fileName || `קובץ סעיף 28 ${index + 1}`}
+                      </div>
+
+                      {item.loading ? (
+                        <div style={{ color: "#69758e", fontSize: 12, marginTop: 4 }}>
+                          קורא Excel...
+                        </div>
+                      ) : hasParsedData ? (
+                        <div
+                          style={{
+                            color: "#247a3d",
+                            fontSize: 12,
+                            fontWeight: 800,
+                            marginTop: 4,
+                          }}
+                        >
+                          נקלטו נתוני קיטום עבור {getFamilyOwnerLabel(item.owner)}
+                        </div>
+                      ) : (
+                        <div style={{ color: "#69758e", fontSize: 12, marginTop: 4 }}>
+                          טרם נבחר קובץ
+                        </div>
+                      )}
+
+                      {item.error && (
+                        <div
+                          style={{
+                            color: "#b42318",
+                            fontSize: 12,
+                            fontWeight: 700,
+                            marginTop: 4,
+                          }}
+                        >
+                          {item.error}
+                        </div>
+                      )}
+                    </div>
+
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 8,
+                        flexWrap: "wrap",
+                        justifyContent: "flex-end",
+                      }}
+                    >
+                      <button
+                        type="button"
+                        onClick={() =>
+                          document.getElementById(`${item.id}-input`)?.click()
+                        }
+                        disabled={item.loading}
+                        style={{
+                          background: "#ffffff",
+                          color: "#0d2c6c",
+                          border: "1px solid #cbd4e6",
+                          borderRadius: 12,
+                          padding: "10px 14px",
+                          fontSize: 12,
+                          fontWeight: 800,
+                          cursor: item.loading ? "not-allowed" : "pointer",
+                          minWidth: 110,
+                          fontFamily: "Calibri, sans-serif",
+                        }}
+                      >
+                        בחירת Excel
+                      </button>
+
+                      {item.fileName && (
+                        <button
+                          type="button"
+                          onClick={() => clearSection28CappingUpload(item.id)}
+                          disabled={item.loading}
+                          style={{
+                            background: "#fff5f5",
+                            color: "#c81e1e",
+                            border: "1px solid #f3c2c2",
+                            borderRadius: 12,
+                            padding: "10px 14px",
+                            fontSize: 12,
+                            fontWeight: 800,
+                            cursor: item.loading ? "not-allowed" : "pointer",
+                            fontFamily: "Calibri, sans-serif",
+                          }}
+                        >
+                          נקה קובץ
+                        </button>
+                      )}
+
+                      <button
+                        type="button"
+                        onClick={() => removeSection28CappingUpload(item.id)}
+                        disabled={section28CappingUploads.length <= 1 || item.loading}
+                        style={{
+                          background:
+                            section28CappingUploads.length <= 1 || item.loading
+                              ? "#f4f6fb"
+                              : "#fff5f5",
+                          color:
+                            section28CappingUploads.length <= 1 || item.loading
+                              ? "#9aa5b8"
+                              : "#c81e1e",
+                          border: "1px solid #f3c2c2",
+                          borderRadius: 12,
+                          padding: "10px 14px",
+                          fontSize: 12,
+                          fontWeight: 800,
+                          cursor:
+                            section28CappingUploads.length <= 1 || item.loading
+                              ? "not-allowed"
+                              : "pointer",
+                          fontFamily: "Calibri, sans-serif",
+                        }}
+                      >
+                        הסר ריבוע
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
           </div>
+
+          <button
+            type="button"
+            onClick={addSection28CappingUpload}
+            style={{
+              marginTop: 14,
+              background: "#ffffff",
+              color: "#0d2c6c",
+              border: "1px solid #cbd4e6",
+              borderRadius: 12,
+              padding: "10px 14px",
+              fontSize: 12,
+              fontWeight: 800,
+              cursor: "pointer",
+              fontFamily: "Calibri, sans-serif",
+            }}
+          >
+            הוסף קובץ סעיף 28 נוסף
+          </button>
         </div>
 
         <div

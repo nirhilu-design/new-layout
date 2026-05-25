@@ -1381,15 +1381,30 @@ function CapitalKpi({ title, value, tone = "default" }) {
   );
 }
 
+function getCapitalPensionTableTotals(rows) {
+  return safeArray(rows).reduce((acc, row) => {
+    acc.capitalRewards += getCapitalNumber(row, ["capitalRewards", "תגמולים הוניים"]);
+    acc.pre2000Rewards += getCapitalNumber(row, ["annuityRewardsUntil2000", "pre2000Rewards", "rewardsBefore2000", "תגמולים קצבתיים עד 1.1.2000"]);
+    acc.previousEmployerContinuity += getCapitalNumber(row, ["previousEmployersSeveranceRightsSequence", "previousEmployerContinuity", "previousEmployerSeveranceRights", "פיצויים ממעסיקים קודמים ברצף זכויות"]);
+    acc.currentEmployerTax += getCapitalNumber(row, ["currentEmployerSeveranceTaxable", "taxableCompensation", "currentEmployerCompensationTax", "פיצויים מעסיק נוכחי למס"]);
+    acc.totalPension += getCapitalRowPensionValue(row);
+    acc.totalCapital += getCapitalRowCapitalValue(row, false);
+    return acc;
+  }, {
+    capitalRewards: 0,
+    pre2000Rewards: 0,
+    previousEmployerContinuity: 0,
+    currentEmployerTax: 0,
+    totalPension: 0,
+    totalCapital: 0,
+  });
+}
+
 function CapitalOwnerBlock({ section }) {
   const [openRows, setOpenRows] = useState({});
   const pensionRows = safeArray(section?.pensionPolicies);
   const studyRows = safeArray(section?.studyFunds);
-  const pensionTotals = pensionRows.reduce((acc, row) => {
-    acc.totalCapital += getCapitalRowCapitalValue(row, false);
-    acc.totalPension += getCapitalRowPensionValue(row);
-    return acc;
-  }, { totalCapital: 0, totalPension: 0 });
+  const pensionTotals = getCapitalPensionTableTotals(pensionRows);
   const studyTotal = studyRows.reduce((sum, row) => sum + getCapitalRowFundValue(row), 0);
 
   const toggleRow = (row, index) => {
@@ -1433,7 +1448,11 @@ function CapitalOwnerBlock({ section }) {
                   );
                 })}
                 <tr className="total-row client-capital-total-row">
-                  <td colSpan={5}>סה״כ</td>
+                  <td>סה״כ</td>
+                  <td>{formatCurrency(pensionTotals.capitalRewards)}</td>
+                  <td>{formatCurrency(pensionTotals.pre2000Rewards)}</td>
+                  <td>{formatCurrency(pensionTotals.previousEmployerContinuity)}</td>
+                  <td>{formatCurrency(pensionTotals.currentEmployerTax)}</td>
                   <td className="pension-total">{formatCurrency(pensionTotals.totalPension)}</td>
                   <td className="capital-total">{formatCurrency(pensionTotals.totalCapital)}</td>
                 </tr>
@@ -1450,15 +1469,14 @@ function CapitalOwnerBlock({ section }) {
             <table className="client-table client-capital-study-table">
               <thead>
                 <tr>
-                  <th>חברה מנהלת</th>
-                  <th>מספר קופה</th>
+                  <th>קופה / קבוצה</th>
                   <th>צבירה</th>
                 </tr>
               </thead>
               <tbody>
-                {studyRows.map((row, index) => <CapitalStudyRow key={row?.id || index} row={row} />)}
+                {studyRows.map((row, index) => <CapitalStudyRow key={row?.id || index} row={row} index={index} />)}
                 <tr className="total-row">
-                  <td colSpan={2}>סה״כ</td>
+                  <td>סה״כ</td>
                   <td>{formatCurrency(studyTotal)}</td>
                 </tr>
               </tbody>
@@ -1544,16 +1562,66 @@ function CapitalGroupedDetailsRow({ row }) {
   );
 }
 
-function CapitalStudyRow({ row }) {
-  const company = getCapitalText(row, ["managingCompany", "companyName", "managerName", "issuerName", "חברה מנהלת", "שם יצרן"]) || "—";
-  const policyNumber = getCapitalText(row, ["policyNumber", "fundNumber", "policyNo", "מספר קופה", "מספר פוליסה"]) || "—";
+function CapitalStudyRow({ row, index = 0 }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const sourceRows = safeArray(row?.sourceRows);
+  const hasDetails = sourceRows.length > 0;
+  const policyNumber = getCapitalText(row, ["policyNumber", "fundNumber", "policyNo", "מספר קופה", "מספר פוליסה"]) || getCapitalText(row, ["productType", "productGroup", "productName", "type", "מוצר / קבוצה", "סוג מוצר"]) || "קרן השתלמות";
   const totalFund = getCapitalRowFundValue(row);
 
   return (
-    <tr>
-      <td>{company}</td>
-      <td>{policyNumber}</td>
-      <td>{totalFund ? formatCurrency(totalFund) : "—"}</td>
+    <>
+      <tr>
+        <td className="client-capital-product-cell">
+          {hasDetails ? (
+            <button type="button" className="client-capital-expand-button" onClick={() => setIsOpen((prev) => !prev)} aria-expanded={isOpen} title="הצגת הקרנות המקובצות">
+              <span>{isOpen ? "−" : "+"}</span>
+            </button>
+          ) : null}
+          <strong>{policyNumber}</strong>
+          {hasDetails ? <small>{sourceRows.length} קרנות מקובצות</small> : null}
+        </td>
+        <td>{totalFund ? formatCurrency(totalFund) : "—"}</td>
+      </tr>
+      {isOpen ? <CapitalStudyDetailsRow row={row} /> : null}
+    </>
+  );
+}
+
+function CapitalStudyDetailsRow({ row }) {
+  const sourceRows = safeArray(row?.sourceRows);
+
+  if (!sourceRows.length) return null;
+
+  return (
+    <tr className="client-capital-details-row">
+      <td colSpan={2}>
+        <div className="client-capital-details-box">
+          <div className="client-capital-details-title">הקרנות שנכללו בקבוצה</div>
+          <div className="client-table-wrap client-capital-inner-wrap">
+            <table className="client-table client-capital-inner-table">
+              <thead>
+                <tr>
+                  <th>חברה מנהלת</th>
+                  <th>שם תוכנית</th>
+                  <th>מספר קופה</th>
+                  <th>צבירה</th>
+                </tr>
+              </thead>
+              <tbody>
+                {sourceRows.map((item, index) => (
+                  <tr key={item?.id || index}>
+                    <td>{getCapitalText(item, ["managerName", "managingCompany", "companyName", "issuerName", "חברה מנהלת", "שם יצרן"]) || "—"}</td>
+                    <td>{getCapitalText(item, ["planName", "productName", "שם תוכנית", "שם תכנית"]) || "—"}</td>
+                    <td>{getCapitalText(item, ["policyNumber", "fundNumber", "policyNo", "מספר קופה", "מספר פוליסה"]) || "—"}</td>
+                    <td>{formatCurrency(getCapitalRowFundValue(item))}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </td>
     </tr>
   );
 }
@@ -2857,7 +2925,7 @@ const clientDashboardCss = `
   .client-capital-total-row .capital-total { background: #FFFDF7 !important; border-right: 1px solid #F1E4C5; color: #00215D; font-weight: 900; }
   .client-capital-total-row .pension-total { background: #F8FBFF !important; border-right: 1px solid #DCEAFE; color: #00215D; font-weight: 900; }
   .client-capital-study-wrap { max-width: 720px; }
-  .client-capital-study-table { min-width: 560px; }
+  .client-capital-study-table { min-width: 460px; }
   .client-capital-study-table th, .client-capital-study-table td { text-align: center; }
   .client-capital-study-table th:first-child, .client-capital-study-table td:first-child { text-align: right; }
   .client-capital-note { border: 1px solid #D8DEE9; border-radius: 16px; background: #F8FBFF; color: #627D98; font-size: 12px; line-height: 1.7; padding: 12px 14px; }

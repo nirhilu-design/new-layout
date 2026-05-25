@@ -42,6 +42,7 @@ function ClientFamilyView({ clientModel }) {
   const [linkedReportData, setLinkedReportData] = useState(() => readLinkedReportData());
   const [linkedClientModel, setLinkedClientModel] = useState(() => readLinkedClientModel());
   const [selectedPieSegment, setSelectedPieSegment] = useState(null);
+  const [activeClientTab, setActiveClientTab] = useState("overview");
 
   useEffect(() => {
     const syncReportData = (event) => {
@@ -148,6 +149,12 @@ function ClientFamilyView({ clientModel }) {
       section.studyFunds.length > 0
   );
 
+  useEffect(() => {
+    if (!hasCapitalClassificationData && activeClientTab === "capital") {
+      setActiveClientTab("overview");
+    }
+  }, [hasCapitalClassificationData, activeClientTab]);
+
   const summaryText = getClientConversationSummaryText(model, sourceReportData);
   const recommendationsText = getClientRecommendationsText(model, sourceReportData);
 
@@ -185,6 +192,130 @@ function ClientFamilyView({ clientModel }) {
           @keyframes familyDrawerIn {
             from { transform: translateX(-24px); opacity: 0.65; }
             to { transform: translateX(0); opacity: 1; }
+          }
+
+          .family-client-shell {
+            min-height: 100vh;
+            display: grid;
+            grid-template-columns: 236px minmax(0, 1fr);
+            gap: 18px;
+            align-items: start;
+            background: #F9F7F3;
+            padding: 18px;
+            box-sizing: border-box;
+          }
+
+          .family-client-sidebar {
+            position: sticky;
+            top: 18px;
+            background: #FFFFFF;
+            border: 1px solid #E2D1BF;
+            border-radius: 22px;
+            padding: 14px;
+            box-shadow: 0 8px 24px rgba(16,42,67,0.06);
+            z-index: 20;
+          }
+
+          .family-client-sidebar-title {
+            color: #00215D;
+            font-size: 15px;
+            font-weight: 900;
+            margin: 0 0 4px;
+          }
+
+          .family-client-sidebar-subtitle {
+            color: #627D98;
+            font-size: 11px;
+            line-height: 1.55;
+            margin: 0 0 12px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid #EEE4D8;
+          }
+
+          .family-client-side-tab {
+            width: 100%;
+            min-height: 46px;
+            border: 1px solid #EEE4D8;
+            background: linear-gradient(180deg, #FFFFFF 0%, #FCFBF8 100%);
+            border-radius: 14px;
+            padding: 0 12px;
+            margin: 0 0 9px;
+            display: grid;
+            grid-template-columns: 24px minmax(0, 1fr);
+            gap: 10px;
+            align-items: center;
+            cursor: pointer;
+            font-family: Calibri, Arial, sans-serif;
+            text-align: right;
+            color: #102A43;
+            font-size: 13px;
+            font-weight: 900;
+            transition: all 0.16s ease;
+          }
+
+          .family-client-side-tab:hover {
+            border-color: #00215D;
+            background: #F4F7FB;
+            transform: translateY(-1px);
+            box-shadow: 0 8px 18px rgba(0, 33, 93, 0.08);
+          }
+
+          .family-client-side-tab.active {
+            border-color: #00215D;
+            background: #EAF1FB;
+            color: #00215D;
+            box-shadow: inset 4px 0 0 #00215D, 0 8px 18px rgba(0, 33, 93, 0.08);
+          }
+
+          .family-client-side-icon {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: #EAF1FB;
+            color: #00215D;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 13px;
+            font-weight: 900;
+          }
+
+          .family-client-content {
+            min-width: 0;
+          }
+
+          .family-tab-panel {
+            display: none;
+          }
+
+          .family-tab-panel.active {
+            display: block;
+          }
+
+          @media (max-width: 980px) {
+            .family-client-shell {
+              grid-template-columns: 1fr;
+              padding: 12px;
+            }
+
+            .family-client-sidebar {
+              position: relative;
+              top: auto;
+              display: flex;
+              gap: 8px;
+              overflow-x: auto;
+              align-items: center;
+            }
+
+            .family-client-sidebar-title,
+            .family-client-sidebar-subtitle {
+              display: none;
+            }
+
+            .family-client-side-tab {
+              min-width: 150px;
+              margin: 0;
+            }
           }
 
           @media (max-width: 900px) {
@@ -423,12 +554,56 @@ function ClientFamilyView({ clientModel }) {
               word-break: break-word !important;
             }
 
-            .no-print { display: none !important; }
+            .no-print,
+            .family-client-sidebar { display: none !important; }
+
+            .family-client-shell {
+              display: block !important;
+              padding: 0 !important;
+              background: #ffffff !important;
+            }
+
+            .family-client-content {
+              display: block !important;
+              width: 100% !important;
+            }
+
+            .family-tab-panel {
+              display: block !important;
+            }
           }
         `}
       </style>
 
-      <div className="family-print-page family-print-page-1">
+      <div className="family-client-shell">
+        <aside className="family-client-sidebar no-print" aria-label="תפריט אזורי הדוח">
+          <div className="family-client-sidebar-title">תפריט לקוח</div>
+          <div className="family-client-sidebar-subtitle">מעבר בין אזורי הדוח המשפחתי</div>
+
+          <button
+            type="button"
+            className={`family-client-side-tab ${activeClientTab === "overview" ? "active" : ""}`}
+            onClick={() => setActiveClientTab("overview")}
+          >
+            <span className="family-client-side-icon">⌂</span>
+            <span>סקירה משפחתית</span>
+          </button>
+
+          {hasCapitalClassificationData ? (
+            <button
+              type="button"
+              className={`family-client-side-tab ${activeClientTab === "capital" ? "active" : ""}`}
+              onClick={() => setActiveClientTab("capital")}
+            >
+              <span className="family-client-side-icon">₪</span>
+              <span>פירוק נכסים</span>
+            </button>
+          ) : null}
+        </aside>
+
+        <main className="family-client-content">
+          <div className={`family-tab-panel ${activeClientTab === "overview" ? "active" : ""}`}>
+            <div className="family-print-page family-print-page-1">
         <Header
           title="דוח פנסיוני משפחתי מאוחד"
           eyebrow="מסך לקוח · דוח משפחתי מאוחד"
@@ -567,24 +742,28 @@ function ClientFamilyView({ clientModel }) {
           )}
         </SectionCard>
       </div>
+          </div>
 
-      {hasCapitalClassificationData ? (
-        <div className="family-print-page family-print-page-capital">
-          <SectionCard title="פירוק נכסים" icon="📑">
-            <div className="family-explanation" style={explanation}>
-              פירוט זה מציג את אותו מידע שעבר מה־REPORT: פוליסות / גמל / פנסיה,
-              קרנות השתלמות, סיכומי הון וקצבה ומקרא סיווג כספים.
+          {hasCapitalClassificationData ? (
+            <div className={`family-tab-panel ${activeClientTab === "capital" ? "active" : ""}`}>
+              <div className="family-print-page family-print-page-capital">
+                <SectionCard title="פירוק נכסים" icon="📑">
+                  <div className="family-explanation" style={explanation}>
+                    פירוט זה מציג את אותו מידע שעבר מה־REPORT: פוליסות / גמל / פנסיה,
+                    קרנות השתלמות, סיכומי הון וקצבה ומקרא סיווג כספים.
+                  </div>
+
+                  <ClientCapitalClassificationSection
+                    sections={capitalClassification}
+                    formatCurrency={formatCurrency}
+                  />
+                </SectionCard>
+              </div>
             </div>
+          ) : null}
 
-            <ClientCapitalClassificationSection
-              sections={capitalClassification}
-              formatCurrency={formatCurrency}
-            />
-          </SectionCard>
-        </div>
-      ) : null}
-
-      <div className="family-print-page family-print-page-3">
+          <div className={`family-tab-panel ${activeClientTab === "overview" ? "active" : ""}`}>
+            <div className="family-print-page family-print-page-3">
         <SectionCard title="הלוואות על חשבון מוצרים פנסיוניים" icon="💳">
           <div className="family-explanation" style={explanation}>
             פירוט הלוואות לפי אדם עם סיכום כולל ויחס לנכסים.
@@ -709,6 +888,9 @@ function ClientFamilyView({ clientModel }) {
             </div>
           </div>
         </SectionCard>
+      </div>
+          </div>
+        </main>
       </div>
 
       <PieSegmentDrawer

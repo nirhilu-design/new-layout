@@ -127,21 +127,116 @@ function findFirstObjectByKeyHints(source, keyHints, depth = 0, visited = new Se
   return null;
 }
 
+
+function getOwnerLabelFromKey(owner, fallbackLabel = "בן/בת זוג") {
+  if (owner === "spouseA") return "בן זוג";
+  if (owner === "spouseB") return "בת זוג";
+  return fallbackLabel || "בן/בת זוג";
+}
+
+function hasSection28Rows(entry) {
+  return safeArray(entry?.groups).length > 0 || safeArray(entry?.comparisonRows).length > 0;
+}
+
+function normalizeSection28SectionsForClient(data) {
+  const sourceData = data?.sourceReportData || {};
+  const raw = data?.section28Capping || sourceData?.section28Capping || null;
+
+  const normalizeEntry = (entry, fallbackOwner = "spouseA") => {
+    const owner = entry?.owner === "spouseB" || fallbackOwner === "spouseB" ? "spouseB" : "spouseA";
+    return {
+      ...(entry || {}),
+      owner,
+      ownerLabel: entry?.ownerLabel || getOwnerLabelFromKey(owner),
+      sourceFileName: entry?.sourceFileName || "",
+      sheetName: entry?.sheetName || "",
+      groups: safeArray(entry?.groups),
+      comparisonRows: safeArray(entry?.comparisonRows),
+    };
+  };
+
+  const direct = Array.isArray(raw)
+    ? raw.map((entry) => normalizeEntry(entry)).filter(hasSection28Rows)
+    : raw && typeof raw === "object" && hasSection28Rows(raw)
+    ? [normalizeEntry(raw, raw.owner === "spouseB" ? "spouseB" : "spouseA")]
+    : [];
+
+  if (direct.length) return direct;
+
+  return [
+    ...safeArray(data?.spouseA_section28Capping || sourceData?.spouseA_section28Capping).map((entry) => normalizeEntry(entry, "spouseA")),
+    ...safeArray(data?.spouseB_section28Capping || sourceData?.spouseB_section28Capping).map((entry) => normalizeEntry(entry, "spouseB")),
+  ].filter(hasSection28Rows);
+}
+
+function hasRecognizedPensionRows(entry) {
+  return safeArray(entry?.vestedBalanceTable?.rows).length > 0 || safeArray(entry?.recognizedPensionAdjustments).length > 0;
+}
+
+function normalizeRecognizedPensionSectionsForClient(data) {
+  const sourceData = data?.sourceReportData || {};
+  const topTable = data?.vestedBalanceTable || sourceData?.vestedBalanceTable || null;
+  const topAdjustments = safeArray(data?.recognizedPensionAdjustments || sourceData?.recognizedPensionAdjustments);
+
+  const normalizeEntry = (entry, fallbackOwner = "spouseA") => {
+    const table = entry?.vestedBalanceTable || entry?.table || entry || null;
+    const owner =
+      entry?.owner === "spouseB" ||
+      table?.owner === "spouseB" ||
+      fallbackOwner === "spouseB"
+        ? "spouseB"
+        : "spouseA";
+    return {
+      owner,
+      ownerLabel: entry?.ownerLabel || table?.ownerLabel || getOwnerLabelFromKey(owner),
+      vestedBalanceTable: table && safeArray(table?.rows).length ? { ...table, owner, ownerLabel: entry?.ownerLabel || table?.ownerLabel || getOwnerLabelFromKey(owner) } : null,
+      recognizedPensionAdjustments: safeArray(entry?.recognizedPensionAdjustments || entry?.adjustments),
+    };
+  };
+
+  const entries = [];
+  const spouseATable = data?.spouseA_vestedBalanceTable || sourceData?.spouseA_vestedBalanceTable || null;
+  const spouseBTable = data?.spouseB_vestedBalanceTable || sourceData?.spouseB_vestedBalanceTable || null;
+  const spouseAAdjustments = safeArray(data?.spouseA_recognizedPensionAdjustments || sourceData?.spouseA_recognizedPensionAdjustments);
+  const spouseBAdjustments = safeArray(data?.spouseB_recognizedPensionAdjustments || sourceData?.spouseB_recognizedPensionAdjustments);
+
+  if (spouseATable || spouseAAdjustments.length) {
+    entries.push(normalizeEntry({ vestedBalanceTable: spouseATable, recognizedPensionAdjustments: spouseAAdjustments, owner: "spouseA" }, "spouseA"));
+  }
+  if (spouseBTable || spouseBAdjustments.length) {
+    entries.push(normalizeEntry({ vestedBalanceTable: spouseBTable, recognizedPensionAdjustments: spouseBAdjustments, owner: "spouseB" }, "spouseB"));
+  }
+
+  if (entries.filter(hasRecognizedPensionRows).length) return entries.filter(hasRecognizedPensionRows);
+
+  if (topTable || topAdjustments.length) {
+    const owner = topTable?.owner || data?.recognizedPensionOwner || sourceData?.recognizedPensionOwner || "spouseA";
+    const ownerLabel = topTable?.ownerLabel || data?.recognizedPensionOwnerLabel || sourceData?.recognizedPensionOwnerLabel || getOwnerLabelFromKey(owner);
+    const filteredAdjustments = topAdjustments.filter((item) => !item?.owner || item.owner === owner);
+    return [
+      {
+        owner,
+        ownerLabel,
+        vestedBalanceTable: topTable ? { ...topTable, owner, ownerLabel } : null,
+        recognizedPensionAdjustments: filteredAdjustments.length ? filteredAdjustments : topAdjustments,
+      },
+    ].filter(hasRecognizedPensionRows);
+  }
+
+  return [];
+}
+
 function buildSpecialSectionsModel(reportData) {
   const data = reportData || {};
   const sourceData = data.sourceReportData || {};
-  const section28Capping = data.section28Capping || sourceData.section28Capping || null;
-  const vestedBalanceTable = data.vestedBalanceTable || sourceData.vestedBalanceTable || null;
-  const recognizedPensionAdjustments = data.recognizedPensionAdjustments || sourceData.recognizedPensionAdjustments || null;
   const capitalClassification = data.capitalClassification || sourceData.capitalClassification || [];
   const spouseAPensionFunds = data.spouseA_pension_funds || sourceData.spouseA_pension_funds || [];
   const spouseAStudyFunds = data.spouseA_study_funds || sourceData.spouseA_study_funds || [];
   const spouseBPensionFunds = data.spouseB_pension_funds || sourceData.spouseB_pension_funds || [];
   const spouseBStudyFunds = data.spouseB_study_funds || sourceData.spouseB_study_funds || [];
 
-  const section28Groups = safeArray(section28Capping?.groups);
-  const vestedRows = safeArray(vestedBalanceTable?.rows);
-  const recognizedAdjustments = safeArray(recognizedPensionAdjustments);
+  const section28Entries = normalizeSection28SectionsForClient(data);
+  const recognizedPensionEntries = normalizeRecognizedPensionSectionsForClient(data);
   const capitalSections = normalizeCapitalClassificationSections({
     capitalClassification,
     spouseAPensionFunds,
@@ -150,8 +245,8 @@ function buildSpecialSectionsModel(reportData) {
     spouseBStudyFunds,
   });
 
-  const hasSection28 = section28Groups.length > 0;
-  const hasRecognizedPension = vestedRows.length > 0 || recognizedAdjustments.length > 0;
+  const hasSection28 = section28Entries.length > 0;
+  const hasRecognizedPension = recognizedPensionEntries.length > 0;
   const hasCapitalClassification = capitalSections.some(
     (section) => safeArray(section.pensionPolicies).length > 0 || safeArray(section.studyFunds).length > 0
   );
@@ -161,15 +256,13 @@ function buildSpecialSectionsModel(reportData) {
     hasRecognizedPension,
     hasCapitalClassification,
     hasAny: hasSection28 || hasRecognizedPension || hasCapitalClassification,
-    section28Capping,
-    vestedBalanceTable,
-    recognizedPensionAdjustments,
+    section28Capping: section28Entries,
+    vestedBalanceTable: recognizedPensionEntries[0]?.vestedBalanceTable || null,
+    recognizedPensionAdjustments: recognizedPensionEntries[0]?.recognizedPensionAdjustments || [],
+    recognizedPensionEntries,
     capitalClassification: capitalSections,
-    section28Data: section28Capping,
-    recognizedPensionData: {
-      vestedBalanceTable,
-      recognizedPensionAdjustments,
-    },
+    section28Data: section28Entries,
+    recognizedPensionData: recognizedPensionEntries,
   };
 }
 
@@ -846,7 +939,7 @@ export default function ClientDashboardPage({
           {activeSection === "loans" ? <LoansSection scope={scope} /> : null}
           {activeSection === "capitalClassification" ? <CapitalClassificationSection sections={specialSections.capitalClassification} /> : null}
           {activeSection === "section28" ? <Section28Section section28Capping={specialSections.section28Capping} /> : null}
-          {activeSection === "recognizedPension" ? <RecognizedPensionSection vestedBalanceTable={specialSections.vestedBalanceTable} recognizedPensionAdjustments={specialSections.recognizedPensionAdjustments} /> : null}
+          {activeSection === "recognizedPension" ? <RecognizedPensionSection entries={specialSections.recognizedPensionEntries} /> : null}
           {activeSection === "summary" ? <ConversationSummarySection scope={scope} clientModel={clientModel} reportData={reportData} /> : null}
         </section>
       </main>
@@ -1707,10 +1800,13 @@ function pickSection28Rows(rows, labelParts) {
 }
 
 function Section28Section({ section28Capping }) {
-  const groups = safeArray(section28Capping?.groups);
-  const comparisonRows = safeArray(section28Capping?.comparisonRows);
+  const entries = Array.isArray(section28Capping)
+    ? section28Capping
+    : section28Capping
+    ? [section28Capping]
+    : [];
 
-  if (!groups.length) {
+  if (!entries.length) {
     return (
       <div>
         <SectionTitle title="קיטום סעיף 28" subtitle="בדוח הנוכחי לא נמצאו נתוני קיטום סעיף 28 להצגה." />
@@ -1719,41 +1815,51 @@ function Section28Section({ section28Capping }) {
     );
   }
 
-  const costGroup = getSection28Group(groups, "employer-cost", "עלויות");
-  const savingGroup = getSection28Group(groups, "saving-simulation", "סימולציה לחיסכון");
-  const retirementGroup = getSection28Group(groups, "retirement", "סימולציה לגיל פרישה");
-  const renderedGroupIds = new Set([costGroup?.id, savingGroup?.id, retirementGroup?.id, "base"].filter(Boolean));
-  const otherGroups = groups.filter(
-    (group) => !renderedGroupIds.has(group?.id) && !normalizeSection28Text(group?.title).includes("נתוני בסיס")
-  );
-
   return (
     <div>
       <SectionTitle
-        title="קיטום סעיף 28"
-        subtitle="תצוגת לקוח מעוצבת לפי מבנה ה־REPORT: חלוקת עובד/מעסיק, סימולציות, השוואת תרחישים וסיכומי קיטום מרכזיים."
+        title="קיטום סעיף 28 לפי בן/בת זוג"
+        subtitle="כל קובץ מוצג לפי השיוך שנבחר במסך ההעלאה, כדי להפריד בין נתוני בן הזוג ובת הזוג."
       />
 
       <div className="client-report-like-shell">
-        {section28Capping?.sourceFileName || section28Capping?.sheetName ? (
-          <div className="client-source-strip">
-            {section28Capping?.sourceFileName ? <span>מקור נתונים: <strong>{section28Capping.sourceFileName}</strong></span> : null}
-            {section28Capping?.sheetName ? <span>גיליון: <strong>{section28Capping.sheetName}</strong></span> : null}
-          </div>
-        ) : null}
+        {entries.map((entry, entryIndex) => {
+          const groups = safeArray(entry?.groups);
+          const comparisonRows = safeArray(entry?.comparisonRows);
+          const costGroup = getSection28Group(groups, "employer-cost", "עלויות");
+          const savingGroup = getSection28Group(groups, "saving-simulation", "סימולציה לחיסכון");
+          const retirementGroup = getSection28Group(groups, "retirement", "סימולציה לגיל פרישה");
+          const renderedGroupIds = new Set([costGroup?.id, savingGroup?.id, retirementGroup?.id, "base"].filter(Boolean));
+          const otherGroups = groups.filter(
+            (group) => !renderedGroupIds.has(group?.id) && !normalizeSection28Text(group?.title).includes("נתוני בסיס")
+          );
 
-        {costGroup ? <Section28CostSplit group={costGroup} /> : null}
-        {savingGroup ? <Section28SavingSimulation group={savingGroup} /> : null}
-        {comparisonRows.length ? <Section28ComparisonTable rows={comparisonRows} /> : null}
-        {retirementGroup ? <Section28RetirementSimulation group={retirementGroup} /> : null}
+          return (
+            <div className="client-report-owner-block" key={`${entry?.owner || "owner"}-${entry?.sourceFileName || entryIndex}`}>
+              <div className="client-owner-block-title">קיטום סעיף 28 — {entry?.ownerLabel || "בן/בת זוג"}</div>
 
-        {otherGroups.length ? (
-          <div className="client-special-grid client-margin-top">
-            {otherGroups.map((group) => (
-              <Section28GenericGroup key={group.id || group.title} group={group} />
-            ))}
-          </div>
-        ) : null}
+              {entry?.sourceFileName || entry?.sheetName ? (
+                <div className="client-source-strip">
+                  {entry?.sourceFileName ? <span>מקור נתונים: <strong>{entry.sourceFileName}</strong></span> : null}
+                  {entry?.sheetName ? <span>גיליון: <strong>{entry.sheetName}</strong></span> : null}
+                </div>
+              ) : null}
+
+              {costGroup ? <Section28CostSplit group={costGroup} /> : null}
+              {savingGroup ? <Section28SavingSimulation group={savingGroup} /> : null}
+              {comparisonRows.length ? <Section28ComparisonTable rows={comparisonRows} /> : null}
+              {retirementGroup ? <Section28RetirementSimulation group={retirementGroup} /> : null}
+
+              {otherGroups.length ? (
+                <div className="client-special-grid client-margin-top">
+                  {otherGroups.map((group) => (
+                    <Section28GenericGroup key={group.id || group.title} group={group} />
+                  ))}
+                </div>
+              ) : null}
+            </div>
+          );
+        })}
       </div>
     </div>
   );
@@ -2056,13 +2162,10 @@ function getManualRecognizedPensionRows(adjustments) {
     }));
 }
 
-function RecognizedPensionSection({ vestedBalanceTable, recognizedPensionAdjustments }) {
-  const pdfRows = safeArray(vestedBalanceTable?.rows);
-  const manualRows = getManualRecognizedPensionRows(recognizedPensionAdjustments);
-  const pdfTotal = getPdfExemptPaymentsTotal(pdfRows);
-  const manualTotal = manualRows.reduce((sum, row) => sum + Number(row.amount || 0), 0);
+function RecognizedPensionSection({ entries = [] }) {
+  const safeEntries = safeArray(entries).filter(hasRecognizedPensionRows);
 
-  if (!pdfRows.length && !manualRows.length) {
+  if (!safeEntries.length) {
     return (
       <div>
         <SectionTitle title="קצבה מוכרת" subtitle="בדוח הנוכחי לא נמצאו נתוני קצבה מוכרת להצגה." />
@@ -2074,18 +2177,33 @@ function RecognizedPensionSection({ vestedBalanceTable, recognizedPensionAdjustm
   return (
     <div>
       <SectionTitle
-        title="קצבה מוכרת"
-        subtitle="תצוגת לקוח לפי מבנה ה־REPORT: טבלת חישוב PDF, הזנה ידנית לפי חברת ביטוח ופער הצבירה לחיסכון במס."
+        title="קצבה מוכרת לפי בן/בת זוג"
+        subtitle="נתוני PDF והזנות ידניות מוצגים לפי השיוך שנבחר במסך ההעלאה."
       />
 
       <div className="client-report-like-shell">
-        {vestedBalanceTable?.sourceFileName ? (
-          <div className="client-source-strip"><span>מקור נתונים: <strong>{vestedBalanceTable.sourceFileName}</strong></span></div>
-        ) : null}
+        {safeEntries.map((entry, entryIndex) => {
+          const vestedBalanceTable = entry?.vestedBalanceTable || null;
+          const recognizedPensionAdjustments = safeArray(entry?.recognizedPensionAdjustments);
+          const pdfRows = safeArray(vestedBalanceTable?.rows);
+          const manualRows = getManualRecognizedPensionRows(recognizedPensionAdjustments);
+          const pdfTotal = getPdfExemptPaymentsTotal(pdfRows);
+          const manualTotal = manualRows.reduce((sum, row) => sum + Number(row.amount || 0), 0);
 
-        {pdfRows.length ? <VestedPdfCalculationTable rows={pdfRows} pdfTotal={pdfTotal} /> : null}
-        {manualRows.length ? <ManualRecognizedPensionTable rows={manualRows} manualTotal={manualTotal} /> : null}
-        {pdfTotal > 0 && manualTotal > 0 ? <TaxSavingGapSummary pdfTotal={pdfTotal} manualTotal={manualTotal} /> : null}
+          return (
+            <div className="client-report-owner-block" key={`${entry?.owner || "owner"}-${entryIndex}`}>
+              <div className="client-owner-block-title">קצבה מוכרת — {entry?.ownerLabel || "בן/בת זוג"}</div>
+
+              {vestedBalanceTable?.sourceFileName ? (
+                <div className="client-source-strip"><span>מקור נתונים: <strong>{vestedBalanceTable.sourceFileName}</strong></span></div>
+              ) : null}
+
+              {pdfRows.length ? <VestedPdfCalculationTable rows={pdfRows} pdfTotal={pdfTotal} /> : null}
+              {manualRows.length ? <ManualRecognizedPensionTable rows={manualRows} manualTotal={manualTotal} /> : null}
+              {pdfTotal > 0 && manualTotal > 0 ? <TaxSavingGapSummary pdfTotal={pdfTotal} manualTotal={manualTotal} /> : null}
+            </div>
+          );
+        })}
       </div>
     </div>
   );
@@ -2838,6 +2956,8 @@ const clientDashboardCss = `
 
 
   .client-report-like-shell { display: flex; flex-direction: column; gap: 14px; }
+  .client-report-owner-block { border: 1px solid #E7D9CA; border-radius: 22px; background: #FFFFFF; padding: 16px; display: flex; flex-direction: column; gap: 14px; }
+  .client-owner-block-title { color: #00215D; font-size: 18px; line-height: 1.3; font-weight: 900; padding-bottom: 10px; border-bottom: 1px solid #EEE4D8; }
   .client-source-strip { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: flex-start; border: 1px solid #E2D1BF; border-radius: 18px; background: #FCFBF8; padding: 12px 14px; color: #627D98; font-size: 12px; font-weight: 800; }
   .client-source-strip strong { color: #00215D; font-size: 13px; }
   .client-report-panel { border: 1px solid #E7D9CA; border-radius: 20px; background: linear-gradient(180deg, #FFFFFF 0%, #FCFBF8 100%); box-shadow: 0 2px 10px rgba(16,42,67,0.04); padding: 18px; min-width: 0; }

@@ -239,6 +239,59 @@ function normalizeSection28CappingReportData(data) {
   return fallbackEntries.filter(hasSection28Rows);
 }
 
+
+function getReportOwnerLabel(owner, fallback = "בן/בת זוג") {
+  if (owner === "spouseA") return "בן זוג";
+  if (owner === "spouseB") return "בת זוג";
+  return fallback || "בן/בת זוג";
+}
+
+function hasRecognizedPensionReportRows(entry) {
+  return (
+    normalizeCapitalReportArray(entry?.vestedBalanceTable?.rows).length > 0 ||
+    normalizeCapitalReportArray(entry?.recognizedPensionAdjustments).length > 0
+  );
+}
+
+function normalizeRecognizedPensionReportData(data) {
+  const source = data || {};
+  const topTable = source.vestedBalanceTable || null;
+  const topAdjustments = normalizeCapitalReportArray(source.recognizedPensionAdjustments);
+
+  const normalizeEntry = ({ table = null, adjustments = [], owner = "spouseA", ownerLabel = "" }) => {
+    const safeOwner = owner === "spouseB" ? "spouseB" : "spouseA";
+    const safeOwnerLabel = ownerLabel || table?.ownerLabel || getReportOwnerLabel(safeOwner);
+    return {
+      owner: safeOwner,
+      ownerLabel: safeOwnerLabel,
+      vestedBalanceTable: table && normalizeCapitalReportArray(table?.rows).length
+        ? { ...table, owner: safeOwner, ownerLabel: safeOwnerLabel }
+        : null,
+      recognizedPensionAdjustments: normalizeCapitalReportArray(adjustments),
+    };
+  };
+
+  const entries = [];
+  if (source.spouseA_vestedBalanceTable || normalizeCapitalReportArray(source.spouseA_recognizedPensionAdjustments).length) {
+    entries.push(normalizeEntry({ table: source.spouseA_vestedBalanceTable, adjustments: source.spouseA_recognizedPensionAdjustments, owner: "spouseA" }));
+  }
+  if (source.spouseB_vestedBalanceTable || normalizeCapitalReportArray(source.spouseB_recognizedPensionAdjustments).length) {
+    entries.push(normalizeEntry({ table: source.spouseB_vestedBalanceTable, adjustments: source.spouseB_recognizedPensionAdjustments, owner: "spouseB" }));
+  }
+
+  const splitEntries = entries.filter(hasRecognizedPensionReportRows);
+  if (splitEntries.length) return splitEntries;
+
+  if (topTable || topAdjustments.length) {
+    const owner = topTable?.owner || source.recognizedPensionOwner || "spouseA";
+    const ownerLabel = topTable?.ownerLabel || source.recognizedPensionOwnerLabel || getReportOwnerLabel(owner);
+    const adjustmentsForOwner = topAdjustments.filter((item) => !item?.owner || item.owner === owner);
+    return [normalizeEntry({ table: topTable, adjustments: adjustmentsForOwner.length ? adjustmentsForOwner : topAdjustments, owner, ownerLabel })].filter(hasRecognizedPensionReportRows);
+  }
+
+  return [];
+}
+
 function getCapitalRowValue(row, key) {
   const value = row?.[key];
   if (value === null || value === undefined || value === "") return "-";
@@ -946,18 +999,8 @@ export default function ReportPage({
     weightedEquityExposure = 0,
   } = safeReportData;
 
-  const vestedBalanceTable = safeReportData?.vestedBalanceTable || null;
-  const recognizedPensionAdjustments = Array.isArray(
-    safeReportData?.recognizedPensionAdjustments
-  )
-    ? safeReportData.recognizedPensionAdjustments
-    : [];
-  const hasRecognizedPensionAdjustments =
-    recognizedPensionAdjustments.length > 0;
-  const hasVestedBalanceTable =
-    (Array.isArray(vestedBalanceTable?.rows) &&
-      vestedBalanceTable.rows.length > 0) ||
-    hasRecognizedPensionAdjustments;
+  const recognizedPensionEntries = normalizeRecognizedPensionReportData(safeReportData);
+  const hasVestedBalanceTable = recognizedPensionEntries.length > 0;
 
   const section28CappingEntries = normalizeSection28CappingReportData(safeReportData);
   const hasSection28Capping = section28CappingEntries.length > 0;
@@ -3584,16 +3627,38 @@ export default function ReportPage({
               <div style={styles.explanation}>
                 טבלה זו מוצגת רק כאשר הועלה PDF ייעודי במסך ההעלאה ונמצאו בו
                 נתוני צבירה מוכרת, או כאשר הוזן סכום קצבה מוכרת ידנית לפי חברת ביטוח.
-                {vestedBalanceTable?.sourceFileName
-                  ? ` מקור הנתונים: ${vestedBalanceTable.sourceFileName}.`
-                  : ""}
+                כל בלוק מוצג לפי השיוך שנבחר במסך ההעלאה.
               </div>
 
-              <VestedBalanceTable
-                table={vestedBalanceTable}
-                adjustments={recognizedPensionAdjustments}
-                styles={styles}
-              />
+              <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+                {recognizedPensionEntries.map((entry, index) => (
+                  <div
+                    key={`${entry.owner || "owner"}-${index}`}
+                    style={{
+                      border: "1px solid #EEE4D8",
+                      borderRadius: 18,
+                      background: "linear-gradient(180deg, #FFFFFF 0%, #FCFBF8 100%)",
+                      padding: 16,
+                    }}
+                  >
+                    <div style={{ color: navy, fontSize: 14, fontWeight: 900, marginBottom: 12 }}>
+                      קצבה מוכרת — {entry.ownerLabel || "בן/בת זוג"}
+                    </div>
+
+                    {entry.vestedBalanceTable?.sourceFileName ? (
+                      <div style={{ color: textSoft, fontSize: 11, fontWeight: 800, marginBottom: 12 }}>
+                        מקור: {entry.vestedBalanceTable.sourceFileName}
+                      </div>
+                    ) : null}
+
+                    <VestedBalanceTable
+                      table={entry.vestedBalanceTable}
+                      adjustments={entry.recognizedPensionAdjustments}
+                      styles={styles}
+                    />
+                  </div>
+                ))}
+              </div>
             </section>
           ) : null}
 
@@ -5748,14 +5813,11 @@ function PrintReportA4({ reportData, conversationSummary = "", actionRecommendat
   const loans = data.loans || { hasData: false, details: [] };
   const loanDetails = Array.isArray(loans.details) ? loans.details : [];
   const section28CappingEntries = normalizeSection28CappingReportData(data);
-  const vestedBalanceTable = data.vestedBalanceTable || null;
-  const vestedRows = Array.isArray(vestedBalanceTable?.rows) ? vestedBalanceTable.rows : [];
-  const recognizedPensionAdjustments = Array.isArray(data.recognizedPensionAdjustments) ? data.recognizedPensionAdjustments : [];
-  const manualRecognizedRows = getManualRecognizedPensionRows(recognizedPensionAdjustments);
+  const recognizedPensionEntries = normalizeRecognizedPensionReportData(data);
   const capitalClassificationEntries = normalizeCapitalClassificationReportData(data);
   const hasCapitalClassification = capitalClassificationEntries.length > 0;
   const hasSection28Capping = section28CappingEntries.length > 0;
-  const hasRecognizedPension = vestedRows.length > 0 || manualRecognizedRows.length > 0;
+  const hasRecognizedPension = recognizedPensionEntries.length > 0;
   const shouldShowPensionAppendixPage = hasSection28Capping || hasRecognizedPension;
 
   const fmtCurrency = (value) => `₪${Math.round(Number(value || 0)).toLocaleString("en-US")}`;
@@ -6157,39 +6219,53 @@ function PrintReportA4({ reportData, conversationSummary = "", actionRecommendat
 
   const RecognizedPensionPrintSummary = () => (
     <div>
-      {vestedRows.length ? (
-        <div className="print-card-soft" style={{ marginBottom: "3mm" }}>
-          <div style={{ color: "#00215D", fontWeight: 900, fontSize: 10.5, marginBottom: "2mm" }}>טבלת חישוב מתוך PDF</div>
-          <Kpi label="סה״כ תשלומים פטורים" value={formatReportNumber(pdfRecognizedTotal)} />
-          <table className="print-table" style={{ marginTop: "3mm" }}>
-            <thead><tr><th>שם הקופה</th><th>תשלומים פטורים</th><th>קצבה מוכרת</th></tr></thead>
-            <tbody>{vestedRows.slice(0, 6).map((row, index) => <tr key={row.id || index}><td>{row.fundName || "—"}</td><td>{row.exemptPayments || "—"}</td><td>{row.pension || "—"}</td></tr>)}</tbody>
-          </table>
-        </div>
-      ) : null}
+      {recognizedPensionEntries.map((entry, entryIndex) => {
+        const vestedRows = Array.isArray(entry?.vestedBalanceTable?.rows) ? entry.vestedBalanceTable.rows : [];
+        const manualRecognizedRows = getManualRecognizedPensionRows(entry?.recognizedPensionAdjustments);
+        const pdfRecognizedTotal = getPdfExemptPaymentsTotal(vestedRows);
+        const manualRecognizedTotal = manualRecognizedRows.reduce((sum, row) => sum + Number(row.amount || 0), 0);
 
-      {manualRecognizedRows.length ? (
-        <div className="print-card-soft" style={{ marginBottom: "3mm" }}>
-          <div style={{ color: "#00215D", fontWeight: 900, fontSize: 10.5, marginBottom: "2mm" }}>קצבה מוכרת שהוזנה ידנית</div>
-          <Kpi label="סה״כ קצבה מוכרת" value={formatReportNumber(manualRecognizedTotal)} />
-          <table className="print-table" style={{ marginTop: "3mm" }}>
-            <thead><tr><th>חברת ביטוח</th><th>סכום</th></tr></thead>
-            <tbody>{manualRecognizedRows.slice(0, 7).map((row) => <tr key={row.id}><td>{row.companyName}</td><td>{formatReportNumber(row.amount)}</td></tr>)}</tbody>
-          </table>
-        </div>
-      ) : null}
+        return (
+          <div className="print-card-soft" style={{ marginBottom: "3mm" }} key={`${entry.owner || "owner"}-${entryIndex}`}>
+            <div style={{ color: "#00215D", fontWeight: 900, fontSize: 11, marginBottom: "2mm" }}>
+              קצבה מוכרת — {entry.ownerLabel || "בן/בת זוג"}
+            </div>
 
-      {pdfRecognizedTotal > 0 && manualRecognizedTotal > 0 ? (
-        <div className="print-card-soft">
-          <div style={{ color: "#627D98", fontSize: 10.5, marginBottom: "1mm" }}>פער הצבירה לחיסכון במס</div>
-          <div style={{ color: "#00215D", fontSize: 18, fontWeight: 900, direction: "ltr" }}>{formatReportNumber(pdfRecognizedTotal - manualRecognizedTotal)}</div>
-        </div>
-      ) : null}
+            {vestedRows.length ? (
+              <div style={{ marginBottom: "3mm" }}>
+                <div style={{ color: "#00215D", fontWeight: 900, fontSize: 10.5, marginBottom: "2mm" }}>טבלת חישוב מתוך PDF</div>
+                <Kpi label="סה״כ תשלומים פטורים" value={formatReportNumber(pdfRecognizedTotal)} />
+                <table className="print-table" style={{ marginTop: "3mm" }}>
+                  <thead><tr><th>שם הקופה</th><th>תשלומים פטורים</th><th>קצבה מוכרת</th></tr></thead>
+                  <tbody>{vestedRows.slice(0, 6).map((row, index) => <tr key={row.id || index}><td>{row.fundName || "—"}</td><td>{row.exemptPayments || "—"}</td><td>{row.pension || "—"}</td></tr>)}</tbody>
+                </table>
+              </div>
+            ) : null}
 
-      {!vestedRows.length && !manualRecognizedRows.length ? <div className="print-muted">לא קיימים נתוני קצבה מוכרת בדוח.</div> : null}
+            {manualRecognizedRows.length ? (
+              <div>
+                <div style={{ color: "#00215D", fontWeight: 900, fontSize: 10.5, marginBottom: "2mm" }}>קצבה מוכרת שהוזנה ידנית</div>
+                <Kpi label="סה״כ קצבה מוכרת" value={formatReportNumber(manualRecognizedTotal)} />
+                <table className="print-table" style={{ marginTop: "3mm" }}>
+                  <thead><tr><th>חברת ביטוח</th><th>קצבה מוכרת</th></tr></thead>
+                  <tbody>{manualRecognizedRows.slice(0, 6).map((row) => <tr key={row.id}><td>{row.companyName}</td><td>{formatReportNumber(row.amount)}</td></tr>)}</tbody>
+                </table>
+              </div>
+            ) : null}
+
+            {pdfRecognizedTotal > 0 && manualRecognizedTotal > 0 ? (
+              <div className="print-card-soft" style={{ marginTop: "3mm" }}>
+                <div style={{ color: "#627D98", fontSize: 10.5, marginBottom: "1mm" }}>פער הצבירה לחיסכון במס</div>
+                <div style={{ color: "#00215D", fontSize: 18, fontWeight: 900, direction: "ltr" }}>{formatReportNumber(pdfRecognizedTotal - manualRecognizedTotal)}</div>
+              </div>
+            ) : null}
+          </div>
+        );
+      })}
+
+      {!recognizedPensionEntries.length ? <div className="print-muted">לא קיימים נתוני קצבה מוכרת בדוח.</div> : null}
     </div>
   );
-
 
 
   const splitPrintParagraphs = (text) =>
@@ -6530,14 +6606,14 @@ function PrintReportA4({ reportData, conversationSummary = "", actionRecommendat
 
       {shouldShowPensionAppendixPage ? (
         <section className="print-a4-page print-appendix-page">
-          <PrintHeader title="סעיף 28 וקצבה מוכרת" page={appendixPageNumber} />
+          <PrintHeader title="סעיף 28 וקצבה מוכרת לפי בן/בת זוג" page={appendixPageNumber} />
           <div className="print-appendix-grid">
             <div className="print-appendix-card print-appendix-block">
-              <h3 className="print-section-heading">קיטום על פי סעיף 28</h3>
+              <h3 className="print-section-heading">קיטום על פי סעיף 28 לפי בן/בת זוג</h3>
               <Section28PrintSummary />
             </div>
             <div className="print-appendix-card print-appendix-block">
-              <h3 className="print-section-heading">צבירה מוכרת / קצבה מוכרת</h3>
+              <h3 className="print-section-heading">צבירה מוכרת / קצבה מוכרת לפי בן/בת זוג</h3>
               <RecognizedPensionPrintSummary />
             </div>
           </div>

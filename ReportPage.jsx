@@ -267,6 +267,62 @@ function summarizeCapitalRows(rows, key) {
   );
 }
 
+function getCapitalTotalCapital(row) {
+  const explicit = getCapitalRowNumber(row, "totalCapital");
+  if (explicit > 0) return explicit;
+
+  return (
+    getCapitalRowNumber(row, "capitalRewards") +
+    getCapitalRowNumber(row, "capitalSeverance") +
+    getCapitalRowNumber(row, "liquidExemptSeverance") +
+    getCapitalRowNumber(row, "currentEmployerSeveranceTaxable")
+  );
+}
+
+function getCapitalTotalPension(row) {
+  const explicit = getCapitalRowNumber(row, "totalPension");
+  if (explicit > 0) return explicit;
+
+  return (
+    getCapitalRowNumber(row, "annuityRewards") +
+    getCapitalRowNumber(row, "annuityRewardsUntil2000") +
+    getCapitalRowNumber(row, "annuitySeverance") +
+    getCapitalRowNumber(row, "previousEmployersSeveranceRightsSequence") +
+    getCapitalRowNumber(row, "pension")
+  );
+}
+
+function summarizeCapitalDerivedRows(rows, key) {
+  return normalizeCapitalReportArray(rows).reduce((sum, row) => {
+    if (key === "totalCapital") return sum + getCapitalTotalCapital(row);
+    if (key === "totalPension") return sum + getCapitalTotalPension(row);
+    return sum + getCapitalRowNumber(row, key);
+  }, 0);
+}
+
+function getCapitalDisplayValue(row, key) {
+  if (key === "totalCapital") return getCapitalRowValue({ value: getCapitalTotalCapital(row) }, "value");
+  if (key === "totalPension") return getCapitalRowValue({ value: getCapitalTotalPension(row) }, "value");
+  return getCapitalRowValue(row, key);
+}
+
+function hasCapitalColumnValue(rows, column) {
+  const safeRows = normalizeCapitalReportArray(rows);
+  if (!safeRows.length) return false;
+
+  if (column.alwaysVisible) return true;
+
+  if (column.type === "number") {
+    return summarizeCapitalDerivedRows(safeRows, column.key) > 0;
+  }
+
+  return safeRows.some((row) => String(row?.[column.key] || "").trim());
+}
+
+function getCapitalActiveColumns(rows, columns) {
+  return columns.filter((column) => hasCapitalColumnValue(rows, column));
+}
+
 function CapitalClassificationReportSection({ entries, styles }) {
   const safeEntries = normalizeCapitalReportArray(entries);
 
@@ -300,6 +356,8 @@ function CapitalClassificationOwnerBlock({ entry, styles }) {
     summarizeCapitalRows(studyRows, "redemptionValue");
   const totalRewards = summarizeCapitalRows(allRows, "totalRewards");
   const totalSeverance = summarizeCapitalRows(allRows, "totalSeverance");
+  const totalCapital = summarizeCapitalDerivedRows(allRows, "totalCapital");
+  const totalPension = summarizeCapitalDerivedRows(allRows, "totalPension");
 
   return (
     <div
@@ -334,14 +392,16 @@ function CapitalClassificationOwnerBlock({ entry, styles }) {
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "repeat(3, minmax(120px, 1fr))",
+            gridTemplateColumns: "repeat(5, minmax(108px, 1fr))",
             gap: 8,
-            minWidth: 360,
+            minWidth: 540,
           }}
         >
           <CapitalMiniStat label="סה״כ קופה" value={totalBalance} />
           <CapitalMiniStat label="סה״כ תגמולים" value={totalRewards} />
           <CapitalMiniStat label="סה״כ פיצויים" value={totalSeverance} />
+          <CapitalMiniStat label="סה״כ הון" value={totalCapital} />
+          <CapitalMiniStat label="סה״כ קצבה" value={totalPension} />
         </div>
       </div>
 
@@ -393,26 +453,32 @@ function CapitalMiniStat({ label, value }) {
 
 function CapitalClassificationTable({ title, subtitle, rows, type }) {
   const pensionColumns = [
-    { key: "policyNumber", label: "מספר פוליסה" },
+    { key: "planName", label: "מוצר / קבוצה", alwaysVisible: true },
+    { key: "policyNumber", label: "מספר פוליסה / קופה" },
     { key: "managerName", label: "חברה מנהלת" },
-    { key: "capitalRewards", label: "תגמולים הוניים" },
-    { key: "annuityRewards", label: "תגמולים קצבתיים" },
-    { key: "annuityRewardsUntil2000", label: "תגמולים קצבתיים עד 1.1.2000" },
-    { key: "previousEmployersSeveranceRightsSequence", label: "פיצויים ממעסיקים קודמים ברצף זכויות" },
-    { key: "currentEmployerSeveranceTaxable", label: "פיצויים מעסיק נוכחי למס" },
-    { key: "capitalSeverance", label: "פיצויים הוניים" },
-    { key: "liquidExemptSeverance", label: "פיצויים הוניים פטורים / נזילים" },
-    { key: "annuitySeverance", label: "פיצויים קצבתיים פטורים / נזילים" },
+    { key: "capitalRewards", label: "תגמולים הוניים", type: "number" },
+    { key: "annuityRewards", label: "תגמולים קצבתיים", type: "number" },
+    { key: "annuityRewardsUntil2000", label: "תגמולים קצבתיים עד 1.1.2000", type: "number" },
+    { key: "previousEmployersSeveranceRightsSequence", label: "פיצויים ממעסיקים קודמים ברצף זכויות", type: "number" },
+    { key: "currentEmployerSeveranceTaxable", label: "פיצויים מעסיק נוכחי למס", type: "number" },
+    { key: "capitalSeverance", label: "פיצויים הוניים", type: "number" },
+    { key: "liquidExemptSeverance", label: "פיצויים הוניים פטורים / נזילים", type: "number" },
+    { key: "annuitySeverance", label: "פיצויים קצבתיים פטורים / נזילים", type: "number" },
+    { key: "totalCapital", label: "סה״כ הון", type: "number", alwaysVisible: true, isTotalColumn: true },
+    { key: "totalPension", label: "סה״כ קצבה", type: "number", alwaysVisible: true, isTotalColumn: true },
   ];
 
   const studyColumns = [
+    { key: "planName", label: "מוצר / קבוצה", alwaysVisible: true },
     { key: "policyNumber", label: "מספר קופה" },
     { key: "managerName", label: "חברה מנהלת" },
-    { key: "redemptionValue", label: "ערך פדיון" },
+    { key: "redemptionValue", label: "ערך פדיון", type: "number", alwaysVisible: true },
   ];
 
-  const columns = type === "study" ? studyColumns : pensionColumns;
-  const totalKeys = type === "study" ? ["redemptionValue"] : pensionColumns.slice(2).map((column) => column.key);
+  const baseColumns = type === "study" ? studyColumns : pensionColumns;
+  const columns = getCapitalActiveColumns(rows, baseColumns);
+  const totalKeys = columns.filter((column) => column.type === "number").map((column) => column.key);
+  const minWidth = type === "study" ? Math.max(520, columns.length * 150) : Math.max(760, columns.length * 126);
 
   return (
     <div>
@@ -424,19 +490,19 @@ function CapitalClassificationTable({ title, subtitle, rows, type }) {
       </div>
 
       <div style={{ overflowX: "auto", border: "1px solid #E2D1BF", borderRadius: 14, background: "#fff", boxShadow: "0 4px 12px rgba(16,42,67,0.04)" }}>
-        <table style={{ width: "100%", minWidth: type === "study" ? 520 : 1180, borderCollapse: "collapse", tableLayout: "fixed", direction: "rtl" }}>
+        <table style={{ width: "100%", minWidth, borderCollapse: "collapse", tableLayout: "fixed", direction: "rtl" }}>
           <thead>
             <tr>
               {columns.map((column) => (
                 <th
                   key={column.key}
                   style={{
-                    background: "#EEF2FA",
+                    background: column.isTotalColumn ? "#DCEBFF" : "#EEF2FA",
                     color: "#243B53",
                     borderLeft: "1px solid #D8E2EF",
                     borderBottom: "1px solid #D8E2EF",
-                    padding: "13px 10px",
-                    fontSize: 12,
+                    padding: "12px 8px",
+                    fontSize: 11,
                     fontWeight: 900,
                     textAlign: "center",
                     lineHeight: 1.35,
@@ -450,24 +516,25 @@ function CapitalClassificationTable({ title, subtitle, rows, type }) {
 
           <tbody>
             {rows.map((row, rowIndex) => (
-              <tr key={row.id || `${row.policyNumber || "row"}-${rowIndex}`}>
+              <tr key={row.id || `${row.policyNumber || row.planName || "row"}-${rowIndex}`}>
                 {columns.map((column) => (
                   <td
                     key={column.key}
                     style={{
                       borderLeft: "1px solid #E4EAF2",
                       borderBottom: "1px solid #E4EAF2",
-                      padding: "12px 10px",
+                      padding: "11px 8px",
                       textAlign: "center",
-                      fontSize: 12,
-                      color: "#102A43",
-                      background: rowIndex % 2 ? "#FFFFFF" : "#FCFBF8",
+                      fontSize: 11,
+                      fontWeight: column.isTotalColumn ? 900 : 600,
+                      color: column.isTotalColumn ? "#00215D" : "#102A43",
+                      background: column.isTotalColumn ? "#F3F7FF" : rowIndex % 2 ? "#FFFFFF" : "#FCFBF8",
                       whiteSpace: "normal",
                       wordBreak: "break-word",
-                      direction: typeof row[column.key] === "number" ? "ltr" : "rtl",
+                      direction: column.type === "number" ? "ltr" : "rtl",
                     }}
                   >
-                    {getCapitalRowValue(row, column.key)}
+                    {getCapitalDisplayValue(row, column.key)}
                   </td>
                 ))}
               </tr>
@@ -481,16 +548,16 @@ function CapitalClassificationTable({ title, subtitle, rows, type }) {
                     key={column.key}
                     style={{
                       borderLeft: "1px solid #D8E2EF",
-                      padding: "13px 10px",
+                      padding: "12px 8px",
                       textAlign: "center",
-                      fontSize: 12,
+                      fontSize: 11,
                       fontWeight: 900,
                       color: "#1D4ED8",
-                      background: columnIndex === columns.length - 1 ? "#DCEBFF" : "#EEF2FA",
+                      background: column.isTotalColumn || columnIndex === columns.length - 1 ? "#DCEBFF" : "#EEF2FA",
                       direction: shouldTotal ? "ltr" : "rtl",
                     }}
                   >
-                    {columnIndex === 0 ? 'סה"כ' : shouldTotal ? getCapitalRowValue({ value: summarizeCapitalRows(rows, column.key) }, "value") : ""}
+                    {columnIndex === 0 ? 'סה"כ' : shouldTotal ? getCapitalRowValue({ value: summarizeCapitalDerivedRows(rows, column.key) }, "value") : ""}
                   </td>
                 );
               })}
@@ -6147,24 +6214,28 @@ function PrintReportA4({ reportData, conversationSummary = "", actionRecommendat
 
   const PrintCapitalTable = ({ title, rows, type }) => {
     const pensionColumns = [
-      { key: "policyNumber", label: "מספר פוליסה" },
+      { key: "planName", label: "מוצר / קבוצה", alwaysVisible: true },
+      { key: "policyNumber", label: "מספר פוליסה / קופה" },
       { key: "managerName", label: "חברה מנהלת" },
-      { key: "capitalRewards", label: "תגמולים הוניים" },
-      { key: "annuityRewards", label: "תגמולים קצבתיים" },
-      { key: "annuityRewardsUntil2000", label: "תגמולים קצבתיים עד 1.1.2000" },
-      { key: "previousEmployersSeveranceRightsSequence", label: "פיצויים ממעסיקים קודמים ברצף זכויות" },
-      { key: "currentEmployerSeveranceTaxable", label: "פיצויים מעסיק נוכחי למס" },
-      { key: "capitalSeverance", label: "פיצויים הוניים" },
-      { key: "liquidExemptSeverance", label: "פיצויים הוניים פטורים / נזילים" },
-      { key: "annuitySeverance", label: "פיצויים קצבתיים פטורים / נזילים" },
+      { key: "capitalRewards", label: "תגמולים הוניים", type: "number" },
+      { key: "annuityRewards", label: "תגמולים קצבתיים", type: "number" },
+      { key: "annuityRewardsUntil2000", label: "תגמולים קצבתיים עד 1.1.2000", type: "number" },
+      { key: "previousEmployersSeveranceRightsSequence", label: "פיצויים ממעסיקים קודמים ברצף זכויות", type: "number" },
+      { key: "currentEmployerSeveranceTaxable", label: "פיצויים מעסיק נוכחי למס", type: "number" },
+      { key: "capitalSeverance", label: "פיצויים הוניים", type: "number" },
+      { key: "liquidExemptSeverance", label: "פיצויים הוניים פטורים / נזילים", type: "number" },
+      { key: "annuitySeverance", label: "פיצויים קצבתיים פטורים / נזילים", type: "number" },
+      { key: "totalCapital", label: "סה״כ הון", type: "number", alwaysVisible: true },
+      { key: "totalPension", label: "סה״כ קצבה", type: "number", alwaysVisible: true },
     ];
     const studyColumns = [
+      { key: "planName", label: "מוצר / קבוצה", alwaysVisible: true },
       { key: "policyNumber", label: "מספר קופה" },
       { key: "managerName", label: "חברה מנהלת" },
-      { key: "redemptionValue", label: "ערך פדיון" },
+      { key: "redemptionValue", label: "ערך פדיון", type: "number", alwaysVisible: true },
     ];
-    const columns = type === "study" ? studyColumns : pensionColumns;
-    const totalKeys = type === "study" ? ["redemptionValue"] : pensionColumns.slice(2).map((column) => column.key);
+    const columns = getCapitalActiveColumns(rows, type === "study" ? studyColumns : pensionColumns);
+    const totalKeys = columns.filter((column) => column.type === "number").map((column) => column.key);
 
     return (
       <div>
@@ -6174,10 +6245,10 @@ function PrintReportA4({ reportData, conversationSummary = "", actionRecommendat
             <tr>{columns.map((column) => <th key={column.key}>{column.label}</th>)}</tr>
           </thead>
           <tbody>
-            {rows.slice(0, type === "study" ? 8 : 6).map((row, rowIndex) => (
-              <tr key={row.id || `${row.policyNumber || "row"}-${rowIndex}`}>
+            {rows.slice(0, type === "study" ? 8 : 7).map((row, rowIndex) => (
+              <tr key={row.id || `${row.policyNumber || row.planName || "row"}-${rowIndex}`}>
                 {columns.map((column) => (
-                  <td key={column.key}>{getCapitalRowValue(row, column.key)}</td>
+                  <td key={column.key}>{getCapitalDisplayValue(row, column.key)}</td>
                 ))}
               </tr>
             ))}
@@ -6185,7 +6256,7 @@ function PrintReportA4({ reportData, conversationSummary = "", actionRecommendat
               {columns.map((column, index) => {
                 const shouldTotal = totalKeys.includes(column.key);
                 return (
-                  <td key={column.key}>{index === 0 ? 'סה"כ' : shouldTotal ? getCapitalRowValue({ value: summarizeCapitalRows(rows, column.key) }, "value") : ""}</td>
+                  <td key={column.key}>{index === 0 ? 'סה"כ' : shouldTotal ? getCapitalRowValue({ value: summarizeCapitalDerivedRows(rows, column.key) }, "value") : ""}</td>
                 );
               })}
             </tr>
@@ -6208,6 +6279,8 @@ function PrintReportA4({ reportData, conversationSummary = "", actionRecommendat
         const totalBalance = summarizeCapitalRows(allRows, "totalBalance") || summarizeCapitalRows(studyRows, "redemptionValue");
         const totalRewards = summarizeCapitalRows(allRows, "totalRewards");
         const totalSeverance = summarizeCapitalRows(allRows, "totalSeverance");
+        const totalCapital = summarizeCapitalDerivedRows(allRows, "totalCapital");
+        const totalPension = summarizeCapitalDerivedRows(allRows, "totalPension");
 
         return (
           <div className="print-capital-owner" key={`${entry.owner}-${entryIndex}`}>
@@ -6220,6 +6293,8 @@ function PrintReportA4({ reportData, conversationSummary = "", actionRecommendat
                 <PrintCapitalStat label="סה״כ קופה" value={totalBalance} />
                 <PrintCapitalStat label="סה״כ תגמולים" value={totalRewards} />
                 <PrintCapitalStat label="סה״כ פיצויים" value={totalSeverance} />
+                <PrintCapitalStat label="סה״כ הון" value={totalCapital} />
+                <PrintCapitalStat label="סה״כ קצבה" value={totalPension} />
               </div>
             </div>
             <div style={{ padding: "2.5mm 3mm 3mm" }}>

@@ -135,6 +135,8 @@ const CAPITAL_CLASSIFICATION_NUMERIC_FIELDS = [
   "pension",
   "coefficient",
   "redemptionValue",
+  "totalCapital",
+  "totalPension",
 ];
 
 function createCapitalClassificationUpload() {
@@ -215,6 +217,133 @@ function getCapitalClassificationOwnerLabel(owner) {
     CAPITAL_CLASSIFICATION_OWNER_OPTIONS.find((option) => option.value === owner)
       ?.label || "בן זוג"
   );
+}
+
+function getCapitalClassificationUniqueText(values) {
+  return Array.from(
+    new Set(
+      values
+        .map((value) => normalizeCapitalClassificationHeader(value))
+        .filter(Boolean)
+    )
+  );
+}
+
+function getCapitalClassificationGroupInfo(row) {
+  const productType = normalizeCapitalClassificationHeader(row?.productType);
+  const planName = normalizeCapitalClassificationHeader(row?.planName);
+  const combined = `${productType} ${planName}`;
+
+  if (combined.includes("קלאסית")) {
+    return {
+      key: `classic-${row?.policyNumber || row?.planName || row?.managerName || Math.random()}`,
+      label: planName || "פוליסה קלאסית",
+      shouldKeepSingle: true,
+    };
+  }
+
+  if (combined.includes("השתלמות")) {
+    return { key: "study-funds", label: "קרנות השתלמות", shouldKeepSingle: false };
+  }
+
+  if (combined.includes("ותיקה")) {
+    return { key: "legacy-pension", label: "קרן פנסיה ותיקה", shouldKeepSingle: false };
+  }
+
+  if (combined.includes("פנסיה") || combined.includes("מקיפה") || combined.includes("קרפ")) {
+    return { key: "pension-funds", label: "קרנות פנסיה", shouldKeepSingle: false };
+  }
+
+  if (combined.includes("גמל")) {
+    return { key: "provident-funds", label: "קופות גמל", shouldKeepSingle: false };
+  }
+
+  if (combined.includes("מנהלים") || combined.includes("פוליסה") || combined.includes("ביטוח")) {
+    return { key: "managers-insurance", label: "ביטוח מנהלים", shouldKeepSingle: false };
+  }
+
+  return {
+    key: normalizeCapitalClassificationKey(productType || planName || "other"),
+    label: productType || planName || "מוצרים נוספים",
+    shouldKeepSingle: false,
+  };
+}
+
+function enrichCapitalClassificationTotals(row) {
+  const totalCapital =
+    Number(row.capitalRewards || 0) +
+    Number(row.capitalSeverance || 0) +
+    Number(row.liquidExemptSeverance || 0) +
+    Number(row.currentEmployerSeveranceTaxable || 0);
+
+  const totalPension =
+    Number(row.annuityRewards || 0) +
+    Number(row.annuityRewardsUntil2000 || 0) +
+    Number(row.annuitySeverance || 0) +
+    Number(row.previousEmployersSeveranceRightsSequence || 0) +
+    Number(row.pension || 0);
+
+  return {
+    ...row,
+    totalCapital,
+    totalPension,
+  };
+}
+
+function groupCapitalClassificationRows(rows) {
+  const safeRows = Array.isArray(rows) ? rows : [];
+  const groupedMap = new Map();
+
+  safeRows.forEach((rawRow, index) => {
+    const row = enrichCapitalClassificationTotals(rawRow);
+    const groupInfo = getCapitalClassificationGroupInfo(row);
+    const key = groupInfo.shouldKeepSingle ? `${groupInfo.key}-${index}` : groupInfo.key;
+
+    if (!groupedMap.has(key)) {
+      groupedMap.set(key, {
+        ...row,
+        id: `capital-group-${key}`,
+        policyNumber: groupInfo.shouldKeepSingle ? row.policyNumber : "",
+        planName: groupInfo.label,
+        productType: groupInfo.label,
+        sourceRows: [],
+        sourcePolicies: [],
+        isGrouped: !groupInfo.shouldKeepSingle,
+      });
+    }
+
+    const target = groupedMap.get(key);
+    target.sourceRows.push(row);
+    target.sourcePolicies = getCapitalClassificationUniqueText([
+      ...target.sourcePolicies,
+      row.policyNumber,
+    ]);
+
+    target.managerName = getCapitalClassificationUniqueText([
+      target.managerName,
+      row.managerName,
+    ]).join(" + ");
+
+    CAPITAL_CLASSIFICATION_NUMERIC_FIELDS.forEach((field) => {
+      if (field === "coefficient") {
+        target[field] = Number(target[field] || 0) || Number(row[field] || 0) || 0;
+        return;
+      }
+
+      target[field] = Number(target[field] || 0) + Number(row[field] || 0);
+    });
+
+    const enriched = enrichCapitalClassificationTotals(target);
+    Object.assign(target, {
+      totalCapital: enriched.totalCapital,
+      totalPension: enriched.totalPension,
+    });
+  });
+
+  return Array.from(groupedMap.values()).map((row, index) => ({
+    ...row,
+    id: row.id || `capital-group-row-${index}`,
+  }));
 }
 
 function buildEmptyReportDataForManualInputs() {
@@ -776,11 +905,15 @@ export default function UploadPage({ setReportData }) {
       return null;
     }
 
-    const pensionPolicies = normalizedRows.filter(
+    const enrichedRows = normalizedRows.map(enrichCapitalClassificationTotals);
+
+    const groupedRows = groupCapitalClassificationRows(enrichedRows);
+
+    const pensionPolicies = groupedRows.filter(
       (row) => !normalizeCapitalClassificationHeader(row.productType).includes("השתלמות")
     );
 
-    const studyFunds = normalizedRows.filter((row) =>
+    const studyFunds = groupedRows.filter((row) =>
       normalizeCapitalClassificationHeader(row.productType).includes("השתלמות")
     );
 
@@ -794,13 +927,16 @@ export default function UploadPage({ setReportData }) {
       sheetName,
       headers,
       columnMap,
-      allRows: normalizedRows,
+      allRows: groupedRows,
+      rawRows: enrichedRows,
       pensionPolicies,
       studyFunds,
       totals: {
-        totalBalance: sumField(normalizedRows, "totalBalance"),
-        totalRewards: sumField(normalizedRows, "totalRewards"),
-        totalSeverance: sumField(normalizedRows, "totalSeverance"),
+        totalBalance: sumField(groupedRows, "totalBalance"),
+        totalRewards: sumField(groupedRows, "totalRewards"),
+        totalSeverance: sumField(groupedRows, "totalSeverance"),
+        totalCapital: sumField(groupedRows, "totalCapital"),
+        totalPension: sumField(groupedRows, "totalPension"),
         pensionPoliciesBalance: sumField(pensionPolicies, "totalBalance"),
         studyFundsBalance: sumField(studyFunds, "redemptionValue") || sumField(studyFunds, "totalBalance"),
       },

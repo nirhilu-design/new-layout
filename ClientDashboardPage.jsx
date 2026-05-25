@@ -1214,12 +1214,13 @@ function getCapitalText(row, keys) {
 
 function getCapitalRowFundValue(row) {
   return getCapitalNumber(row, [
+    "totalBalance",
     "totalFund",
     "totalFundValue",
     "fundValue",
     "accumulation",
     "balance",
-    "totalBalance",
+    "totalBalanceValue",
     "סהכ קופה",
     "סה״כ קופה",
     "סהכ צבירה",
@@ -1227,20 +1228,84 @@ function getCapitalRowFundValue(row) {
   ]);
 }
 
-function getCapitalRowPensionValue(row) {
-  const explicit = getCapitalNumber(row, ["totalPension", "pensionTotal", "סהכ קצבה", "סה״כ קצבה"]);
+function getCapitalSum(row, keys) {
+  return keys.reduce((sum, key) => sum + getCapitalNumber(row, [key]), 0);
+}
+
+function getCapitalRowCompensationValue(row) {
+  const explicit = getCapitalNumber(row, [
+    "totalSeverance",
+    "totalCompensation",
+    "compensationTotal",
+    "severanceTotal",
+    "סהכ פיצוים",
+    "סהכ פיצויים",
+    "סה\"כ פיצויים",
+  ]);
+
   if (explicit) return explicit;
-  return (
-    getCapitalNumber(row, ["pensionRewards", "pensionCompensation", "pension", "annuityRewards", "תגמולים קצבתיים", "פיצויים קצבתיים", "פנסיה"]) +
-    getCapitalNumber(row, ["currentEmployerSeveranceTaxable", "taxableCompensation", "currentEmployerCompensationTax", "פיצויים מעסיק נוכחי למס"])
-  );
+
+  return getCapitalSum(row, [
+    "capitalSeverance",
+    "annuitySeverance",
+    "currentEmployerSeveranceTaxable",
+    "previousEmployersSeveranceRightsSequence",
+    "liquidExemptSeverance",
+    "capitalCompensation",
+    "pensionCompensation",
+    "taxableCompensation",
+    "פיצויים הוניים",
+    "פיצוים הונים",
+    "פיצויים קצבתיים",
+    "פיצוים קצבתיים",
+    "פיצויים מעסיק נוכחי למס",
+    "פיצויים ממעסיקים קודמים ברצף זכויות",
+  ]);
+}
+
+function getCapitalRowPensionValue(row) {
+  const components = getCapitalSum(row, [
+    "annuityRewards",
+    "pensionRewards",
+    "annuitySeverance",
+    "pensionCompensation",
+    "previousEmployersSeveranceRightsSequence",
+    "currentEmployerSeveranceTaxable",
+    "taxableCompensation",
+    "pension",
+    "תגמולים קצבתיים",
+    "פיצויים קצבתיים",
+    "פיצויים מעסיק נוכחי למס",
+    "פיצויים ממעסיקים קודמים ברצף זכויות",
+    "פנסיה",
+  ]);
+
+  if (components) return components;
+
+  return getCapitalNumber(row, ["totalPension", "pensionTotal", "סהכ קצבה", "סה״כ קצבה"]);
 }
 
 function getCapitalRowCapitalValue(row, isStudyFund = false) {
-  const explicit = getCapitalNumber(row, ["totalCapital", "capitalTotal", "סהכ הון", "סה״כ הון"]);
-  if (explicit) return explicit;
   if (isStudyFund) return getCapitalRowFundValue(row);
-  return getCapitalNumber(row, ["capitalCompensation", "capitalRewards", "pre2000Rewards", "liquidCompensation", "exemptCompensation", "תגמולים הוניים", "תגמולים קצבתיים עד 1.1.2000", "פיצויים הוניים"]);
+
+  const components = getCapitalSum(row, [
+    "capitalRewards",
+    "annuityRewardsUntil2000",
+    "pre2000Rewards",
+    "rewardsBefore2000",
+    "capitalSeverance",
+    "liquidExemptSeverance",
+    "capitalCompensation",
+    "liquidCompensation",
+    "exemptCompensation",
+    "תגמולים הוניים",
+    "תגמולים קצבתיים עד 1.1.2000",
+    "פיצויים הוניים",
+  ]);
+
+  if (components) return components;
+
+  return getCapitalNumber(row, ["totalCapital", "capitalTotal", "סהכ הון", "סה״כ הון"]);
 }
 
 function getCapitalSummary(sections) {
@@ -1252,8 +1317,8 @@ function getCapitalSummary(sections) {
   return rows.reduce((acc, item) => {
     const row = item.row || {};
     acc.totalFund += getCapitalRowFundValue(row);
-    acc.totalRewards += getCapitalNumber(row, ["totalRewards", "rewardsTotal", "תגמולים הוניים", "תגמולים קצבתיים", "תגמולים קצבתיים עד 1.1.2000", "סהכ תגמולים"]);
-    acc.totalCompensation += getCapitalNumber(row, ["totalCompensation", "compensationTotal", "פיצויים הוניים", "פיצויים קצבתיים", "פיצויים מעסיק נוכחי למס", "סהכ פיצוים", "סהכ פיצויים"]);
+    acc.totalRewards += getCapitalNumber(row, ["totalRewards", "rewardsTotal", "סהכ תגמולים", "סה\"כ תגמולים"]) || getCapitalSum(row, ["capitalRewards", "annuityRewardsUntil2000", "annuityRewards", "תגמולים הוניים", "תגמולים קצבתיים", "תגמולים קצבתיים עד 1.1.2000"]);
+    acc.totalCompensation += getCapitalRowCompensationValue(row);
     acc.totalCapital += getCapitalRowCapitalValue(row, item.isStudyFund);
     acc.totalPension += item.isStudyFund ? 0 : getCapitalRowPensionValue(row);
     return acc;
@@ -1317,6 +1382,7 @@ function CapitalKpi({ title, value, tone = "default" }) {
 }
 
 function CapitalOwnerBlock({ section }) {
+  const [openRows, setOpenRows] = useState({});
   const pensionRows = safeArray(section?.pensionPolicies);
   const studyRows = safeArray(section?.studyFunds);
   const pensionTotals = pensionRows.reduce((acc, row) => {
@@ -1325,6 +1391,11 @@ function CapitalOwnerBlock({ section }) {
     return acc;
   }, { totalCapital: 0, totalPension: 0 });
   const studyTotal = studyRows.reduce((sum, row) => sum + getCapitalRowFundValue(row), 0);
+
+  const toggleRow = (row, index) => {
+    const key = row?.id || `${row?.productType || "capital"}-${index}`;
+    setOpenRows((prev) => ({ ...prev, [key]: !prev[key] }));
+  };
 
   return (
     <div className="client-report-panel client-capital-owner-panel">
@@ -1343,7 +1414,6 @@ function CapitalOwnerBlock({ section }) {
               <thead>
                 <tr>
                   <th>מוצר / קבוצה</th>
-                  <th>חברה מנהלת</th>
                   <th>תגמולים הוניים</th>
                   <th>תגמולים קצבתיים עד 1.1.2000</th>
                   <th>פיצויים ממעסיקים קודמים ברצף זכויות</th>
@@ -1353,9 +1423,17 @@ function CapitalOwnerBlock({ section }) {
                 </tr>
               </thead>
               <tbody>
-                {pensionRows.map((row, index) => <CapitalPensionRow key={row?.id || index} row={row} />)}
+                {pensionRows.map((row, index) => {
+                  const key = row?.id || `${row?.productType || "capital"}-${index}`;
+                  return (
+                    <React.Fragment key={key}>
+                      <CapitalPensionRow row={row} index={index} isOpen={Boolean(openRows[key])} onToggle={() => toggleRow(row, index)} />
+                      {openRows[key] ? <CapitalGroupedDetailsRow row={row} /> : null}
+                    </React.Fragment>
+                  );
+                })}
                 <tr className="total-row client-capital-total-row">
-                  <td colSpan={6}>סה״כ</td>
+                  <td colSpan={5}>סה״כ</td>
                   <td className="pension-total">{formatCurrency(pensionTotals.totalPension)}</td>
                   <td className="capital-total">{formatCurrency(pensionTotals.totalCapital)}</td>
                 </tr>
@@ -1392,26 +1470,76 @@ function CapitalOwnerBlock({ section }) {
   );
 }
 
-function CapitalPensionRow({ row }) {
+function CapitalPensionRow({ row, index = 0, isOpen = false, onToggle = () => {} }) {
   const productType = getCapitalText(row, ["productType", "productGroup", "productName", "type", "מוצר / קבוצה", "סוג מוצר"]) || "—";
-  const company = getCapitalText(row, ["managingCompany", "companyName", "managerName", "issuerName", "חברה מנהלת", "שם יצרן"]) || "—";
+  const sourceRows = safeArray(row?.sourceRows);
+  const hasDetails = sourceRows.length > 0;
   const capitalRewards = getCapitalNumber(row, ["capitalRewards", "תגמולים הוניים"]);
-  const pre2000Rewards = getCapitalNumber(row, ["pre2000Rewards", "rewardsBefore2000", "תגמולים קצבתיים עד 1.1.2000"]);
-  const previousEmployerContinuity = getCapitalNumber(row, ["previousEmployerContinuity", "previousEmployerSeveranceRights", "פיצויים ממעסיקים קודמים ברצף זכויות"]);
+  const pre2000Rewards = getCapitalNumber(row, ["annuityRewardsUntil2000", "pre2000Rewards", "rewardsBefore2000", "תגמולים קצבתיים עד 1.1.2000"]);
+  const previousEmployerContinuity = getCapitalNumber(row, ["previousEmployersSeveranceRightsSequence", "previousEmployerContinuity", "previousEmployerSeveranceRights", "פיצויים ממעסיקים קודמים ברצף זכויות"]);
   const currentEmployerTax = getCapitalNumber(row, ["currentEmployerSeveranceTaxable", "taxableCompensation", "currentEmployerCompensationTax", "פיצויים מעסיק נוכחי למס"]);
   const totalPension = getCapitalRowPensionValue(row);
   const totalCapital = getCapitalRowCapitalValue(row, false);
 
   return (
     <tr>
-      <td>{productType}</td>
-      <td>{company}</td>
+      <td className="client-capital-product-cell">
+        {hasDetails ? (
+          <button type="button" className="client-capital-expand-button" onClick={onToggle} aria-expanded={isOpen} title="הצגת התוכניות המקובצות">
+            <span>{isOpen ? "−" : "+"}</span>
+          </button>
+        ) : null}
+        <strong>{productType}</strong>
+        {hasDetails ? <small>{sourceRows.length} תוכניות מקובצות</small> : null}
+      </td>
       <td>{capitalRewards ? formatCurrency(capitalRewards) : "—"}</td>
       <td>{pre2000Rewards ? formatCurrency(pre2000Rewards) : "—"}</td>
       <td>{previousEmployerContinuity ? formatCurrency(previousEmployerContinuity) : "—"}</td>
       <td>{currentEmployerTax ? formatCurrency(currentEmployerTax) : "—"}</td>
       <td>{totalPension ? formatCurrency(totalPension) : "—"}</td>
       <td>{totalCapital ? formatCurrency(totalCapital) : "—"}</td>
+    </tr>
+  );
+}
+
+function CapitalGroupedDetailsRow({ row }) {
+  const sourceRows = safeArray(row?.sourceRows);
+
+  if (!sourceRows.length) return null;
+
+  return (
+    <tr className="client-capital-details-row">
+      <td colSpan={7}>
+        <div className="client-capital-details-box">
+          <div className="client-capital-details-title">התוכניות שנכללו בקבוצה</div>
+          <div className="client-table-wrap client-capital-inner-wrap">
+            <table className="client-table client-capital-inner-table">
+              <thead>
+                <tr>
+                  <th>חברה מנהלת</th>
+                  <th>שם תוכנית</th>
+                  <th>מספר פוליסה / קופה</th>
+                  <th>סה״כ קופה</th>
+                  <th>סה״כ תגמולים</th>
+                  <th>סה״כ פיצויים</th>
+                </tr>
+              </thead>
+              <tbody>
+                {sourceRows.map((item, index) => (
+                  <tr key={item?.id || index}>
+                    <td>{getCapitalText(item, ["managerName", "managingCompany", "companyName", "issuerName", "חברה מנהלת", "שם יצרן"]) || "—"}</td>
+                    <td>{getCapitalText(item, ["planName", "productName", "שם תוכנית", "שם תכנית"]) || "—"}</td>
+                    <td>{getCapitalText(item, ["policyNumber", "policyNo", "fundNumber", "מספר פוליסה", "מספר קופה"]) || "—"}</td>
+                    <td>{formatCurrency(getCapitalRowFundValue(item))}</td>
+                    <td>{formatCurrency(getCapitalNumber(item, ["totalRewards", "rewardsTotal", "סהכ תגמולים", "סה\"כ תגמולים"]) || getCapitalSum(item, ["capitalRewards", "annuityRewardsUntil2000", "annuityRewards"]))}</td>
+                    <td>{formatCurrency(getCapitalRowCompensationValue(item))}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </td>
     </tr>
   );
 }
@@ -2708,10 +2836,24 @@ const clientDashboardCss = `
   .capital-dot.capital { background: #FFFDF7; border-color: #F1E4C5; }
   .client-capital-owner-panel { padding: 18px; }
   .client-capital-subtitle { margin-bottom: 10px; color: #00215D; font-size: 15px; font-weight: 900; }
-  .client-capital-table { min-width: 1120px; }
+  .client-capital-table { min-width: 1040px; }
   .client-capital-table th, .client-capital-table td { text-align: center; white-space: normal; line-height: 1.45; }
-  .client-capital-table th:first-child, .client-capital-table td:first-child,
-  .client-capital-table th:nth-child(2), .client-capital-table td:nth-child(2) { text-align: right; }
+  .client-capital-table th:first-child, .client-capital-table td:first-child { text-align: right; }
+
+  .client-capital-product-cell { min-width: 190px; display: grid; grid-template-columns: 30px minmax(0, 1fr); gap: 7px; align-items: center; }
+  .client-capital-product-cell strong { color: #00215D; font-size: 12px; font-weight: 900; line-height: 1.3; }
+  .client-capital-product-cell small { grid-column: 2; color: #627D98; font-size: 10px; font-weight: 800; margin-top: 2px; }
+  .client-capital-expand-button { width: 26px; height: 26px; border-radius: 9px; border: 1px solid #D8DEE9; background: #FFFFFF; color: #00215D; cursor: pointer; font-family: Calibri, Arial, sans-serif; font-weight: 900; font-size: 16px; line-height: 1; display: inline-flex; align-items: center; justify-content: center; }
+  .client-capital-expand-button:hover { background: #EEF2FA; border-color: #B8C7DE; }
+  .client-capital-details-row td { background: #FCFBF8 !important; padding: 12px !important; }
+  .client-capital-details-box { border: 1px solid #E7D9CA; border-radius: 16px; background: #FFFFFF; padding: 12px; }
+  .client-capital-details-title { color: #00215D; font-size: 13px; font-weight: 900; margin-bottom: 10px; }
+  .client-capital-inner-wrap { border-radius: 14px; }
+  .client-capital-inner-table { min-width: 760px; }
+  .client-capital-inner-table th { background: #EEF2FA; color: #00215D; }
+  .client-capital-inner-table th, .client-capital-inner-table td { text-align: center; font-size: 11px; }
+  .client-capital-inner-table th:first-child, .client-capital-inner-table td:first-child,
+  .client-capital-inner-table th:nth-child(2), .client-capital-inner-table td:nth-child(2) { text-align: right; }
   .client-capital-total-row .capital-total { background: #FFFDF7 !important; border-right: 1px solid #F1E4C5; color: #00215D; font-weight: 900; }
   .client-capital-total-row .pension-total { background: #F8FBFF !important; border-right: 1px solid #DCEAFE; color: #00215D; font-weight: 900; }
   .client-capital-study-wrap { max-width: 720px; }

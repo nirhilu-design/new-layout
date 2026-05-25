@@ -401,6 +401,7 @@ export default function UploadPage({ setReportData }) {
   const [vestedPdfTable, setVestedPdfTable] = useState(null);
   const [vestedPdfLoading, setVestedPdfLoading] = useState(false);
   const [vestedPdfError, setVestedPdfError] = useState("");
+  const [recognizedPensionOwner, setRecognizedPensionOwner] = useState("spouseA");
 
 
   const [capitalClassificationUploads, setCapitalClassificationUploads] =
@@ -508,6 +509,20 @@ export default function UploadPage({ setReportData }) {
 
   const openLogoPicker = () => {
     logoInputRef.current?.click();
+  };
+
+  const updateRecognizedPensionOwner = (owner) => {
+    const safeOwner = owner === "spouseB" ? "spouseB" : "spouseA";
+    setRecognizedPensionOwner(safeOwner);
+    setVestedPdfTable((prev) =>
+      prev
+        ? {
+            ...prev,
+            owner: safeOwner,
+            ownerLabel: getFamilyOwnerLabel(safeOwner),
+          }
+        : prev
+    );
   };
 
   const openVestedPdfPicker = () => {
@@ -1670,7 +1685,11 @@ export default function UploadPage({ setReportData }) {
         );
         setVestedPdfTable(null);
       } else {
-        setVestedPdfTable(table);
+        setVestedPdfTable({
+          ...table,
+          owner: recognizedPensionOwner,
+          ownerLabel: getFamilyOwnerLabel(recognizedPensionOwner),
+        });
       }
     } catch (err) {
       console.error(err);
@@ -1723,6 +1742,8 @@ export default function UploadPage({ setReportData }) {
   const getCleanRecognizedPensionAdjustments = () =>
     recognizedPensionAdjustments
       .map((item) => ({
+        owner: recognizedPensionOwner,
+        ownerLabel: getFamilyOwnerLabel(recognizedPensionOwner),
         companyName: item.companyName,
         amount: normalizeAmountForReport(item.amount),
       }))
@@ -1836,11 +1857,30 @@ export default function UploadPage({ setReportData }) {
       reportData.spouseB_section28Capping = section28CappingData.filter(
         (item) => item.owner === "spouseB"
       );
-      reportData.vestedBalanceTable = vestedPdfTable?.rows?.length
-        ? vestedPdfTable
-        : null;
-      reportData.recognizedPensionAdjustments =
+      const recognizedPensionAdjustmentsData =
         getCleanRecognizedPensionAdjustments();
+      const vestedBalanceTableData = vestedPdfTable?.rows?.length
+        ? {
+            ...vestedPdfTable,
+            owner: recognizedPensionOwner,
+            ownerLabel: getFamilyOwnerLabel(recognizedPensionOwner),
+          }
+        : null;
+
+      reportData.vestedBalanceTable = vestedBalanceTableData;
+      reportData.recognizedPensionAdjustments =
+        recognizedPensionAdjustmentsData;
+      reportData.recognizedPensionOwner = recognizedPensionOwner;
+      reportData.recognizedPensionOwnerLabel =
+        getFamilyOwnerLabel(recognizedPensionOwner);
+      reportData.spouseA_vestedBalanceTable =
+        vestedBalanceTableData?.owner === "spouseA" ? vestedBalanceTableData : null;
+      reportData.spouseB_vestedBalanceTable =
+        vestedBalanceTableData?.owner === "spouseB" ? vestedBalanceTableData : null;
+      reportData.spouseA_recognizedPensionAdjustments =
+        recognizedPensionAdjustmentsData.filter((item) => item.owner === "spouseA");
+      reportData.spouseB_recognizedPensionAdjustments =
+        recognizedPensionAdjustmentsData.filter((item) => item.owner === "spouseB");
       reportData.capitalClassification = capitalClassificationData;
       reportData.spouseA_pension_funds =
         capitalClassificationData.spouseA_pension_funds;
@@ -2362,6 +2402,46 @@ export default function UploadPage({ setReportData }) {
                 שלא נמצאה טבלה, הדוח יוצג ללא הטבלה.
               </div>
 
+              <div
+                style={{
+                  marginTop: 14,
+                  display: "grid",
+                  gridTemplateColumns: "minmax(180px, 240px) minmax(0, 1fr)",
+                  gap: 10,
+                  alignItems: "center",
+                }}
+              >
+                <select
+                  value={recognizedPensionOwner}
+                  onChange={(event) =>
+                    updateRecognizedPensionOwner(event.target.value)
+                  }
+                  style={{
+                    height: 42,
+                    border: "1px solid #cbd4e6",
+                    borderRadius: 12,
+                    padding: "0 12px",
+                    color: "#0d2c6c",
+                    fontWeight: 800,
+                    background: "#fff",
+                    fontFamily: "Calibri, sans-serif",
+                  }}
+                >
+                  <option value="spouseA">בן זוג</option>
+                  <option value="spouseB">בת זוג</option>
+                </select>
+
+                <div
+                  style={{
+                    color: "#69758e",
+                    fontSize: 12,
+                    lineHeight: 1.5,
+                  }}
+                >
+                  שיוך קצבה מוכרת: ה־PDF וההזנות הידניות בריבוע זה יישמרו עבור {getFamilyOwnerLabel(recognizedPensionOwner)}.
+                </div>
+              </div>
+
               {vestedPdfFile && (
                 <div
                   style={{
@@ -2372,7 +2452,7 @@ export default function UploadPage({ setReportData }) {
                     wordBreak: "break-word",
                   }}
                 >
-                  קובץ PDF: {vestedPdfFile.name}
+                  קובץ PDF: {vestedPdfFile.name} · שייך ל{getFamilyOwnerLabel(recognizedPensionOwner)}
                 </div>
               )}
 

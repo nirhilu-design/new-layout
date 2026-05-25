@@ -275,8 +275,7 @@ function getCapitalTotalCapital(row) {
     getCapitalRowNumber(row, "capitalRewards") +
     getCapitalRowNumber(row, "annuityRewardsUntil2000") +
     getCapitalRowNumber(row, "capitalSeverance") +
-    getCapitalRowNumber(row, "liquidExemptSeverance") +
-    getCapitalRowNumber(row, "currentEmployerSeveranceTaxable")
+    getCapitalRowNumber(row, "liquidExemptSeverance")
   );
 }
 
@@ -525,7 +524,6 @@ function getCapitalCellTone(column) {
     "annuityRewardsUntil2000",
     "capitalSeverance",
     "liquidExemptSeverance",
-    "currentEmployerSeveranceTaxable",
     "totalCapital",
   ]);
 
@@ -604,7 +602,7 @@ function CapitalClassificationTable({ title, subtitle, rows, type }) {
                   <th
                     key={column.key}
                     style={{
-                      background: getCapitalToneBackground(tone, true, column.isTotalColumn),
+                      background: "#EEF2FA",
                       color: "#243B53",
                       borderLeft: "1px solid #D8E2EF",
                       borderBottom: "1px solid #D8E2EF",
@@ -639,9 +637,7 @@ function CapitalClassificationTable({ title, subtitle, rows, type }) {
                         fontSize: 11,
                         fontWeight: isTotalColumn ? 900 : 600,
                         color: isTotalColumn ? "#00215D" : "#102A43",
-                        background: type === "study"
-                          ? rowIndex % 2 ? "#FFFFFF" : "#FCFBF8"
-                          : getCapitalToneBackground(tone, false, isTotalColumn),
+                        background: rowIndex % 2 ? "#FFFFFF" : "#FCFBF8",
                         whiteSpace: "normal",
                         wordBreak: "break-word",
                         direction: column.type === "number" ? "ltr" : "rtl",
@@ -668,9 +664,9 @@ function CapitalClassificationTable({ title, subtitle, rows, type }) {
                       fontSize: 11,
                       fontWeight: 900,
                       color: "#1D4ED8",
-                      background: type === "study"
-                        ? columnIndex === columns.length - 1 ? "#EAF6FF" : "#EEF2FA"
-                        : getCapitalToneBackground(tone, true, column.isTotalColumn),
+                      background: shouldTotal
+                        ? getCapitalToneBackground(tone, true, column.isTotalColumn || column.key === "studyBalance")
+                        : "#EEF2FA",
                       direction: shouldTotal ? "ltr" : "rtl",
                     }}
                   >

@@ -5833,7 +5833,6 @@ function PrintReportA4({ reportData, conversationSummary = "", actionRecommendat
   const totalLoansAmount = loanDetails.reduce((sum, loan) => sum + Number(loan.amount || 0), 0);
   const totalLoansBalance = loanDetails.reduce((sum, loan) => sum + Number(loan.balance || 0), 0);
   const loanRatioToAssets = Number(family.totalAssets || 0) > 0 ? (totalLoansAmount / Number(family.totalAssets || 0)) * 100 : 0;
-  const pdfRecognizedTotal = getPdfExemptPaymentsTotal(vestedRows);
   const manualRecognizedTotal = manualRecognizedRows.reduce((sum, row) => sum + Number(row.amount || 0), 0);
 
   const memberPages = [];

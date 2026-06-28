@@ -97,13 +97,13 @@ const ISRAEL_INSURANCE_COMPANIES = [
 
 
 const CAPITAL_CLASSIFICATION_OWNER_OPTIONS = [
-  { value: "spouseA", label: "בן זוג" },
-  { value: "spouseB", label: "בת זוג" },
+  { value: "spouseA", label: "מבוטח/ת ראשית" },
+  { value: "spouseB", label: "בן/בת זוג" },
 ];
 
 
 function getFamilyOwnerLabel(owner) {
-  return owner === "spouseB" ? "בת זוג" : "בן זוג";
+  return owner === "spouseB" ? "בן/בת זוג" : "מבוטח/ת ראשית";
 }
 
 function createSection28CappingUpload(owner = "spouseA") {
@@ -1921,16 +1921,28 @@ export default function UploadPage({ setReportData }) {
         }}
       >
         <div style={{ marginBottom: 24 }}>
-          <h1
-            style={{
-              margin: 0,
-              color: "#0d2c6c",
-              fontSize: 32,
-              fontWeight: 900,
-            }}
-          >
-            העלאת קבצי XML
-          </h1>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 }}>
+            <h1
+              style={{
+                margin: 0,
+                color: "#0d2c6c",
+                fontSize: 32,
+                fontWeight: 900,
+              }}
+            >
+              העלאת קבצי XML
+            </h1>
+            <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
+              <div style={{ position: "relative", width: 48, height: 48, borderRadius: "50%", background: "#00215D", flexShrink: 0 }}>
+                <span style={{ position: "absolute", width: 22, height: 7, borderRadius: 999, left: 13, top: 13, background: "#FF2756", transform: "rotate(-35deg)", display: "block" }} />
+                <span style={{ position: "absolute", width: 22, height: 7, borderRadius: 999, left: 13, top: 23, background: "#ffffff", transform: "rotate(-35deg)", display: "block" }} />
+              </div>
+              <div style={{ lineHeight: 1.2 }}>
+                <div style={{ color: "#00215D", fontSize: 18, fontWeight: 900, letterSpacing: "-0.5px" }}>zviran</div>
+                <div style={{ color: "#627D98", fontSize: 10, fontWeight: 700 }}>Total Rewards Experts</div>
+              </div>
+            </div>
+          </div>
 
           <p
             style={{
@@ -2140,7 +2152,7 @@ export default function UploadPage({ setReportData }) {
               marginBottom: 16,
             }}
           >
-            ניתן להעלות אקסל קיטום ולשייך אותו ידנית לבן זוג או בת זוג. כל קובץ
+            ניתן להעלות EXCEL קיטום ולשייך אותו ידנית לבן זוג או בת זוג. כל קובץ
             יישמר בדוח עם שיוך נפרד, כדי שסעיף 28 לא יוצג כנתון משפחתי כללי.
           </div>
 
@@ -2259,6 +2271,7 @@ export default function UploadPage({ setReportData }) {
                     >
                       <button
                         type="button"
+                        title="מקור הנתונים קובץ הורדה מפקדיקט"
                         onClick={() =>
                           document.getElementById(`${item.id}-input`)?.click()
                         }
@@ -2731,7 +2744,7 @@ export default function UploadPage({ setReportData }) {
               marginBottom: 8,
             }}
           >
-            פירוט פוליסות וקרנות לפי אקסל סיווג כספים (אופציונלי)
+            פירוט פוליסות וקרנות לפי EXCEL סיווג כספים (אופציונלי)
           </div>
 
           <div
@@ -2742,7 +2755,7 @@ export default function UploadPage({ setReportData }) {
               marginBottom: 16,
             }}
           >
-            ניתן להעלות אקסל סיווג כספים ולשייך אותו ידנית לבן זוג או בת זוג.
+            ניתן להעלות EXCEL סיווג כספים ולשייך אותו ידנית לבן זוג או בת זוג.
             הנתון של פיצויים אצל מעסיק נוכחי נשמר במערכת כשדה פיצויים למס.
           </div>
 
@@ -2847,6 +2860,7 @@ export default function UploadPage({ setReportData }) {
                     >
                       <button
                         type="button"
+                        title="מקור הנתונים קובץ הורדה מפקדיקט"
                         onClick={() =>
                           document.getElementById(`${item.id}-input`)?.click()
                         }

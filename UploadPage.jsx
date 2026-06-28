@@ -416,6 +416,8 @@ export default function UploadPage({ setReportData }) {
       },
     ]);
 
+  const [hoveredExcelId, setHoveredExcelId] = useState(null);
+
   const fileInputRef = useRef(null);
   const logoInputRef = useRef(null);
   const vestedPdfInputRef = useRef(null);
@@ -2269,28 +2271,50 @@ export default function UploadPage({ setReportData }) {
                         justifyContent: "flex-end",
                       }}
                     >
-                      <button
-                        type="button"
-                        title="מקור הנתונים קובץ הורדה מפקדיקט"
-                        onClick={() =>
-                          document.getElementById(`${item.id}-input`)?.click()
-                        }
-                        disabled={item.loading}
-                        style={{
-                          background: "#ffffff",
-                          color: "#0d2c6c",
-                          border: "1px solid #cbd4e6",
-                          borderRadius: 12,
-                          padding: "10px 14px",
-                          fontSize: 12,
-                          fontWeight: 800,
-                          cursor: item.loading ? "not-allowed" : "pointer",
-                          minWidth: 110,
-                          fontFamily: "Calibri, sans-serif",
-                        }}
-                      >
-                        בחירת Excel
-                      </button>
+                      <div style={{ position: "relative", display: "inline-block" }}>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            document.getElementById(`${item.id}-input`)?.click()
+                          }
+                          disabled={item.loading}
+                          onMouseEnter={() => setHoveredExcelId(`s28-${item.id}`)}
+                          onMouseLeave={() => setHoveredExcelId(null)}
+                          style={{
+                            background: "#ffffff",
+                            color: "#0d2c6c",
+                            border: "1px solid #cbd4e6",
+                            borderRadius: 12,
+                            padding: "10px 14px",
+                            fontSize: 12,
+                            fontWeight: 800,
+                            cursor: item.loading ? "not-allowed" : "pointer",
+                            minWidth: 110,
+                            fontFamily: "Calibri, sans-serif",
+                          }}
+                        >
+                          בחירת Excel
+                        </button>
+                        {hoveredExcelId === `s28-${item.id}` && (
+                          <div style={{
+                            position: "absolute",
+                            bottom: "calc(100% + 8px)",
+                            right: 0,
+                            background: "#0d2c6c",
+                            color: "#fff",
+                            fontSize: 11,
+                            fontWeight: 700,
+                            fontFamily: "Calibri, sans-serif",
+                            padding: "6px 10px",
+                            borderRadius: 8,
+                            whiteSpace: "nowrap",
+                            zIndex: 10,
+                            boxShadow: "0 4px 12px rgba(0,0,0,0.18)",
+                          }}>
+                            מקור הנתונים קובץ הורדה מפקדיקט
+                          </div>
+                        )}
+                      </div>
 
                       {item.fileName && (
                         <button
@@ -2440,8 +2464,8 @@ export default function UploadPage({ setReportData }) {
                     fontFamily: "Calibri, sans-serif",
                   }}
                 >
-                  <option value="spouseA">בן זוג</option>
-                  <option value="spouseB">בת זוג</option>
+                  <option value="spouseA">מבוטח/ת ראשית</option>
+                  <option value="spouseB">בן/בת זוג</option>
                 </select>
 
                 <div
@@ -2858,28 +2882,50 @@ export default function UploadPage({ setReportData }) {
                         justifyContent: "flex-end",
                       }}
                     >
-                      <button
-                        type="button"
-                        title="מקור הנתונים קובץ הורדה מפקדיקט"
-                        onClick={() =>
-                          document.getElementById(`${item.id}-input`)?.click()
-                        }
-                        disabled={item.loading}
-                        style={{
-                          background: "#ffffff",
-                          color: "#0d2c6c",
-                          border: "1px solid #cbd4e6",
-                          borderRadius: 12,
-                          padding: "10px 14px",
-                          fontSize: 12,
-                          fontWeight: 800,
-                          cursor: item.loading ? "not-allowed" : "pointer",
-                          minWidth: 110,
-                          fontFamily: "Calibri, sans-serif",
-                        }}
-                      >
-                        בחירת Excel
-                      </button>
+                      <div style={{ position: "relative", display: "inline-block" }}>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            document.getElementById(`${item.id}-input`)?.click()
+                          }
+                          disabled={item.loading}
+                          onMouseEnter={() => setHoveredExcelId(`cc-${item.id}`)}
+                          onMouseLeave={() => setHoveredExcelId(null)}
+                          style={{
+                            background: "#ffffff",
+                            color: "#0d2c6c",
+                            border: "1px solid #cbd4e6",
+                            borderRadius: 12,
+                            padding: "10px 14px",
+                            fontSize: 12,
+                            fontWeight: 800,
+                            cursor: item.loading ? "not-allowed" : "pointer",
+                            minWidth: 110,
+                            fontFamily: "Calibri, sans-serif",
+                          }}
+                        >
+                          בחירת Excel
+                        </button>
+                        {hoveredExcelId === `cc-${item.id}` && (
+                          <div style={{
+                            position: "absolute",
+                            bottom: "calc(100% + 8px)",
+                            right: 0,
+                            background: "#0d2c6c",
+                            color: "#fff",
+                            fontSize: 11,
+                            fontWeight: 700,
+                            fontFamily: "Calibri, sans-serif",
+                            padding: "6px 10px",
+                            borderRadius: 8,
+                            whiteSpace: "nowrap",
+                            zIndex: 10,
+                            boxShadow: "0 4px 12px rgba(0,0,0,0.18)",
+                          }}>
+                            מקור הנתונים קובץ הורדה מפקדיקט
+                          </div>
+                        )}
+                      </div>
 
                       {item.fileName && (
                         <button
@@ -2952,7 +2998,7 @@ export default function UploadPage({ setReportData }) {
               fontFamily: "Calibri, sans-serif",
             }}
           >
-            הוסף ריבוע סיווג כספים נוסף
+            הוסף דוח פירוק נכסים נוסף
           </button>
         </div>
 
@@ -3133,27 +3179,36 @@ export default function UploadPage({ setReportData }) {
           </div>
         )}
 
-        <button
-          type="button"
-          onClick={handleAnalyzeFiles}
-          disabled={loading || selectedFiles.length === 0}
-          style={{
-            width: "100%",
-            padding: "16px 20px",
-            background:
-              loading || selectedFiles.length === 0 ? "#c3cbdd" : "#0d2c6c",
-            color: "#fff",
-            border: "none",
-            borderRadius: 16,
-            fontSize: 12,
-            fontWeight: 800,
-            cursor:
-              loading || selectedFiles.length === 0 ? "not-allowed" : "pointer",
-            transition: "all 0.2s ease",
-          }}
-        >
-          {loading ? "מנתח קבצים..." : "הפק דוח"}
-        </button>
+        <div style={{ display: "flex", justifyContent: "center", marginTop: 8 }}>
+          <button
+            type="button"
+            onClick={handleAnalyzeFiles}
+            disabled={loading || selectedFiles.length === 0}
+            style={{
+              padding: "16px 52px",
+              background:
+                loading || selectedFiles.length === 0
+                  ? "#c3cbdd"
+                  : "linear-gradient(135deg, #0d2c6c 0%, #1a4fa8 100%)",
+              color: "#fff",
+              border: "none",
+              borderRadius: 20,
+              fontSize: 18,
+              fontWeight: 900,
+              fontFamily: "Calibri, sans-serif",
+              cursor:
+                loading || selectedFiles.length === 0 ? "not-allowed" : "pointer",
+              transition: "all 0.2s ease",
+              boxShadow:
+                loading || selectedFiles.length === 0
+                  ? "none"
+                  : "0 8px 24px rgba(13,44,108,0.32)",
+              letterSpacing: "0.5px",
+            }}
+          >
+            {loading ? "מנתח קבצים..." : "הפק דוח"}
+          </button>
+        </div>
 
         {loading && (
           <div

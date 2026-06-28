@@ -1932,13 +1932,13 @@ export default function UploadPage({ setReportData }) {
             >
               העלאת קבצי XML
             </h1>
-            <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
-              <div style={{ position: "relative", width: 48, height: 48, borderRadius: "50%", background: "#00215D", flexShrink: 0 }}>
-                <span style={{ position: "absolute", width: 22, height: 7, borderRadius: 999, left: 13, top: 13, background: "#FF2756", transform: "rotate(-35deg)", display: "block" }} />
-                <span style={{ position: "absolute", width: 22, height: 7, borderRadius: 999, left: 13, top: 23, background: "#ffffff", transform: "rotate(-35deg)", display: "block" }} />
+            <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0, direction: "ltr" }}>
+              <div style={{ position: "relative", width: 54, height: 54, borderRadius: "50%", background: "#00215D", flexShrink: 0 }}>
+                <span style={{ position: "absolute", width: 24, height: 8, borderRadius: 999, left: 15, top: 15, background: "#FF2756", transform: "rotate(-35deg)", display: "block" }} />
+                <span style={{ position: "absolute", width: 24, height: 8, borderRadius: 999, left: 15, top: 25, background: "#ffffff", transform: "rotate(-35deg)", display: "block" }} />
               </div>
-              <div style={{ lineHeight: 1.2 }}>
-                <div style={{ color: "#00215D", fontSize: 18, fontWeight: 900, letterSpacing: "-0.5px" }}>zviran</div>
+              <div style={{ lineHeight: 1.2, textAlign: "left" }}>
+                <div style={{ color: "#00215D", fontSize: 20, fontWeight: 900, letterSpacing: "-0.5px" }}>zviran</div>
                 <div style={{ color: "#627D98", fontSize: 10, fontWeight: 700 }}>Total Rewards Experts</div>
               </div>
             </div>

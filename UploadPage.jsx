@@ -2340,33 +2340,6 @@ export default function UploadPage({ setReportData }) {
                         </button>
                       )}
 
-                      <button
-                        type="button"
-                        onClick={() => removeSection28CappingUpload(item.id)}
-                        disabled={section28CappingUploads.length <= 1 || item.loading}
-                        style={{
-                          background:
-                            section28CappingUploads.length <= 1 || item.loading
-                              ? "#f4f6fb"
-                              : "#fff5f5",
-                          color:
-                            section28CappingUploads.length <= 1 || item.loading
-                              ? "#9aa5b8"
-                              : "#c81e1e",
-                          border: "1px solid #f3c2c2",
-                          borderRadius: 12,
-                          padding: "10px 14px",
-                          fontSize: 12,
-                          fontWeight: 800,
-                          cursor:
-                            section28CappingUploads.length <= 1 || item.loading
-                              ? "not-allowed"
-                              : "pointer",
-                          fontFamily: "Calibri, sans-serif",
-                        }}
-                      >
-                        הסר ריבוע
-                      </button>
                     </div>
                   </div>
                 </div>
@@ -2951,33 +2924,6 @@ export default function UploadPage({ setReportData }) {
                         </button>
                       )}
 
-                      <button
-                        type="button"
-                        onClick={() => removeCapitalClassificationUpload(item.id)}
-                        disabled={capitalClassificationUploads.length <= 1 || item.loading}
-                        style={{
-                          background:
-                            capitalClassificationUploads.length <= 1 || item.loading
-                              ? "#f4f6fb"
-                              : "#fff5f5",
-                          color:
-                            capitalClassificationUploads.length <= 1 || item.loading
-                              ? "#9aa5b8"
-                              : "#c81e1e",
-                          border: "1px solid #f3c2c2",
-                          borderRadius: 12,
-                          padding: "10px 14px",
-                          fontSize: 12,
-                          fontWeight: 800,
-                          cursor:
-                            capitalClassificationUploads.length <= 1 || item.loading
-                              ? "not-allowed"
-                              : "pointer",
-                          fontFamily: "Calibri, sans-serif",
-                        }}
-                      >
-                        הסר ריבוע
-                      </button>
                     </div>
                   </div>
                 </div>

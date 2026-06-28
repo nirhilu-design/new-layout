@@ -1935,10 +1935,13 @@ export default function UploadPage({ setReportData }) {
               העלאת קבצי XML
             </h1>
             <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0, direction: "ltr" }}>
-              <div style={{ position: "relative", width: 54, height: 54, borderRadius: "50%", background: "#00215D", flexShrink: 0 }}>
-                <span style={{ position: "absolute", width: 24, height: 8, borderRadius: 999, left: 15, top: 15, background: "#FF2756", transform: "rotate(-35deg)", display: "block" }} />
-                <span style={{ position: "absolute", width: 24, height: 8, borderRadius: 999, left: 15, top: 25, background: "#ffffff", transform: "rotate(-35deg)", display: "block" }} />
-              </div>
+              <svg width="54" height="54" viewBox="0 0 54 54" fill="none" style={{ flexShrink: 0 }}>
+                <circle cx="27" cy="27" r="27" fill="#00215D"/>
+                <g transform="rotate(-35, 27, 27)">
+                  <rect x="9" y="16" width="26" height="9" rx="4.5" fill="#FF2756"/>
+                  <rect x="19" y="29" width="26" height="9" rx="4.5" fill="#FFFFFF"/>
+                </g>
+              </svg>
               <div style={{ lineHeight: 1.2, textAlign: "left" }}>
                 <div style={{ color: "#00215D", fontSize: 20, fontWeight: 900, letterSpacing: "-0.5px" }}>zviran</div>
                 <div style={{ color: "#627D98", fontSize: 10, fontWeight: 700 }}>Total Rewards Experts</div>

@@ -991,34 +991,44 @@ function PersonalDetailsSection({ members }) {
 }
 
 function GenderIcon({ gender }) {
-  const isFemale = gender === "female";
-  return (
-    <div style={{ position: "relative", width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}>
-      <svg width="34" height="34" viewBox="0 0 24 24" fill="none">
-        <circle cx="12" cy="8" r="3.5" stroke="#fff" strokeWidth="2"/>
-        <path d="M5 20c.7-3.3 3.2-5.2 7-5.2s6.3 1.9 7 5.2" stroke="#fff" strokeWidth="2" strokeLinecap="round"/>
+  if (gender === "female") {
+    return (
+      <svg viewBox="0 0 24 30" fill="white" xmlns="http://www.w3.org/2000/svg" width="38" height="38">
+        {/* Head */}
+        <circle cx="12" cy="4.8" r="3"/>
+        {/* Long flowing hair */}
+        <path d="M9 3.5 C7 3.5 6 6 6.5 10 L8.5 9 L8.5 6 C10 7 14 7 15.5 6 L15.5 9 L17.5 10 C18 6 17 3.5 15 3.5 C14 1.8 10 1.8 9 3.5Z"/>
+        {/* Upper body - shoulders wider */}
+        <path d="M8 10 C8 9 9.5 8.5 12 8.5 C14.5 8.5 16 9 16 10 L16.5 13.5 C14.5 13 12 13 9.5 13.5Z"/>
+        {/* Lower body - hips wider */}
+        <path d="M9.5 13.5 C12 13 14.5 13 16.5 13.5 L17 17 C15.5 17 12 17 7 17Z"/>
+        {/* Legs */}
+        <rect x="8.5" y="17" width="2.8" height="7.5" rx="1.4"/>
+        <rect x="12.7" y="17" width="2.8" height="7.5" rx="1.4"/>
+        {/* Base line */}
+        <rect x="6" y="25" width="12" height="1.2" rx="0.6"/>
       </svg>
-      <div style={{
-        position: "absolute",
-        bottom: -2,
-        left: -2,
-        width: 18,
-        height: 18,
-        borderRadius: "50%",
-        background: isFemale ? "#FF2756" : "#1a4fa8",
-        border: "2px solid #fff",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        fontSize: 9,
-        fontWeight: 900,
-        color: "#fff",
-        fontFamily: "Calibri, sans-serif",
-        lineHeight: 1,
-      }}>
-        {isFemale ? "F" : "M"}
-      </div>
-    </div>
+    );
+  }
+  return (
+    <svg viewBox="0 0 24 30" fill="white" xmlns="http://www.w3.org/2000/svg" width="38" height="38">
+      {/* Head */}
+      <circle cx="12" cy="4.8" r="3"/>
+      {/* Short hair bump */}
+      <ellipse cx="12" cy="2.3" rx="2.8" ry="1.3"/>
+      {/* Body - straight, slightly wider at shoulders */}
+      <path d="M7.5 10 C7.5 9 9 8.5 12 8.5 C15 8.5 16.5 9 16.5 10 L16.5 17 L7.5 17Z"/>
+      {/* V-neck */}
+      <path d="M10 9.5 L12 11.5 L14 9.5" stroke="rgba(0,33,93,0.4)" strokeWidth="0.8" fill="none"/>
+      {/* Arms */}
+      <path d="M7.5 10 L5.5 16 C5.8 16.5 7 16.3 7.3 15.8 L8.5 10.5Z"/>
+      <path d="M16.5 10 L18.5 16 C18.2 16.5 17 16.3 16.7 15.8 L15.5 10.5Z"/>
+      {/* Legs */}
+      <rect x="8.5" y="17" width="2.8" height="7.5" rx="1.4"/>
+      <rect x="12.7" y="17" width="2.8" height="7.5" rx="1.4"/>
+      {/* Base line */}
+      <rect x="6" y="25" width="12" height="1.2" rx="0.6"/>
+    </svg>
   );
 }
 

@@ -991,44 +991,9 @@ function PersonalDetailsSection({ members }) {
 }
 
 function GenderIcon({ gender }) {
-  if (gender === "female") {
-    return (
-      <svg viewBox="0 0 24 30" fill="white" xmlns="http://www.w3.org/2000/svg" width="38" height="38">
-        {/* Head */}
-        <circle cx="12" cy="4.8" r="3"/>
-        {/* Long flowing hair */}
-        <path d="M9 3.5 C7 3.5 6 6 6.5 10 L8.5 9 L8.5 6 C10 7 14 7 15.5 6 L15.5 9 L17.5 10 C18 6 17 3.5 15 3.5 C14 1.8 10 1.8 9 3.5Z"/>
-        {/* Upper body - shoulders wider */}
-        <path d="M8 10 C8 9 9.5 8.5 12 8.5 C14.5 8.5 16 9 16 10 L16.5 13.5 C14.5 13 12 13 9.5 13.5Z"/>
-        {/* Lower body - hips wider */}
-        <path d="M9.5 13.5 C12 13 14.5 13 16.5 13.5 L17 17 C15.5 17 12 17 7 17Z"/>
-        {/* Legs */}
-        <rect x="8.5" y="17" width="2.8" height="7.5" rx="1.4"/>
-        <rect x="12.7" y="17" width="2.8" height="7.5" rx="1.4"/>
-        {/* Base line */}
-        <rect x="6" y="25" width="12" height="1.2" rx="0.6"/>
-      </svg>
-    );
-  }
+  const src = gender === "female" ? "/icon-female.png" : "/icon-male.png";
   return (
-    <svg viewBox="0 0 24 30" fill="white" xmlns="http://www.w3.org/2000/svg" width="38" height="38">
-      {/* Head */}
-      <circle cx="12" cy="4.8" r="3"/>
-      {/* Short hair bump */}
-      <ellipse cx="12" cy="2.3" rx="2.8" ry="1.3"/>
-      {/* Body - straight, slightly wider at shoulders */}
-      <path d="M7.5 10 C7.5 9 9 8.5 12 8.5 C15 8.5 16.5 9 16.5 10 L16.5 17 L7.5 17Z"/>
-      {/* V-neck */}
-      <path d="M10 9.5 L12 11.5 L14 9.5" stroke="rgba(0,33,93,0.4)" strokeWidth="0.8" fill="none"/>
-      {/* Arms */}
-      <path d="M7.5 10 L5.5 16 C5.8 16.5 7 16.3 7.3 15.8 L8.5 10.5Z"/>
-      <path d="M16.5 10 L18.5 16 C18.2 16.5 17 16.3 16.7 15.8 L15.5 10.5Z"/>
-      {/* Legs */}
-      <rect x="8.5" y="17" width="2.8" height="7.5" rx="1.4"/>
-      <rect x="12.7" y="17" width="2.8" height="7.5" rx="1.4"/>
-      {/* Base line */}
-      <rect x="6" y="25" width="12" height="1.2" rx="0.6"/>
-    </svg>
+    <img src={src} alt={gender === "female" ? "נקבה" : "זכר"} style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "50%" }} />
   );
 }
 
@@ -2898,7 +2863,7 @@ const clientDashboardCss = `
   .client-personal-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
   .client-personal-card { padding: 22px; min-height: 290px; }
   .client-personal-card-header { display: grid; grid-template-columns: 66px minmax(0, 1fr); gap: 14px; align-items: center; padding-bottom: 16px; margin-bottom: 16px; border-bottom: 1px solid ${theme.divider}; }
-  .client-personal-avatar { width: 66px; height: 66px; border-radius: 22px; background: linear-gradient(135deg, ${theme.accent}, ${theme.navy}); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 28px; font-weight: 900; }
+  .client-personal-avatar { width: 66px; height: 66px; border-radius: 50%; background: transparent; display: flex; align-items: center; justify-content: center; overflow: hidden; }
   .client-personal-card-kicker { color: ${theme.textSoft}; font-size: 12px; font-weight: 900; margin-bottom: 4px; }
   .client-personal-card h3 { margin: 0; color: ${theme.navy}; font-size: 22px; line-height: 1.25; font-weight: 900; }
   .client-personal-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }

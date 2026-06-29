@@ -3065,7 +3065,7 @@ const clientDashboardCss = `
   .client-zviran-mark-red, .client-zviran-mark-white { position: absolute; width: 24px; height: 8px; border-radius: 999px; left: 15px; transform: rotate(-35deg); }
   .client-zviran-mark-red { top: 15px; background: ${theme.accent}; } .client-zviran-mark-white { top: 25px; background: #fff; }
   .client-brand-title { font-size: 21px; line-height: 1.2; font-weight: 900; } .client-brand-subtitle { margin-top: 4px; font-size: 12px; color: rgba(255,255,255,0.72); }
-  .client-sidebar-nav { display: flex; flex-direction: column; gap: 4px; padding-top: 8px; position: relative; }
+  .client-sidebar-nav { display: flex; flex-direction: column; gap: 4px; padding: 6px; margin-top: 8px; position: relative; background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.15); border-radius: 18px; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
   .client-nav-pill { position: absolute; right: 0; left: 0; height: 54px; border-radius: 14px; background: linear-gradient(135deg, ${theme.accent} 0%, ${theme.navy} 100%); box-shadow: 0 8px 22px rgba(255,39,86,0.22); transition: top 0.3s cubic-bezier(0.4, 0, 0.2, 1); pointer-events: none; z-index: 0; }
   .client-nav-item { position: relative; z-index: 1; width: 100%; height: 54px; border: 0; border-radius: 14px; padding: 0 14px; background: transparent; color: rgba(255,255,255,0.72); cursor: pointer; display: grid; grid-template-columns: 28px minmax(0, 1fr); gap: 10px; align-items: center; text-align: right; font-family: Calibri, Arial, sans-serif; font-size: 14px; font-weight: 800; transition: color 0.18s ease; }
   .client-nav-item:hover { color: #fff; }

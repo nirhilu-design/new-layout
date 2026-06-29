@@ -1939,7 +1939,8 @@ function formatSection28DisplayValue(value) {
     return `₪${Math.round(number).toLocaleString("en-US")}`;
   }
 
-  return text;
+  if (/[₪%\d]/.test(text)) return text;
+  return "אין נתון";
 }
 
 function isSection28ImportantRow(label) {
@@ -1989,10 +1990,7 @@ function Section28Section({ section28Capping }) {
 
   return (
     <div>
-      <SectionTitle
-        title="קיטום סעיף 28 לפי בן/בת זוג"
-        subtitle="כל קובץ מוצג לפי השיוך שנבחר במסך ההעלאה, כדי להפריד בין נתוני בן הזוג ובת הזוג."
-      />
+      <SectionTitle title="קיטום סעיף 28 לפי בן/בת זוג" />
 
       <div className="client-report-like-shell">
         {entries.map((entry, entryIndex) => {
@@ -2049,8 +2047,8 @@ function Section28CostSplit({ group }) {
   const employeeRows = pickSection28Rows(rows, [
     "גידול בנטו בעקבות קיטום בפיצויים",
     "גידול בנטו בעקבות קיטום תגמולים",
-    "גידול בנטו בעקבות קיטום קה\"ל מעל לתקרה",
-    "הפרשות עובד קה\"ל מעל תקרה",
+    "גידול בנטו בעקבות קיטום קה\"ש מעל לתקרה",
+    "הפרשות עובד קה\"ש מעל תקרה",
     "הפרשות עובד תגמולים",
   ]);
 
@@ -2190,34 +2188,32 @@ function Section28ComparisonTable({ rows }) {
   return (
     <div className="client-report-panel client-margin-top">
       <div className="client-report-panel-title">השוואה בין תרחישים</div>
-      <div className="client-section28-comparison-layout">
-        <div className="client-table-wrap">
-          <table className="client-table client-section28-table">
-            <thead>
-              <tr>
-                <th>סעיף</th>
-                <th>לפני קיטום</th>
-                <th>אחרי קיטום</th>
-                <th>פער בין תרחישים</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((row, index) => {
-                const isTotal = normalizeSection28Text(row.label).includes('סה"כ') || normalizeSection28Text(row.label).includes("סה״כ");
-                return (
-                  <tr key={`${row.label}-${index}`} className={isTotal ? "total-row" : ""}>
-                    <td>{row.label || "—"}</td>
-                    <td>{section28NumericValue(row.before) !== 0 ? formatSection28DisplayValue(row.before) : ""}</td>
-                    <td>{section28NumericValue(row.after) !== 0 ? formatSection28DisplayValue(row.after) : ""}</td>
-                    <td>{section28NumericValue(row.gap) !== 0 ? formatSection28DisplayValue(row.gap) : ""}</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-        <Section28ComparisonBars rows={rows} />
+      <div className="client-table-wrap">
+        <table className="client-table client-section28-table" style={{ width: "100%" }}>
+          <thead>
+            <tr>
+              <th>סעיף</th>
+              <th>לפני קיטום</th>
+              <th>אחרי קיטום</th>
+              <th>פער בין תרחישים</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row, index) => {
+              const isTotal = normalizeSection28Text(row.label).includes('סה"כ') || normalizeSection28Text(row.label).includes("סה״כ");
+              return (
+                <tr key={`${row.label}-${index}`} className={isTotal ? "total-row" : ""}>
+                  <td>{row.label || "—"}</td>
+                  <td>{section28NumericValue(row.before) !== 0 ? formatSection28DisplayValue(row.before) : ""}</td>
+                  <td>{section28NumericValue(row.after) !== 0 ? formatSection28DisplayValue(row.after) : ""}</td>
+                  <td>{section28NumericValue(row.gap) !== 0 ? formatSection28DisplayValue(row.gap) : ""}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
       </div>
+      <Section28ComparisonBars rows={rows} />
     </div>
   );
 }
@@ -3236,7 +3232,7 @@ const clientDashboardCss = `
   .client-section28-table { min-width: 680px; }
   .client-section28-table th, .client-section28-table td { text-align: center; }
   .client-table tr.total-row td { background: #EEF2FA; color: #00215D; font-weight: 900; }
-  .client-section28-bars-card { background: #FFFFFF; border: 1px solid #EEE4D8; border-radius: 18px; padding: 14px; min-width: 0; }
+  .client-section28-bars-card { background: #FFFFFF; border: 1px solid #EEE4D8; border-radius: 18px; padding: 14px; min-width: 0; margin-top: 14px; }
   .client-section28-bar-group { margin-top: 12px; }
   .client-section28-bar-title { color: #627D98; font-size: 12px; font-weight: 900; margin-bottom: 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .client-section28-bar-row { margin-bottom: 8px; }

@@ -1107,10 +1107,10 @@ function PensionSection({ scope }) {
     <div>
       <SectionTitle title="סיכום פנסיוני" subtitle="ריכוז נתוני הצבירה, ההפקדות והתחזית לגיל פרישה — ללא רכיבי פאי בעמוד הראשי." />
       <div className="client-kpi-grid">
-        <KpiCard icon={<PiggyIcon />} title="הפקדה חודשית כוללת" value={formatCurrency(summary.monthlyDeposits)} subtext="לפי התצוגה שנבחרה" />
-        <KpiCard icon={<GrowthIcon />} title="סך נכסים" value={formatCurrency(summary.totalAssets)} subtext="סך הצבירה הקיימת" />
-        <KpiCard icon={<WalletIcon />} title="קצבה חודשית צפויה" value={formatCurrency(summary.monthlyPensionWithDeposits)} subtext="עם המשך הפקדות" />
-        <KpiCard icon={<BankIcon />} title="צבירה צפויה" value={formatCurrency(summary.projectedLumpSumWithDeposits)} subtext="עם המשך הפקדות" />
+        <KpiCard icon={<CalendarDepositIcon />} title="הפקדה חודשית כוללת" value={formatCurrency(summary.monthlyDeposits)} subtext="לפי התצוגה שנבחרה" />
+        <KpiCard icon={<SavingsGrowthIcon />} title="סך נכסים" value={formatCurrency(summary.totalAssets)} subtext="סך הצבירה הקיימת" />
+        <KpiCard icon={<SafePensionIcon />} title="קצבה חודשית צפויה" value={formatCurrency(summary.monthlyPensionWithDeposits)} subtext="עם המשך הפקדות" />
+        <KpiCard icon={<SavingsGrowthIcon />} title="צבירה צפויה" value={formatCurrency(summary.projectedLumpSumWithDeposits)} subtext="עם המשך הפקדות" />
       </div>
       <div className="client-grid-2 client-margin-top">
         <ComparisonCard title="השוואת צבירה צפויה" explanation="פער בין צבירה עתידית עם המשך הפקדות לבין מצב ללא המשך הפקדות." withValue={summary.projectedLumpSumWithDeposits} withoutValue={summary.projectedLumpSumWithoutDeposits} />
@@ -1325,13 +1325,16 @@ function InsuranceSection({ scope }) {
 
       {scope.isFamily ? (
         <div className="client-kpi-grid" style={{ gridTemplateColumns: "1fr" }}>
-          <MetricBox title="ביטוח חיים / הון למוטבים" value={formatCurrency(insurance.deathCoverage)} icon={<ShieldIcon />} />
+          <MetricBox title="ביטוח חיים / הון למוטבים" value={formatCurrency(insurance.deathCoverage)} icon={<FamilyUmbrellaIcon />} />
         </div>
       ) : (
-        <div className="client-grid-3">
-          <MetricBox title="ביטוח חיים / הון למוטבים" value={formatCurrency(insurance.deathCoverage)} icon={<ShieldIcon />} />
-          <MetricBox title="אובדן כושר עבודה" value={formatCurrency(insurance.disabilityValue)} icon={<PersonIcon />} />
-          <MetricBox title="שיעור אובדן כושר עבודה" value={formatPercent(insurance.disabilityPercent)} icon="%" />
+        <div className="client-grid-2">
+          <MetricBox title="ביטוח חיים / הון למוטבים" value={formatCurrency(insurance.deathCoverage)} icon={<FamilyUmbrellaIcon />} />
+          <MetricBox
+            title="אובדן כושר עבודה"
+            value={`${formatCurrency(insurance.disabilityValue)}${insurance.disabilityPercent > 0 ? ` (${formatPercent(insurance.disabilityPercent)})` : ""}`}
+            icon={<DisabilityIcon />}
+          />
         </div>
       )}
 
@@ -1410,10 +1413,9 @@ function LoansSection({ scope }) {
   return (
     <div>
       <SectionTitle title="הלוואות" subtitle="פירוט הלוואות על חשבון מוצרים פנסיוניים." />
-      <div className="client-grid-3">
-        <MetricBox title='סה"כ הלוואות' value={formatCurrency(totalAmount)} icon={<BankIcon />} />
+      <div className="client-grid-2">
+        <MetricBox title='סה"כ הלוואות' value={`${formatCurrency(totalAmount)}${ratio > 0 ? ` (${ratio.toFixed(1)}%)` : ""}`} icon={<BankIcon />} />
         <MetricBox title="יתרת הלוואות" value={formatCurrency(totalBalance)} icon="◔" />
-        <MetricBox title="שיעור מתוך הנכסים" value={`${ratio.toFixed(1)}%`} icon="%" />
       </div>
       <div className="client-table-wrap client-margin-top">
         {loans.length ? <table className="client-table"><thead><tr><th>שם</th><th>סכום הלוואה</th><th>יתרה</th><th>תדירות החזר</th><th>תאריך סיום</th></tr></thead><tbody>{loans.map((loan, index) => <tr key={loan.id || index}><td>{[loan.firstName, loan.familyName].filter(Boolean).join(" ") || loan.name || "—"}</td><td>{formatCurrency(loan.amount)}</td><td>{formatCurrency(loan.balance)}</td><td>{loan.repaymentFrequency || "—"}</td><td>{formatDate(loan.endDate)}</td></tr>)}</tbody></table> : <div className="client-empty-state">לא התקבל מידע על הלוואות להצגה.</div>}
@@ -2981,12 +2983,77 @@ function ZviranMark() {
   return <div className="client-zviran-mark" aria-hidden="true"><span className="client-zviran-mark-red" /><span className="client-zviran-mark-white" /></div>;
 }
 
-function PiggyIcon() { return <svg width="30" height="30" viewBox="0 0 24 24" fill="none"><path d="M4 13C4 9.7 6.9 7 10.8 7H15.3C18.1 7 20 8.9 20 11.6V17H17.4L16.7 19H8.2L7.5 17H4V13Z" stroke="#00215D" strokeWidth="2" strokeLinejoin="round"/><path d="M8 7L6.7 4.8H10.3L11.4 7" stroke="#FF2756" strokeWidth="2" strokeLinejoin="round"/><path d="M16.2 10.8H16.25" stroke="#FF2756" strokeWidth="3" strokeLinecap="round"/></svg>; }
-function GrowthIcon() { return <svg width="30" height="30" viewBox="0 0 24 24" fill="none"><path d="M4 18V9" stroke="#00215D" strokeWidth="2.2" strokeLinecap="round"/><path d="M10 18V5" stroke="#00215D" strokeWidth="2.2" strokeLinecap="round"/><path d="M16 18V12" stroke="#00215D" strokeWidth="2.2" strokeLinecap="round"/><path d="M3 19H21" stroke="#FF2756" strokeWidth="2.2" strokeLinecap="round"/></svg>; }
-function WalletIcon() { return <svg width="30" height="30" viewBox="0 0 24 24" fill="none"><rect x="4" y="7" width="16" height="11" rx="3" stroke="#00215D" strokeWidth="2.2"/><path d="M17 12H20V16H17C15.9 16 15 15.1 15 14C15 12.9 15.9 12 17 12Z" stroke="#FF2756" strokeWidth="2.2"/><path d="M7 7L15 4" stroke="#00215D" strokeWidth="2.2" strokeLinecap="round"/></svg>; }
+function FamilyUmbrellaIcon() {
+  return <svg width="30" height="30" viewBox="0 0 30 30" fill="none">
+    <path d="M15 4C9 4 4.5 8.5 4 14H26C25.5 8.5 21 4 15 4Z" fill="#C8EDD8" stroke="#00215D" strokeWidth="1.5" strokeLinejoin="round"/>
+    <line x1="15" y1="4" x2="15" y2="21" stroke="#00215D" strokeWidth="1.5"/>
+    <path d="M15 21C15 23 13 24 12 23" stroke="#00215D" strokeWidth="1.5" strokeLinecap="round"/>
+    <circle cx="9" cy="24" r="2.2" fill="#4DB87A" stroke="#00215D" strokeWidth="1.2"/>
+    <circle cx="15" cy="23" r="2.5" fill="#4DB87A" stroke="#00215D" strokeWidth="1.2"/>
+    <circle cx="21" cy="24" r="2.2" fill="#4DB87A" stroke="#00215D" strokeWidth="1.2"/>
+    <path d="M6.5 28C7 26 8 25.5 9 25.5" stroke="#00215D" strokeWidth="1.1" strokeLinecap="round"/>
+    <path d="M12.5 27.5C13 25.5 14 25 15 25" stroke="#00215D" strokeWidth="1.1" strokeLinecap="round"/>
+    <path d="M18.5 28C19 26 20 25.5 21 25.5" stroke="#00215D" strokeWidth="1.1" strokeLinecap="round"/>
+  </svg>;
+}
+function DisabilityIcon() {
+  return <svg width="30" height="30" viewBox="0 0 30 30" fill="none">
+    <circle cx="11" cy="5" r="2.5" fill="#4DB87A" stroke="#00215D" strokeWidth="1.3"/>
+    <path d="M11 8L9 14L7.5 22" stroke="#00215D" strokeWidth="1.4" strokeLinecap="round"/>
+    <path d="M11 8L13 13" stroke="#00215D" strokeWidth="1.4" strokeLinecap="round"/>
+    <path d="M8.5 11.5H13.5" stroke="#00215D" strokeWidth="1.4" strokeLinecap="round"/>
+    <path d="M15.5 9.5V21.5" stroke="#00215D" strokeWidth="1.4" strokeLinecap="round"/>
+    <path d="M12.5 9.5H15.5" stroke="#00215D" strokeWidth="1.3" strokeLinecap="round"/>
+    <path d="M15.5 21.5L13.5 26" stroke="#00215D" strokeWidth="1.4" strokeLinecap="round"/>
+    <path d="M18 23C20 21 24 22 25 25C26 28 21 29 19 27.5" fill="#C8EDD8" stroke="#00215D" strokeWidth="1.2" strokeLinejoin="round"/>
+    <path d="M21 13L27 9" stroke="#4DB87A" strokeWidth="1.6" strokeLinecap="round"/>
+    <path d="M24 7.5L27 9L25.5 12" stroke="#4DB87A" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+  </svg>;
+}
+function SavingsGrowthIcon() {
+  return <svg width="30" height="30" viewBox="0 0 30 30" fill="none">
+    <ellipse cx="7.5" cy="23" rx="3.5" ry="5" fill="#C8EDD8" stroke="#00215D" strokeWidth="1.3"/>
+    <ellipse cx="15" cy="21" rx="4.5" ry="7" fill="#4DB87A" stroke="#00215D" strokeWidth="1.3"/>
+    <ellipse cx="22.5" cy="22" rx="3.5" ry="6" fill="#C8EDD8" stroke="#00215D" strokeWidth="1.3"/>
+    <path d="M5 15L10 10L16 13L23 5" stroke="#00215D" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+    <path d="M20 5H24V9" stroke="#00215D" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+  </svg>;
+}
+function CalendarDepositIcon() {
+  return <svg width="30" height="30" viewBox="0 0 30 30" fill="none">
+    <rect x="2" y="6" width="19" height="17" rx="2.5" fill="#C8EDD8" stroke="#00215D" strokeWidth="1.4"/>
+    <line x1="2" y1="12" x2="21" y2="12" stroke="#00215D" strokeWidth="1.4"/>
+    <line x1="7" y1="3" x2="7" y2="8" stroke="#00215D" strokeWidth="1.5" strokeLinecap="round"/>
+    <line x1="14" y1="3" x2="14" y2="8" stroke="#00215D" strokeWidth="1.5" strokeLinecap="round"/>
+    <rect x="5" y="15" width="3" height="3" rx="0.8" fill="#4DB87A"/>
+    <rect x="10" y="15" width="3" height="3" rx="0.8" fill="#4DB87A"/>
+    <rect x="5" y="20" width="3" height="3" rx="0.8" fill="#4DB87A"/>
+    <path d="M22 18H27" stroke="#4DB87A" strokeWidth="1.6" strokeLinecap="round"/>
+    <path d="M24.5 15.5L27 18L24.5 20.5" stroke="#4DB87A" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+  </svg>;
+}
+function SafePensionIcon() {
+  return <svg width="30" height="30" viewBox="0 0 30 30" fill="none">
+    <rect x="3" y="8" width="15" height="15" rx="2.5" fill="#C8EDD8" stroke="#00215D" strokeWidth="1.4"/>
+    <circle cx="10.5" cy="15.5" r="4" fill="none" stroke="#00215D" strokeWidth="1.3"/>
+    <circle cx="10.5" cy="15.5" r="1.8" fill="#4DB87A"/>
+    <line x1="18" y1="11" x2="22" y2="9" stroke="#00215D" strokeWidth="1.3" strokeLinecap="round"/>
+    <line x1="18" y1="15.5" x2="24" y2="15.5" stroke="#00215D" strokeWidth="1.3" strokeLinecap="round"/>
+    <line x1="18" y1="20" x2="22" y2="22" stroke="#00215D" strokeWidth="1.3" strokeLinecap="round"/>
+    <circle cx="24" cy="9" r="2" fill="#4DB87A" stroke="#00215D" strokeWidth="1"/>
+    <circle cx="26" cy="15.5" r="2" fill="#4DB87A" stroke="#00215D" strokeWidth="1"/>
+    <circle cx="24" cy="22" r="2" fill="#4DB87A" stroke="#00215D" strokeWidth="1"/>
+  </svg>;
+}
+function PercentArrowIcon() {
+  return <svg width="30" height="30" viewBox="0 0 30 30" fill="none">
+    <circle cx="9" cy="10" r="4" fill="#C8EDD8" stroke="#00215D" strokeWidth="1.5"/>
+    <circle cx="21" cy="21" r="4" fill="#C8EDD8" stroke="#00215D" strokeWidth="1.5"/>
+    <line x1="7" y1="24" x2="23" y2="7" stroke="#00215D" strokeWidth="1.5" strokeLinecap="round"/>
+    <path d="M18 6L24 4L24 10" stroke="#4DB87A" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"/>
+  </svg>;
+}
 function BankIcon() { return <svg width="30" height="30" viewBox="0 0 24 24" fill="none"><path d="M4 10L12 5L20 10" stroke="#00215D" strokeWidth="2.2" strokeLinejoin="round"/><path d="M6 10V18" stroke="#00215D" strokeWidth="2.2" strokeLinecap="round"/><path d="M10 10V18" stroke="#00215D" strokeWidth="2.2" strokeLinecap="round"/><path d="M14 10V18" stroke="#00215D" strokeWidth="2.2" strokeLinecap="round"/><path d="M18 10V18" stroke="#00215D" strokeWidth="2.2" strokeLinecap="round"/><path d="M4 19H20" stroke="#FF2756" strokeWidth="2.2" strokeLinecap="round"/></svg>; }
-function ShieldIcon() { return <svg width="30" height="30" viewBox="0 0 24 24" fill="none"><path d="M12 4L19 7V12C19 16.6 16.1 19.4 12 21C7.9 19.4 5 16.6 5 12V7L12 4Z" stroke="#00215D" strokeWidth="2.2" strokeLinejoin="round"/><path d="M9 12L11 14L15.5 9.5" stroke="#FF2756" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/></svg>; }
-function PersonIcon() { return <svg width="30" height="30" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="7.5" r="3.5" stroke="#00215D" strokeWidth="2.2"/><path d="M5 20C5.7 16.7 8.2 14.8 12 14.8C15.8 14.8 18.3 16.7 19 20" stroke="#FF2756" strokeWidth="2.2" strokeLinecap="round"/></svg>; }
 
 const clientDashboardCss = `
   * { box-sizing: border-box; }

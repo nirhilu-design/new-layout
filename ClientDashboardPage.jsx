@@ -1323,18 +1323,20 @@ function InsuranceSection({ scope }) {
     <div>
       <SectionTitle title="פירוט ביטוחים" subtitle="ריכוז הכיסויים הביטוחיים לפי התצוגה שנבחרה, כולל פירוט ביטוח חיים לפי מוצרים וצבירה." />
 
-      <div className="client-grid-3">
-        <MetricBox title="ביטוח חיים / הון למוטבים" value={formatCurrency(insurance.deathCoverage)} icon={<ShieldIcon />} />
-        <MetricBox title="אובדן כושר עבודה" value={formatCurrency(insurance.disabilityValue)} icon={<PersonIcon />} />
-        <MetricBox title="שיעור אובדן כושר עבודה" value={formatPercent(insurance.disabilityPercent)} icon="%" />
-      </div>
+      {scope.isFamily ? (
+        <div className="client-kpi-grid" style={{ gridTemplateColumns: "1fr" }}>
+          <MetricBox title="ביטוח חיים / הון למוטבים" value={formatCurrency(insurance.deathCoverage)} icon={<ShieldIcon />} />
+        </div>
+      ) : (
+        <div className="client-grid-3">
+          <MetricBox title="ביטוח חיים / הון למוטבים" value={formatCurrency(insurance.deathCoverage)} icon={<ShieldIcon />} />
+          <MetricBox title="אובדן כושר עבודה" value={formatCurrency(insurance.disabilityValue)} icon={<PersonIcon />} />
+          <MetricBox title="שיעור אובדן כושר עבודה" value={formatPercent(insurance.disabilityPercent)} icon="%" />
+        </div>
+      )}
 
       <div className="client-panel client-margin-top">
         <h3>פירוט ביטוח חיים לפי מוצרים וצבירה</h3>
-        <p className="client-panel-subtitle">
-          ברמת משפחה מוצגת עמודת בן משפחה. בתצוגת לקוח פרטית העמודה מוסרת לגמרי כדי שלא תיווצר הזזת עמודות בטבלה.
-        </p>
-
         <InsuranceProductsTable rows={deathCoverageRows} isFamily={Boolean(scope.isFamily)} />
       </div>
     </div>
@@ -3056,25 +3058,26 @@ const clientDashboardCss = `
   .client-table { width: 100%; min-width: 760px; border-collapse: collapse; table-layout: auto; }
   .client-table th { background: ${theme.navy}; color: #fff; padding: 12px 10px; font-size: 12px; text-align: right; white-space: nowrap; }
   .client-table td { padding: 12px 10px; border-bottom: 1px solid ${theme.divider}; color: ${theme.text}; font-size: 12px; white-space: nowrap; }
-  .client-insurance-table { table-layout: fixed; min-width: 0; }
-  .client-insurance-table.family { min-width: 860px; }
-  .client-insurance-table.member { min-width: 720px; }
+  .client-insurance-table { table-layout: fixed; min-width: 0; width: 100%; }
+  .client-insurance-table th { padding: 9px 7px; font-size: 11px; }
+  .client-insurance-table td { padding: 8px 7px; font-size: 12px; }
   .client-insurance-table th, .client-insurance-table td { vertical-align: middle; }
-  .client-insurance-table .wide-col, .client-insurance-table .text-col { white-space: normal; overflow-wrap: anywhere; line-height: 1.45; }
+  .client-insurance-table .wide-col { white-space: normal; word-break: break-word; overflow-wrap: anywhere; line-height: 1.4; max-width: 160px; }
+  .client-insurance-table .text-col { white-space: normal; overflow-wrap: anywhere; line-height: 1.4; }
   .client-insurance-table .policy-col, .client-insurance-table .money-col { direction: ltr; text-align: center; white-space: nowrap; }
-  .client-insurance-table .client-insurance-col-memberName { width: 13%; }
-  .client-insurance-table .client-insurance-col-planName { width: 22%; }
-  .client-insurance-table .client-insurance-col-managerName { width: 19%; }
-  .client-insurance-table .client-insurance-col-productType { width: 16%; }
+  .client-insurance-table .client-insurance-col-memberName { width: 12%; }
+  .client-insurance-table .client-insurance-col-planName { width: 18%; }
+  .client-insurance-table .client-insurance-col-managerName { width: 16%; }
+  .client-insurance-table .client-insurance-col-productType { width: 15%; }
   .client-insurance-table .client-insurance-col-policyNo { width: 13%; }
   .client-insurance-table .client-insurance-col-currentValue { width: 13%; }
-  .client-insurance-table .client-insurance-col-deathCoverage { width: 12%; }
-  .client-insurance-table.member .client-insurance-col-planName { width: 25%; }
-  .client-insurance-table.member .client-insurance-col-managerName { width: 22%; }
+  .client-insurance-table .client-insurance-col-deathCoverage { width: 13%; }
+  .client-insurance-table.member .client-insurance-col-planName { width: 20%; }
+  .client-insurance-table.member .client-insurance-col-managerName { width: 19%; }
   .client-insurance-table.member .client-insurance-col-productType { width: 17%; }
-  .client-insurance-table.member .client-insurance-col-policyNo { width: 14%; }
-  .client-insurance-table.member .client-insurance-col-currentValue { width: 11%; }
-  .client-insurance-table.member .client-insurance-col-deathCoverage { width: 11%; }
+  .client-insurance-table.member .client-insurance-col-policyNo { width: 15%; }
+  .client-insurance-table.member .client-insurance-col-currentValue { width: 14%; }
+  .client-insurance-table.member .client-insurance-col-deathCoverage { width: 15%; }
   .client-empty-state { border: 1px dashed ${theme.border}; border-radius: 16px; background: ${theme.surfaceAlt}; padding: 18px; color: ${theme.textSoft}; font-size: 13px; text-align: center; line-height: 1.7; } .client-text-panel { min-height: 210px; border: 1px solid ${theme.divider}; border-radius: 16px; background: #FFFDFB; padding: 16px; color: ${theme.text}; font-size: 13px; line-height: 1.9; white-space: pre-wrap; }
 
   .client-section-title-row.compact { margin-top: 18px; margin-bottom: 12px; }

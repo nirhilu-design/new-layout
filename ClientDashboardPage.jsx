@@ -2701,7 +2701,7 @@ function buildPieSegmentDetails(scope, payload) {
     sourceType: "insurance",
   }));
 
-  const candidates = [...productRows, ...routeRows, ...deathRows];
+  const candidates = [...productRows, ...deathRows];
 
   const matched = candidates
     .filter((row) => rowMatchesSegment(row, segment, type))

@@ -993,7 +993,7 @@ function PersonalDetailsSection({ members }) {
 function GenderIcon({ gender }) {
   const src = gender === "female" ? "/icon-female.png" : "/icon-male.png";
   return (
-    <img src={src} alt={gender === "female" ? "נקבה" : "זכר"} style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "50%" }} />
+    <img src={src} alt={gender === "female" ? "נקבה" : "זכר"} style={{ width: 66, height: 66, objectFit: "cover", borderRadius: "50%", display: "block", flexShrink: 0 }} />
   );
 }
 

@@ -872,6 +872,7 @@ export default function ClientDashboardPage({
 }) {
   const [activeSection, setActiveSection] = useState("personal");
   const [selectedPieSegment, setSelectedPieSegment] = useState(null);
+  const [showPdfModal, setShowPdfModal] = useState(false);
   const initialScopeId = viewMode === "member" && selectedMemberId ? selectedMemberId : "family";
   const [localScopeId, setLocalScopeId] = useState(initialScopeId);
 
@@ -948,6 +949,11 @@ export default function ClientDashboardPage({
               </select>
             </label>
 
+            <button type="button" className="client-pdf-button" onClick={() => setShowPdfModal(true)} title="ייצוא לדוח PDF">
+              <PdfIcon />
+              <span>ייצוא PDF</span>
+            </button>
+
             {!isSharedMode ? <button type="button" onClick={onBack} className="client-back-button">חזרה ל־REPORT</button> : null}
           </div>
         </header>
@@ -966,7 +972,125 @@ export default function ClientDashboardPage({
       </main>
 
       <PieSegmentDrawer selected={selectedPieSegment} onClose={handleClosePieDrawer} />
+
+      {showPdfModal ? (
+        <PdfExportModal
+          navItems={navItems}
+          onClose={() => setShowPdfModal(false)}
+          scope={scope}
+          detailedMembers={detailedMembers}
+          specialSections={specialSections}
+          clientModel={clientModel}
+          reportData={reportData}
+        />
+      ) : null}
     </div>
+  );
+}
+
+function PdfIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" style={{ flexShrink: 0 }}>
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
+      <polyline points="14,2 14,8 20,8" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
+      <line x1="8" y1="13" x2="16" y2="13" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      <line x1="8" y1="17" x2="13" y2="17" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function renderSectionContent(sectionId, { scope, detailedMembers, specialSections, clientModel, reportData }) {
+  if (sectionId === "pension") return <PensionSection scope={scope} />;
+  if (sectionId === "personal") return <PersonalDetailsSection members={detailedMembers} />;
+  if (sectionId === "allocation") return <AllocationSection scope={scope} onSegmentClick={() => {}} />;
+  if (sectionId === "insurance") return <InsuranceSection scope={scope} />;
+  if (sectionId === "loans") return <LoansSection scope={scope} />;
+  if (sectionId === "capitalClassification") return <CapitalClassificationSection sections={specialSections.capitalClassification} />;
+  if (sectionId === "section28") return <Section28Section section28Capping={specialSections.section28Capping} />;
+  if (sectionId === "recognizedPension") return <RecognizedPensionSection entries={specialSections.recognizedPensionEntries} />;
+  if (sectionId === "summary") return <ConversationSummarySection scope={scope} clientModel={clientModel} reportData={reportData} />;
+  return null;
+}
+
+function PdfExportModal({ navItems, onClose, scope, detailedMembers, specialSections, clientModel, reportData }) {
+  const [selected, setSelected] = React.useState(() => new Set(navItems.map((item) => item.id)));
+  const [printing, setPrinting] = React.useState(false);
+
+  const toggleItem = (id) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const handlePrint = () => {
+    setPrinting(true);
+    setTimeout(() => {
+      window.print();
+      setPrinting(false);
+    }, 120);
+  };
+
+  const selectedItems = navItems.filter((item) => selected.has(item.id));
+  const printProps = { scope, detailedMembers, specialSections, clientModel, reportData };
+
+  return (
+    <>
+      <div className="pdf-modal-overlay" onClick={onClose} />
+      <div className="pdf-modal">
+        <div className="pdf-modal-header">
+          <h2>ייצוא דוח PDF</h2>
+          <button type="button" className="pdf-modal-close" onClick={onClose}>×</button>
+        </div>
+
+        <p className="pdf-modal-subtitle">בחר את הטאבים שיופיעו בדוח המודפס</p>
+
+        <div className="pdf-modal-items">
+          {navItems.map((item) => (
+            <label key={item.id} className={`pdf-modal-item ${selected.has(item.id) ? "checked" : ""}`}>
+              <input
+                type="checkbox"
+                checked={selected.has(item.id)}
+                onChange={() => toggleItem(item.id)}
+                className="pdf-modal-checkbox"
+              />
+              <span className="pdf-modal-icon">{item.icon}</span>
+              <span>{item.label}</span>
+            </label>
+          ))}
+        </div>
+
+        <div className="pdf-modal-footer">
+          <button type="button" className="pdf-modal-cancel" onClick={onClose}>ביטול</button>
+          <button
+            type="button"
+            className="pdf-modal-export"
+            onClick={handlePrint}
+            disabled={selected.size === 0 || printing}
+          >
+            <PdfIcon />
+            {printing ? "מכין..." : `ייצא ${selected.size} טאבים`}
+          </button>
+        </div>
+      </div>
+
+      {printing ? (
+        <div className="pdf-print-container">
+          <div className="pdf-print-header">
+            <div className="pdf-print-title">{scope.isFamily ? "מבט משפחתי" : scope.name || "דוח אישי"}</div>
+            <div className="pdf-print-subtitle">דוח פנסיוני · {new Intl.DateTimeFormat("he-IL").format(new Date())}</div>
+          </div>
+          {selectedItems.map((item) => (
+            <div key={item.id} className="pdf-print-section">
+              <div className="pdf-print-section-title">{item.label}</div>
+              {renderSectionContent(item.id, printProps)}
+            </div>
+          ))}
+        </div>
+      ) : null}
+    </>
   );
 }
 
@@ -3087,7 +3211,50 @@ const clientDashboardCss = `
   .client-capital-study-table th:first-child, .client-capital-study-table td:first-child { text-align: right; }
   .client-capital-note { border: 1px solid #D8DEE9; border-radius: 16px; background: #F8FBFF; color: #627D98; font-size: 12px; line-height: 1.7; padding: 12px 14px; }
 
-  @media print { .client-web-shell { display: none !important; } }
+  .client-pdf-button { min-height: 54px; padding: 0 16px; border-radius: 16px; background: rgba(255,255,255,0.11); border: 1px solid rgba(255,255,255,0.18); color: #fff; font-family: Calibri, Arial, sans-serif; font-size: 13px; font-weight: 900; cursor: pointer; display: flex; align-items: center; gap: 8px; white-space: nowrap; }
+  .client-pdf-button:hover { background: rgba(255,255,255,0.18); }
+
+  .pdf-modal-overlay { position: fixed; inset: 0; z-index: 10000; background: rgba(0,24,69,0.48); }
+  .pdf-modal { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 10001; background: #fff; border-radius: 24px; padding: 28px; width: min(520px, 94vw); box-shadow: 0 24px 64px rgba(0,33,93,0.22); direction: rtl; font-family: Calibri, Arial, sans-serif; }
+  .pdf-modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+  .pdf-modal-header h2 { margin: 0; color: ${theme.navy}; font-size: 22px; font-weight: 900; }
+  .pdf-modal-close { width: 36px; height: 36px; border-radius: 999px; border: 1px solid ${theme.border}; background: ${theme.surfaceAlt}; color: ${theme.text}; font-size: 24px; line-height: 1; cursor: pointer; }
+  .pdf-modal-subtitle { margin: 0 0 18px; color: ${theme.textSoft}; font-size: 13px; font-weight: 700; }
+  .pdf-modal-items { display: flex; flex-direction: column; gap: 8px; margin-bottom: 22px; max-height: 360px; overflow-y: auto; }
+  .pdf-modal-item { display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 14px; border: 1px solid ${theme.divider}; background: ${theme.surfaceAlt}; cursor: pointer; font-size: 14px; font-weight: 800; color: ${theme.text}; transition: 0.15s ease; }
+  .pdf-modal-item.checked { background: ${theme.softBlue}; border-color: #BFCFE8; color: ${theme.navy}; }
+  .pdf-modal-item:hover { border-color: ${theme.border}; }
+  .pdf-modal-checkbox { display: none; }
+  .pdf-modal-item::before { content: ""; width: 20px; height: 20px; border-radius: 6px; border: 2px solid ${theme.border}; background: #fff; flex-shrink: 0; order: -1; }
+  .pdf-modal-item.checked::before { background: ${theme.navy}; border-color: ${theme.navy}; background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 12 10' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 5l3.5 3.5L11 1' stroke='%23fff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"); background-size: 12px; background-repeat: no-repeat; background-position: center; }
+  .pdf-modal-icon { font-size: 18px; }
+  .pdf-modal-footer { display: flex; gap: 10px; justify-content: flex-end; }
+  .pdf-modal-cancel { min-height: 44px; padding: 0 20px; border-radius: 12px; border: 1px solid ${theme.border}; background: #fff; color: ${theme.text}; font-family: Calibri, Arial, sans-serif; font-size: 14px; font-weight: 800; cursor: pointer; }
+  .pdf-modal-export { min-height: 44px; padding: 0 22px; border-radius: 12px; border: 0; background: linear-gradient(135deg, ${theme.accent} 0%, ${theme.navy} 100%); color: #fff; font-family: Calibri, Arial, sans-serif; font-size: 14px; font-weight: 900; cursor: pointer; display: flex; align-items: center; gap: 8px; }
+  .pdf-modal-export:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .pdf-print-container { display: none; }
+
+  @media print {
+    @page { size: A4 landscape; margin: 10mm; }
+    html, body { direction: rtl !important; font-family: Calibri, Arial, sans-serif !important; background: #fff !important; }
+    .client-web-shell, .pdf-modal-overlay, .pdf-modal { display: none !important; }
+    .pdf-print-container { display: block !important; }
+    .pdf-print-header { margin-bottom: 14mm; border-bottom: 2px solid #00215D; padding-bottom: 6mm; }
+    .pdf-print-title { font-size: 22pt; font-weight: 900; color: #00215D; }
+    .pdf-print-subtitle { font-size: 10pt; color: #627D98; margin-top: 3mm; }
+    .pdf-print-section { page-break-inside: avoid; break-inside: avoid; margin-bottom: 12mm; }
+    .pdf-print-section-title { font-size: 14pt; font-weight: 900; color: #00215D; border-right: 4px solid #FF2756; padding-right: 8px; margin-bottom: 6mm; page-break-after: avoid; break-after: avoid; }
+    table { page-break-inside: avoid; break-inside: avoid; width: 100%; border-collapse: collapse; font-size: 9pt; }
+    th, td { border: 1px solid #E2D1BF; padding: 4px 6px; }
+    thead { display: table-header-group; }
+    .client-kpi-grid, .client-grid-2, .client-grid-3, .client-personal-grid, .client-allocation-top-pies { display: grid !important; }
+    .client-panel, .client-product-accordion, .client-personal-card, .client-kpi-card { page-break-inside: avoid; break-inside: avoid; }
+    .client-donut-panel { page-break-inside: avoid; break-inside: avoid; }
+    button, .client-topbar, .client-sidebar, .client-drawer-overlay, .pdf-modal { display: none !important; }
+    .client-content-card { box-shadow: none !important; border: none !important; }
+    svg, canvas { max-width: 100% !important; }
+  }
   @media (max-width: 1180px) { .client-product-summary { grid-template-columns: 28px minmax(0, 1fr) repeat(2, minmax(110px, .8fr)); } .client-product-strip-item { border-right: 0; padding-right: 0; } .client-web-shell { grid-template-columns: 1fr; } .client-sidebar { position: relative; height: auto; display: block; border-left: 0; border-bottom: 1px solid rgba(255,255,255,0.12); } .client-sidebar-nav { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); } .client-main { padding: 18px; } .client-topbar { flex-direction: column; align-items: stretch; } .client-topbar-actions { justify-content: flex-start; } .client-kpi-grid, .client-capital-kpi-row { grid-template-columns: repeat(2, minmax(0, 1fr)); } .client-grid-3, .client-grid-2, .client-personal-grid, .client-allocation-top-pies, .client-special-grid { grid-template-columns: 1fr; } }
   @media (max-width: 720px) { .client-product-summary { grid-template-columns: 28px minmax(0, 1fr); align-items: start; } .client-product-strip-item { grid-column: 1 / -1; min-height: auto; } .client-main { padding: 12px; } .client-sidebar { padding: 16px 12px; } .client-sidebar-nav { grid-template-columns: 1fr; } .client-kpi-grid { grid-template-columns: 1fr; } .client-content-card { padding: 16px; border-radius: 18px; } .client-topbar { padding: 16px; border-radius: 18px; } .client-page-title { font-size: 22px; } .client-donut-layout, .client-donut-layout.wide { grid-template-columns: 1fr; justify-items: center; } .client-drawer-stats { grid-template-columns: 1fr; } .client-donut-panel.wide .client-legend { grid-template-columns: 1fr; } .client-scope-select-wrap, .client-history-button { grid-template-columns: 1fr; width: 100%; } .client-personal-fields, .client-special-metrics, .client-capital-kpi-row { grid-template-columns: 1fr; } }
 `;

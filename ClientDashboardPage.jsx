@@ -1287,7 +1287,7 @@ function AssetProductRoutesTable({ rows }) {
       <table className="client-table client-product-assets-table">
         <thead>
           <tr>
-            <th>מו״פיד</th>
+            <th>מספר באוצר</th>
             <th>שם נכס / מסלול</th>
             <th>סך צבירה</th>
             <th>תשואה 12 חודשים</th>
@@ -1322,7 +1322,7 @@ function InsuranceSection({ scope }) {
 
   return (
     <div>
-      <SectionTitle title="פירוט ביטוחים" subtitle="ריכוז הכיסויים הביטוחיים לפי התצוגה שנבחרה, כולל פירוט ביטוח חיים לפי מוצרים וצבירה." />
+      <SectionTitle title="פירוט ביטוחים" />
 
       {scope.isFamily ? (
         <div className="client-kpi-grid" style={{ gridTemplateColumns: "1fr" }}>
@@ -1990,7 +1990,7 @@ function Section28Section({ section28Capping }) {
 
   return (
     <div>
-      <SectionTitle title="קיטום סעיף 28 לפי בן/בת זוג" />
+      <SectionTitle title="קיטום סעיף 28" />
 
       <div className="client-report-like-shell">
         {entries.map((entry, entryIndex) => {
@@ -2340,10 +2340,7 @@ function RecognizedPensionSection({ entries = [] }) {
 
   return (
     <div>
-      <SectionTitle
-        title="קצבה מוכרת לפי בן/בת זוג"
-        subtitle="נתוני PDF והזנות ידניות מוצגים לפי השיוך שנבחר במסך ההעלאה."
-      />
+      <SectionTitle title="קצבה מוכרת" />
 
       <div className="client-report-like-shell">
         {safeEntries.map((entry, entryIndex) => {
@@ -2358,9 +2355,6 @@ function RecognizedPensionSection({ entries = [] }) {
             <div className="client-report-owner-block" key={`${entry?.owner || "owner"}-${entryIndex}`}>
               <div className="client-owner-block-title">קצבה מוכרת — {entry?.ownerLabel || "בן/בת זוג"}</div>
 
-              {vestedBalanceTable?.sourceFileName ? (
-                <div className="client-source-strip"><span>מקור נתונים: <strong>{vestedBalanceTable.sourceFileName}</strong></span></div>
-              ) : null}
 
               {pdfRows.length ? <VestedPdfCalculationTable rows={pdfRows} pdfTotal={pdfTotal} /> : null}
               {manualRows.length ? <ManualRecognizedPensionTable rows={manualRows} manualTotal={manualTotal} /> : null}

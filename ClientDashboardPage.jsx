@@ -1109,7 +1109,7 @@ function PensionSection({ scope }) {
       <SectionTitle title="סיכום פנסיוני" subtitle="ריכוז נתוני הצבירה, ההפקדות והתחזית לגיל פרישה — ללא רכיבי פאי בעמוד הראשי." />
       <div className="client-kpi-grid">
         <KpiCard icon={<CalendarDepositIcon />} title="הפקדה חודשית כוללת" value={formatCurrency(summary.monthlyDeposits)} subtext="לפי התצוגה שנבחרה" />
-        <KpiCard icon={<SavingsGrowthIcon />} title="סך נכסים" value={formatCurrency(summary.totalAssets)} subtext="סך הצבירה הקיימת" />
+        <KpiCard icon={<VaultSavingsIcon />} title="סך נכסים" value={formatCurrency(summary.totalAssets)} subtext="סך הצבירה הקיימת" />
         <KpiCard icon={<SafePensionIcon />} title="קצבה חודשית צפויה" value={formatCurrency(summary.monthlyPensionWithDeposits)} subtext="עם המשך הפקדות" />
         <KpiCard icon={<SavingsGrowthIcon />} title="צבירה צפויה" value={formatCurrency(summary.projectedLumpSumWithDeposits)} subtext="עם המשך הפקדות" />
       </div>
@@ -2010,12 +2010,6 @@ function Section28Section({ section28Capping }) {
             <div className="client-report-owner-block" key={`${entry?.owner || "owner"}-${entry?.sourceFileName || entryIndex}`}>
               <div className="client-owner-block-title">קיטום סעיף 28 — {entry?.ownerLabel || "בן/בת זוג"}</div>
 
-              {entry?.sourceFileName || entry?.sheetName ? (
-                <div className="client-source-strip">
-                  {entry?.sourceFileName ? <span>מקור נתונים: <strong>{entry.sourceFileName}</strong></span> : null}
-                  {entry?.sheetName ? <span>גיליון: <strong>{entry.sheetName}</strong></span> : null}
-                </div>
-              ) : null}
 
               {costGroup ? <Section28CostSplit group={costGroup} /> : null}
               {savingGroup ? <Section28SavingSimulation group={savingGroup} /> : null}
@@ -2213,9 +2207,9 @@ function Section28ComparisonTable({ rows }) {
                 return (
                   <tr key={`${row.label}-${index}`} className={isTotal ? "total-row" : ""}>
                     <td>{row.label || "—"}</td>
-                    <td>{formatSection28DisplayValue(row.before)}</td>
-                    <td>{formatSection28DisplayValue(row.after)}</td>
-                    <td>{formatSection28DisplayValue(row.gap)}</td>
+                    <td>{section28NumericValue(row.before) !== 0 ? formatSection28DisplayValue(row.before) : ""}</td>
+                    <td>{section28NumericValue(row.after) !== 0 ? formatSection28DisplayValue(row.after) : ""}</td>
+                    <td>{section28NumericValue(row.gap) !== 0 ? formatSection28DisplayValue(row.gap) : ""}</td>
                   </tr>
                 );
               })}
@@ -2624,7 +2618,8 @@ function ComparisonCard({ title, explanation, withValue, withoutValue }) {
   const withNum = Number(withValue || 0);
   const withoutNum = Number(withoutValue || 0);
   const maxValue = Math.max(withNum, withoutNum, 1);
-  return <div className="client-panel"><h3>{title}</h3>{explanation ? <p className="client-panel-subtitle">{explanation}</p> : null}<CompareBar label="עם המשך הפקדות" value={withNum} maxValue={maxValue} primary /><CompareBar label="ללא המשך הפקדות" value={withoutNum} maxValue={maxValue} /></div>;
+  const withIsPrimary = withNum >= withoutNum;
+  return <div className="client-panel"><h3>{title}</h3>{explanation ? <p className="client-panel-subtitle">{explanation}</p> : null}<CompareBar label="עם המשך הפקדות" value={withNum} maxValue={maxValue} primary={withIsPrimary} /><CompareBar label="ללא המשך הפקדות" value={withoutNum} maxValue={maxValue} primary={!withIsPrimary} /></div>;
 }
 
 function CompareBar({ label, value, maxValue, primary = false }) {
@@ -3020,6 +3015,21 @@ function SavingsGrowthIcon() {
     <path d="M20 5H24V9" stroke="#00215D" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
   </svg>;
 }
+function VaultSavingsIcon() {
+  return <svg width="34" height="34" viewBox="0 0 34 34" fill="none">
+    <rect x="2" y="5" width="22" height="20" rx="3" fill="#C8EDD8" stroke="#00215D" strokeWidth="1.5"/>
+    <rect x="5" y="8" width="16" height="14" rx="2" fill="#fff" stroke="#00215D" strokeWidth="1.2"/>
+    <circle cx="13" cy="15" r="3.5" fill="none" stroke="#00215D" strokeWidth="1.3"/>
+    <circle cx="13" cy="15" r="1.5" fill="#4DB87A"/>
+    <line x1="24" y1="11" x2="27" y2="11" stroke="#00215D" strokeWidth="1.3" strokeLinecap="round"/>
+    <line x1="24" y1="19" x2="27" y2="19" stroke="#00215D" strokeWidth="1.3" strokeLinecap="round"/>
+    <line x1="8" y1="25" x2="8" y2="28" stroke="#00215D" strokeWidth="1.5" strokeLinecap="round"/>
+    <line x1="18" y1="25" x2="18" y2="28" stroke="#00215D" strokeWidth="1.5" strokeLinecap="round"/>
+    <ellipse cx="26" cy="22" rx="3.2" ry="4.5" fill="#4DB87A" stroke="#00215D" strokeWidth="1.2"/>
+    <line x1="26" y1="20" x2="26" y2="21.5" stroke="#00215D" strokeWidth="1.1" strokeLinecap="round"/>
+    <ellipse cx="31" cy="24" rx="2.5" ry="3.5" fill="#C8EDD8" stroke="#00215D" strokeWidth="1.1"/>
+  </svg>;
+}
 function CalendarDepositIcon() {
   return <svg width="30" height="30" viewBox="0 0 30 30" fill="none">
     <rect x="2" y="6" width="19" height="17" rx="2.5" fill="#C8EDD8" stroke="#00215D" strokeWidth="1.4"/>
@@ -3091,8 +3101,8 @@ const clientDashboardCss = `
   .client-section-title-row p, .client-panel-subtitle { margin: 6px 0 0; color: ${theme.textSoft}; font-size: 13px; line-height: 1.6; }
   .client-kpi-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; margin-bottom: 14px; } .client-grid-2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; } .client-grid-3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; } .client-margin-top { margin-top: 14px; }
   .client-kpi-card, .client-panel, .client-metric-box, .client-personal-card { border: 1px solid #E7D9CA; border-radius: 20px; background: linear-gradient(180deg, #fff 0%, ${theme.surfaceAlt} 100%); box-shadow: 0 2px 10px rgba(16,42,67,0.04); }
-  .client-kpi-card { min-height: 184px; padding: 18px; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 8px; text-align: center; }
-  .client-kpi-icon { width: 74px; height: 74px; border-radius: 22px; background: #F4F7FB; display: flex; align-items: center; justify-content: center; } .client-kpi-title { color: ${theme.textSoft}; font-size: 14px; font-weight: 800; } .client-kpi-value { color: ${theme.navy}; font-size: 32px; line-height: 1.1; font-weight: 900; direction: ltr; } .client-kpi-sub { color: #7A8CA8; font-size: 12px; line-height: 1.45; }
+  .client-kpi-card { min-height: 220px; padding: 22px 18px; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 12px; text-align: center; }
+  .client-kpi-icon { width: 80px; height: 80px; border-radius: 22px; background: #F4F7FB; display: flex; align-items: center; justify-content: center; } .client-kpi-title { color: ${theme.textSoft}; font-size: 16px; font-weight: 800; } .client-kpi-value { color: ${theme.navy}; font-size: 36px; line-height: 1.1; font-weight: 900; direction: ltr; } .client-kpi-sub { color: #7A8CA8; font-size: 13px; line-height: 1.45; }
   .client-personal-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
   .client-personal-card { padding: 22px; min-height: 290px; }
   .client-personal-card-header { display: grid; grid-template-columns: 66px minmax(0, 1fr); gap: 14px; align-items: center; padding-bottom: 16px; margin-bottom: 16px; border-bottom: 1px solid ${theme.divider}; }

@@ -2235,9 +2235,11 @@ function Section28ComparisonBars({ rows }) {
         const after = Math.abs(section28NumericValue(row.after));
         const rowMaxValue = Math.max(before, after, 1);
         const isPensionRow = normalizeSection28Text(row.label) === "קצבה";
-        const beforeBar = { value: before, displayValue: row.before, className: "muted" };
-        const afterBar = { value: after, displayValue: row.after, className: "primary" };
-        const orderedBars = isPensionRow && before > after ? [afterBar, beforeBar] : [beforeBar, afterBar];
+        const beforeClass = before >= after ? "primary" : "muted";
+        const afterClass = after >= before ? "primary" : "muted";
+        const beforeBar = { value: before, displayValue: row.before, className: beforeClass };
+        const afterBar = { value: after, displayValue: row.after, className: afterClass };
+        const orderedBars = [beforeBar, afterBar];
 
         return (
           <div className="client-section28-bar-group" key={`${row.label}-${index}`}>

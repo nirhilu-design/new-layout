@@ -1016,6 +1016,17 @@ function PdfExportModal({ navItems, onClose, scope, detailedMembers, specialSect
   const [selected, setSelected] = React.useState(() => new Set(navItems.map((item) => item.id)));
   const [printing, setPrinting] = React.useState(false);
 
+  React.useEffect(() => {
+    if (!printing) return;
+    const raf = requestAnimationFrame(() => {
+      setTimeout(() => {
+        window.print();
+        setPrinting(false);
+      }, 80);
+    });
+    return () => cancelAnimationFrame(raf);
+  }, [printing]);
+
   const toggleItem = (id) => {
     setSelected((prev) => {
       const next = new Set(prev);
@@ -1027,10 +1038,6 @@ function PdfExportModal({ navItems, onClose, scope, detailedMembers, specialSect
 
   const handlePrint = () => {
     setPrinting(true);
-    setTimeout(() => {
-      window.print();
-      setPrinting(false);
-    }, 120);
   };
 
   const selectedItems = navItems.filter((item) => selected.has(item.id));
@@ -3233,25 +3240,28 @@ const clientDashboardCss = `
   .pdf-modal-export { min-height: 44px; padding: 0 22px; border-radius: 12px; border: 0; background: linear-gradient(135deg, ${theme.accent} 0%, ${theme.navy} 100%); color: #fff; font-family: Calibri, Arial, sans-serif; font-size: 14px; font-weight: 900; cursor: pointer; display: flex; align-items: center; gap: 8px; }
   .pdf-modal-export:disabled { opacity: 0.5; cursor: not-allowed; }
 
-  .pdf-print-container { display: none; }
+  .pdf-print-container { visibility: hidden; position: absolute; top: -9999px; left: -9999px; width: 0; height: 0; overflow: hidden; pointer-events: none; }
 
   @media print {
     @page { size: A4 landscape; margin: 10mm; }
     html, body { direction: rtl !important; font-family: Calibri, Arial, sans-serif !important; background: #fff !important; }
-    .client-web-shell, .pdf-modal-overlay, .pdf-modal { display: none !important; }
-    .pdf-print-container { display: block !important; }
-    .pdf-print-header { margin-bottom: 14mm; border-bottom: 2px solid #00215D; padding-bottom: 6mm; }
-    .pdf-print-title { font-size: 22pt; font-weight: 900; color: #00215D; }
-    .pdf-print-subtitle { font-size: 10pt; color: #627D98; margin-top: 3mm; }
-    .pdf-print-section { page-break-inside: avoid; break-inside: avoid; margin-bottom: 12mm; }
-    .pdf-print-section-title { font-size: 14pt; font-weight: 900; color: #00215D; border-right: 4px solid #FF2756; padding-right: 8px; margin-bottom: 6mm; page-break-after: avoid; break-after: avoid; }
-    table { page-break-inside: avoid; break-inside: avoid; width: 100%; border-collapse: collapse; font-size: 9pt; }
-    th, td { border: 1px solid #E2D1BF; padding: 4px 6px; }
+    .client-sidebar, .client-main, .pdf-modal-overlay, .pdf-modal { display: none !important; }
+    .client-web-shell { display: block !important; background: #fff !important; padding: 0 !important; }
+    .pdf-print-container { visibility: visible !important; position: static !important; top: auto !important; left: auto !important; width: auto !important; height: auto !important; overflow: visible !important; display: block !important; }
+    .pdf-print-header { margin-bottom: 10mm; border-bottom: 2px solid #00215D; padding-bottom: 5mm; }
+    .pdf-print-title { font-size: 20pt; font-weight: 900; color: #00215D; }
+    .pdf-print-subtitle { font-size: 10pt; color: #627D98; margin-top: 2mm; }
+    .pdf-print-section { break-inside: avoid; page-break-inside: avoid; margin-bottom: 10mm; }
+    .pdf-print-section-title { font-size: 13pt; font-weight: 900; color: #00215D; border-right: 4px solid #FF2756; padding-right: 7px; margin-bottom: 5mm; break-after: avoid; page-break-after: avoid; }
+    table { break-inside: avoid; page-break-inside: avoid; width: 100%; border-collapse: collapse; font-size: 8.5pt; }
+    th, td { border: 1px solid #E2D1BF; padding: 3px 5px; }
     thead { display: table-header-group; }
-    .client-kpi-grid, .client-grid-2, .client-grid-3, .client-personal-grid, .client-allocation-top-pies { display: grid !important; }
-    .client-panel, .client-product-accordion, .client-personal-card, .client-kpi-card { page-break-inside: avoid; break-inside: avoid; }
-    .client-donut-panel { page-break-inside: avoid; break-inside: avoid; }
-    button, .client-topbar, .client-sidebar, .client-drawer-overlay, .pdf-modal { display: none !important; }
+    .client-kpi-grid { display: grid !important; grid-template-columns: repeat(4, 1fr) !important; }
+    .client-grid-2, .client-allocation-top-pies { display: grid !important; grid-template-columns: repeat(2, 1fr) !important; }
+    .client-grid-3 { display: grid !important; grid-template-columns: repeat(3, 1fr) !important; }
+    .client-personal-grid { display: grid !important; grid-template-columns: repeat(2, 1fr) !important; }
+    .client-panel, .client-product-accordion, .client-personal-card, .client-kpi-card, .client-donut-panel { break-inside: avoid; page-break-inside: avoid; }
+    button, .client-topbar, .client-drawer-overlay, .pdf-modal { display: none !important; }
     .client-content-card { box-shadow: none !important; border: none !important; }
     svg, canvas { max-width: 100% !important; }
   }

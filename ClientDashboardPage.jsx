@@ -991,19 +991,34 @@ function PersonalDetailsSection({ members }) {
 }
 
 function GenderIcon({ gender }) {
-  if (gender === "female") {
-    return (
-      <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
-        <circle cx="12" cy="8" r="4" stroke="#fff" strokeWidth="2"/>
-        <path d="M12 12v8M9 17h6" stroke="#fff" strokeWidth="2" strokeLinecap="round"/>
-      </svg>
-    );
-  }
+  const isFemale = gender === "female";
   return (
-    <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
-      <circle cx="10" cy="14" r="4" stroke="#fff" strokeWidth="2"/>
-      <path d="M14 10l4-4M18 6h-4M18 6v4" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-    </svg>
+    <div style={{ position: "relative", width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center" }}>
+      <svg width="34" height="34" viewBox="0 0 24 24" fill="none">
+        <circle cx="12" cy="8" r="3.5" stroke="#fff" strokeWidth="2"/>
+        <path d="M5 20c.7-3.3 3.2-5.2 7-5.2s6.3 1.9 7 5.2" stroke="#fff" strokeWidth="2" strokeLinecap="round"/>
+      </svg>
+      <div style={{
+        position: "absolute",
+        bottom: -2,
+        left: -2,
+        width: 18,
+        height: 18,
+        borderRadius: "50%",
+        background: isFemale ? "#FF2756" : "#1a4fa8",
+        border: "2px solid #fff",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        fontSize: 9,
+        fontWeight: 900,
+        color: "#fff",
+        fontFamily: "Calibri, sans-serif",
+        lineHeight: 1,
+      }}>
+        {isFemale ? "F" : "M"}
+      </div>
+    </div>
   );
 }
 

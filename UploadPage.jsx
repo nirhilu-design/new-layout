@@ -2265,50 +2265,27 @@ export default function UploadPage({ setReportData }) {
                         justifyContent: "flex-end",
                       }}
                     >
-                      <div style={{ position: "relative", display: "inline-block" }}>
-                        <button
-                          type="button"
-                          onClick={() =>
-                            document.getElementById(`${item.id}-input`)?.click()
-                          }
-                          disabled={item.loading}
-                          onMouseEnter={() => setHoveredExcelId(`s28-${item.id}`)}
-                          onMouseLeave={() => setHoveredExcelId(null)}
-                          style={{
-                            background: "#ffffff",
-                            color: "#0d2c6c",
-                            border: "1px solid #cbd4e6",
-                            borderRadius: 12,
-                            padding: "10px 14px",
-                            fontSize: 12,
-                            fontWeight: 800,
-                            cursor: item.loading ? "not-allowed" : "pointer",
-                            minWidth: 110,
-                            fontFamily: "Calibri, sans-serif",
-                          }}
-                        >
-                          בחירת Excel
-                        </button>
-                        {hoveredExcelId === `s28-${item.id}` && (
-                          <div style={{
-                            position: "absolute",
-                            bottom: "calc(100% + 8px)",
-                            right: 0,
-                            background: "#0d2c6c",
-                            color: "#fff",
-                            fontSize: 11,
-                            fontWeight: 700,
-                            fontFamily: "Calibri, sans-serif",
-                            padding: "6px 10px",
-                            borderRadius: 8,
-                            whiteSpace: "nowrap",
-                            zIndex: 10,
-                            boxShadow: "0 4px 12px rgba(0,0,0,0.18)",
-                          }}>
-                            מקור הנתונים קובץ הורדה מפקדיקט
-                          </div>
-                        )}
-                      </div>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          document.getElementById(`${item.id}-input`)?.click()
+                        }
+                        disabled={item.loading}
+                        style={{
+                          background: "#ffffff",
+                          color: "#0d2c6c",
+                          border: "1px solid #cbd4e6",
+                          borderRadius: 12,
+                          padding: "10px 14px",
+                          fontSize: 12,
+                          fontWeight: 800,
+                          cursor: item.loading ? "not-allowed" : "pointer",
+                          minWidth: 110,
+                          fontFamily: "Calibri, sans-serif",
+                        }}
+                      >
+                        בחירת Excel
+                      </button>
 
                       {item.fileName && (
                         <button

@@ -976,7 +976,7 @@ function PersonalDetailsSection({ members }) {
   const displayMembers = safeArray(members).slice(0, 2);
   return (
     <div>
-      <SectionTitle title="פרטים אישיים" subtitle="ריכוז פרטי הלקוח/ה לפי הנתונים שנקראו מהמסלקה ומהקבצים שהועלו. הנתונים מוצגים לבעל ולאישה בשני כרטיסים נפרדים." />
+      <SectionTitle title="פרטים אישיים" />
       {displayMembers.length ? (
         <div className="client-personal-grid">
           {displayMembers.map((member, index) => (
@@ -990,13 +990,31 @@ function PersonalDetailsSection({ members }) {
   );
 }
 
+function GenderIcon({ gender }) {
+  if (gender === "female") {
+    return (
+      <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
+        <circle cx="12" cy="8" r="4" stroke="#fff" strokeWidth="2"/>
+        <path d="M12 12v8M9 17h6" stroke="#fff" strokeWidth="2" strokeLinecap="round"/>
+      </svg>
+    );
+  }
+  return (
+    <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
+      <circle cx="10" cy="14" r="4" stroke="#fff" strokeWidth="2"/>
+      <path d="M14 10l4-4M18 6h-4M18 6v4" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  );
+}
+
 function PersonalDetailsCard({ member, index }) {
   const details = member?.personalDetails || {};
+  const gender = details.gender || member?.gender || (index === 1 ? "female" : "male");
   const title = index === 0 ? "בעל" : index === 1 ? "אישה" : "בן/בת משפחה";
   return (
     <div className="client-personal-card">
       <div className="client-personal-card-header">
-        <div className="client-personal-avatar">{String(details.name || member?.name || "?").trim().slice(0, 1)}</div>
+        <div className="client-personal-avatar"><GenderIcon gender={gender} /></div>
         <div>
           <div className="client-personal-card-kicker">{title}</div>
           <h3>{details.name || member?.name || "ללא שם"}</h3>

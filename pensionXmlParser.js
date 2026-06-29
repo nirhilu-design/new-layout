@@ -516,6 +516,9 @@ export function parsePensionXml(rawXml, fileName = "") {
 
   const birthDate = normalizeDateValue(getText(memberNode, "BirthDate"));
 
+  const rawGender = normalizeText(getText(memberNode, "Gender") || getText(memberNode, "Sex") || "");
+  const gender = rawGender === "2" || rawGender === "נקבה" || rawGender === "female" || rawGender === "f" ? "female" : "male";
+
   const member = {
     id: normalizeText(getText(memberNode, "ID")),
     firstName,
@@ -524,6 +527,7 @@ export function parsePensionXml(rawXml, fileName = "") {
     companyName: normalizeText(getText(memberNode, "CompanyName")),
     birthDate,
     dateOfBirth: birthDate,
+    gender,
     currentSalary: parseNumber(getText(memberNode, "Income")),
     income: parseNumber(getText(memberNode, "Income")),
   };
@@ -926,6 +930,7 @@ export function buildLegacyReportData(parsedFiles) {
         currentSalary: file.member.income || 0,
         lastWorkplace,
         employerName: lastWorkplace,
+        gender: file.member.gender || "male",
       },
       shareOfFamilyAssets:
         totalAssets > 0 ? Math.round((assets / totalAssets) * 100) : 0,

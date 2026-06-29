@@ -2714,6 +2714,7 @@ function buildPieSegmentDetails(scope, payload) {
       productType: row.productType || "—",
       policyNo: row.policyNo || row.mofid || "—",
       monthlyDeposit: Number(row.monthlyDeposit || row.monthlyDeposits || 0),
+      managementFeeFromBalance: Number(row.managementFeeFromBalance || 0),
     }))
     .filter((row, index, arr) => {
       const key = `${row.name}|${row.value}|${row.memberName}|${row.managerName}|${row.productType}|${row.policyNo}`;
@@ -2746,12 +2747,13 @@ function PieSegmentDrawer({ selected, onClose }) {
   const segment = selected.segment || {};
   const details = safeArray(selected.details);
   const total = Number(segment.value || 0);
+  const isMainGroup = selected.type === "mainGroup";
   const typeTitle =
     selected.type === "product"
       ? "פירוט לפי מוצר"
       : selected.type === "manager"
       ? "פירוט לפי גוף מנהל"
-      : selected.type === "mainGroup"
+      : isMainGroup
       ? "פירוט לפי אפיק ראשי"
       : "פירוט";
 
@@ -2759,52 +2761,49 @@ function PieSegmentDrawer({ selected, onClose }) {
     <div className="client-drawer-overlay" onClick={onClose}>
       <aside className="client-drawer" onClick={(event) => event.stopPropagation()}>
         <div className="client-drawer-header">
-          <button type="button" className="client-drawer-close" onClick={onClose}>×</button>
           <div>
             <div className="client-drawer-eyebrow">{typeTitle}</div>
             <h2>{segment.name || "פירוט"}</h2>
             <p>{Math.round(Number(segment.percent || 0))}% · {formatCurrency(total)}</p>
           </div>
+          <button type="button" className="client-drawer-close" onClick={onClose}>×</button>
         </div>
 
-        <div className="client-drawer-stats">
+        <div className="client-drawer-stats" style={isMainGroup ? { gridTemplateColumns: "repeat(2, minmax(0, 1fr))" } : {}}>
           <div><span>שווי</span><strong>{formatCurrency(total)}</strong></div>
           <div><span>משקל</span><strong>{Math.round(Number(segment.percent || 0))}%</strong></div>
-          <div><span>רשומות</span><strong>{details.length}</strong></div>
+          {!isMainGroup ? <div><span>כמות פוליסות / קרנות</span><strong>{details.length}</strong></div> : null}
         </div>
 
-        <div className="client-table-wrap">
-          <table className="client-table client-drawer-table">
-            <thead>
-              <tr>
-                <th>שם מוצר / מסלול</th>
-                <th>בן משפחה</th>
-                <th>גוף מנהל</th>
-                <th>סוג מוצר</th>
-                <th>מספר / מו״פיד</th>
-                <th>צבירה</th>
-                <th>הפקדה חודשית</th>
-              </tr>
-            </thead>
-            <tbody>
-              {details.map((row) => (
-                <tr key={row.id}>
-                  <td>{row.name || "—"}</td>
-                  <td>{row.memberName || "—"}</td>
-                  <td>{row.managerName || "—"}</td>
-                  <td>{row.productType || "—"}</td>
-                  <td>{row.policyNo || "—"}</td>
-                  <td>{formatCurrency(row.value)}</td>
-                  <td>{formatCurrency(row.monthlyDeposit)}</td>
+        {isMainGroup ? (
+          <div className="client-drawer-maingroup-summary">
+            <span>סך נכסים מנוהלים באפיק זה</span>
+            <strong>{formatCurrency(total)}</strong>
+          </div>
+        ) : (
+          <div className="client-table-wrap">
+            <table className="client-table client-drawer-table">
+              <thead>
+                <tr>
+                  <th>גוף מנהל</th>
+                  <th>שייכות</th>
+                  <th>צבירה</th>
+                  <th>דמי ניהול</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-
-        <div className="client-drawer-note">
-          הנתונים מוצגים לפי המידע שעבר ל־Family Dashboard. אם נדרש פירוט עמוק יותר לפי נכס בודד, צריך לוודא שה־parser שומר breakdown ברמת פוליסה/נכס עבור אותו אפיק.
-        </div>
+              </thead>
+              <tbody>
+                {details.map((row) => (
+                  <tr key={row.id}>
+                    <td>{row.managerName || "—"}</td>
+                    <td>{row.memberName || "—"}</td>
+                    <td>{formatCurrency(row.value)}</td>
+                    <td>{row.managementFeeFromBalance > 0 ? `${row.managementFeeFromBalance}%` : "—"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </aside>
     </div>
   );
@@ -2880,8 +2879,9 @@ const clientDashboardCss = `
   .client-history-button strong { display: block; color: #fff; font-size: 13px; line-height: 1.2; } .client-history-button small { display: block; color: rgba(255,255,255,0.72); margin-top: 3px; font-size: 10px; line-height: 1.2; }
   .client-history-icon { width: 34px; height: 34px; border-radius: 12px; background: rgba(255,255,255,0.14); display: flex; align-items: center; justify-content: center; color: ${theme.accent}; font-size: 20px; font-weight: 900; }
   .client-updated-box { padding: 8px 12px; display: flex; flex-direction: column; justify-content: center; gap: 3px; color: rgba(255,255,255,0.72); font-size: 11px; } .client-updated-box strong { color: #fff; font-size: 13px; }
-  .client-scope-select-wrap { padding: 7px 12px; display: grid; grid-template-columns: auto minmax(150px, 1fr); gap: 10px; align-items: center; color: rgba(255,255,255,0.72); font-size: 12px; font-weight: 800; }
-  .client-scope-select { min-height: 32px; border: 0; outline: 0; color: #fff; font-family: Calibri, Arial, sans-serif; font-size: 14px; font-weight: 900; background: transparent; cursor: pointer; } .client-scope-select option { color: ${theme.text}; background: #fff; }
+  .client-scope-select-wrap { padding: 7px 12px 7px 36px; position: relative; display: grid; grid-template-columns: auto minmax(150px, 1fr); gap: 10px; align-items: center; color: rgba(255,255,255,0.72); font-size: 12px; font-weight: 800; }
+  .client-scope-select-wrap::after { content: "⌄"; position: absolute; left: 12px; top: 50%; transform: translateY(-60%); color: rgba(255,255,255,0.7); font-size: 16px; pointer-events: none; line-height: 1; }
+  .client-scope-select { min-height: 32px; border: 0; outline: 0; color: #fff; font-family: Calibri, Arial, sans-serif; font-size: 14px; font-weight: 900; background: transparent; cursor: pointer; -webkit-appearance: none; appearance: none; padding-left: 4px; } .client-scope-select option { color: ${theme.text}; background: #fff; font-weight: 700; }
   .client-back-button { padding: 0 16px; font-size: 13px; font-weight: 900; cursor: pointer; }
   .client-content-card { background: #fff; border: 1px solid ${theme.border}; border-radius: 24px; padding: 22px; box-shadow: 0 8px 26px rgba(16,42,67,0.05); min-height: calc(100vh - 174px); }
   .client-section-title-row { display: flex; justify-content: space-between; gap: 16px; align-items: flex-start; margin-bottom: 18px; } .client-section-title-row h2 { margin: 0; color: ${theme.navy}; font-size: 22px; line-height: 1.25; font-weight: 900; }
@@ -2964,8 +2964,8 @@ const clientDashboardCss = `
   .client-drawer-overlay { position: fixed; inset: 0; z-index: 9999; background: rgba(0, 24, 69, .24); display: flex; justify-content: flex-start; direction: rtl; }
   .client-drawer { width: min(680px, 94vw); height: 100vh; overflow-y: auto; background: #fff; border-left: 1px solid ${theme.border}; box-shadow: 24px 0 54px rgba(0,33,93,.22); padding: 22px; animation: clientDrawerIn .18s ease-out; }
   @keyframes clientDrawerIn { from { transform: translateX(-26px); opacity: .65; } to { transform: translateX(0); opacity: 1; } }
-  .client-drawer-header { background: linear-gradient(135deg, ${theme.navy}, ${theme.navyDark}); color: #fff; border-radius: 22px; padding: 18px; margin-bottom: 18px; display: flex; justify-content: space-between; gap: 14px; align-items: flex-start; }
-  .client-drawer-close { width: 36px; height: 36px; border-radius: 999px; border: 1px solid rgba(255,255,255,.28); background: rgba(255,255,255,.12); color: #fff; font-size: 28px; line-height: 1; cursor: pointer; }
+  .client-drawer-header { background: linear-gradient(135deg, ${theme.navy}, ${theme.navyDark}); color: #fff; border-radius: 22px; padding: 18px 18px 18px 14px; margin-bottom: 18px; display: flex; justify-content: space-between; gap: 14px; align-items: flex-start; }
+  .client-drawer-close { width: 36px; height: 36px; flex-shrink: 0; border-radius: 999px; border: 1px solid rgba(255,255,255,.28); background: rgba(255,255,255,.12); color: #fff; font-size: 28px; line-height: 1; cursor: pointer; align-self: flex-start; }
   .client-drawer-eyebrow { font-size: 12px; color: rgba(255,255,255,.76); font-weight: 800; margin-bottom: 4px; }
   .client-drawer-header h2 { margin: 0; color: #fff; font-size: 24px; line-height: 1.25; }
   .client-drawer-header p { margin: 8px 0 0; color: rgba(255,255,255,.84); font-size: 13px; }
@@ -2973,8 +2973,8 @@ const clientDashboardCss = `
   .client-drawer-stats > div { background: ${theme.surfaceAlt}; border: 1px solid ${theme.divider}; border-radius: 16px; padding: 13px; }
   .client-drawer-stats span { display: block; color: ${theme.textSoft}; font-size: 11px; font-weight: 800; margin-bottom: 6px; }
   .client-drawer-stats strong { color: ${theme.navy}; font-size: 16px; direction: ltr; }
-  .client-drawer-table { min-width: 900px; }
-  .client-drawer-note { margin-top: 14px; background: #EEF2FA; border: 1px solid #D8DEE9; border-radius: 14px; padding: 13px; color: ${theme.textSoft}; font-size: 12px; line-height: 1.7; }
+  .client-drawer-table { min-width: 500px; }
+  .client-drawer-maingroup-summary { background: ${theme.softBlue}; border: 1px solid ${theme.border}; border-radius: 16px; padding: 22px 20px; display: flex; flex-direction: column; gap: 8px; } .client-drawer-maingroup-summary span { color: ${theme.textSoft}; font-size: 13px; font-weight: 800; } .client-drawer-maingroup-summary strong { color: ${theme.navy}; font-size: 28px; font-weight: 900; }
 
 
   .client-special-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; align-items: start; }

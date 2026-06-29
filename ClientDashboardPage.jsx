@@ -129,8 +129,8 @@ function findFirstObjectByKeyHints(source, keyHints, depth = 0, visited = new Se
 
 
 function getOwnerLabelFromKey(owner, fallbackLabel = "בן/בת זוג") {
-  if (owner === "spouseA") return "בן זוג";
-  if (owner === "spouseB") return "בת זוג";
+  if (owner === "spouseA") return "מבוטח/ת ראשית";
+  if (owner === "spouseB") return "בן/בת זוג";
   return fallbackLabel || "בן/בת זוג";
 }
 

@@ -916,10 +916,11 @@ export default function ClientDashboardPage({
         </div>
 
         <nav className="client-sidebar-nav" aria-label="ניווט במסך הלקוח">
+          <div className="client-nav-pill" style={{ top: navItems.findIndex((i) => i.id === activeSection) * 62 }} />
           {navItems.map((item) => (
             <button key={item.id} type="button" onClick={() => setActiveSection(item.id)} className={activeSection === item.id ? "client-nav-item active" : "client-nav-item"}>
               <span className="client-nav-icon">{item.icon}</span>
-              <span>{item.label}</span>
+              <span className="client-nav-label">{item.label}</span>
             </button>
           ))}
         </nav>
@@ -3064,11 +3065,13 @@ const clientDashboardCss = `
   .client-zviran-mark-red, .client-zviran-mark-white { position: absolute; width: 24px; height: 8px; border-radius: 999px; left: 15px; transform: rotate(-35deg); }
   .client-zviran-mark-red { top: 15px; background: ${theme.accent}; } .client-zviran-mark-white { top: 25px; background: #fff; }
   .client-brand-title { font-size: 21px; line-height: 1.2; font-weight: 900; } .client-brand-subtitle { margin-top: 4px; font-size: 12px; color: rgba(255,255,255,0.72); }
-  .client-sidebar-nav { display: flex; flex-direction: column; gap: 8px; padding-top: 8px; }
-  .client-nav-item { width: 100%; min-height: 58px; border: 1px solid rgba(255,255,255,0.14); border-radius: 14px; padding: 0 14px; background: rgba(255,255,255,0.07); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); color: rgba(255,255,255,0.82); cursor: pointer; display: grid; grid-template-columns: 30px minmax(0, 1fr); gap: 12px; align-items: center; text-align: right; font-family: Calibri, Arial, sans-serif; font-size: 15px; font-weight: 800; transition: 0.18s ease; }
-  .client-nav-item:hover { background: rgba(255,255,255,0.14); border-color: rgba(255,255,255,0.28); color: #fff; transform: translateX(-2px); }
-  .client-nav-item.active { background: linear-gradient(135deg, ${theme.accent} 0%, ${theme.navy} 100%); border-color: transparent; color: #fff; box-shadow: 0 10px 24px rgba(255,39,86,0.18); transform: translateX(-2px); }
-  .client-nav-icon { font-size: 21px; text-align: center; }
+  .client-sidebar-nav { display: flex; flex-direction: column; gap: 4px; padding-top: 8px; position: relative; }
+  .client-nav-pill { position: absolute; right: 0; left: 0; height: 54px; border-radius: 14px; background: linear-gradient(135deg, ${theme.accent} 0%, ${theme.navy} 100%); box-shadow: 0 8px 22px rgba(255,39,86,0.22); transition: top 0.3s cubic-bezier(0.4, 0, 0.2, 1); pointer-events: none; z-index: 0; }
+  .client-nav-item { position: relative; z-index: 1; width: 100%; height: 54px; border: 0; border-radius: 14px; padding: 0 14px; background: transparent; color: rgba(255,255,255,0.72); cursor: pointer; display: grid; grid-template-columns: 28px minmax(0, 1fr); gap: 10px; align-items: center; text-align: right; font-family: Calibri, Arial, sans-serif; font-size: 14px; font-weight: 800; transition: color 0.18s ease; }
+  .client-nav-item:hover { color: #fff; }
+  .client-nav-item.active { color: #fff; }
+  .client-nav-icon { font-size: 19px; text-align: center; }
+  .client-nav-label { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .client-main { min-width: 0; padding: 24px 28px 36px; }
   .client-topbar { min-height: 108px; background: linear-gradient(135deg, ${theme.navy}, ${theme.navyDark}); color: #fff; border: 1px solid rgba(0,33,93,0.20); border-radius: 24px; padding: 20px 22px; box-shadow: 0 8px 28px rgba(0,33,93,0.14); display: flex; justify-content: space-between; gap: 18px; align-items: center; margin-bottom: 18px; }
   .client-topbar-eyebrow { color: rgba(255,255,255,0.76); font-size: 12px; font-weight: 800; margin-bottom: 7px; }

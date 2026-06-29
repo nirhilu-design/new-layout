@@ -916,7 +916,7 @@ export default function ClientDashboardPage({
         </div>
 
         <nav className="client-sidebar-nav" aria-label="ניווט במסך הלקוח">
-          <div className="client-nav-pill" style={{ top: navItems.findIndex((i) => i.id === activeSection) * 62 }} />
+          <div className="client-nav-pill" style={{ top: navItems.findIndex((i) => i.id === activeSection) * 58 + 6 }} />
           {navItems.map((item) => (
             <button key={item.id} type="button" onClick={() => setActiveSection(item.id)} className={activeSection === item.id ? "client-nav-item active" : "client-nav-item"}>
               <span className="client-nav-icon">{item.icon}</span>

@@ -1030,12 +1030,11 @@ function PersonalField({ label, value }) {
 }
 
 function AllocationSection({ scope, onSegmentClick }) {
+  const total = Number(scope?.summary?.totalAssets || scope?.totalAssets || 0);
+  const totalLabel = total > 0 ? ` (${formatCurrency(total)})` : "";
   return (
     <div>
-      <SectionTitle
-        title="התפלגות נכסים"
-        subtitle="פיזור התיק לפי מוצרים, גופים מנהלים ואפיקים. בהמשך מוצגת טבלת נכסים ברמת מוצר לפי מו״פיד, מסלול ותשואות."
-      />
+      <SectionTitle title={`התפלגות נכסים${totalLabel}`} />
       <div className="client-allocation-top-pies">
         <DonutCard
           title="חלוקה לפי מוצרים"
@@ -2490,7 +2489,7 @@ function DonutCard({ title, items, wide = false, type = "segment", scope = null,
           />
 
           <div className="client-legend">
-            {segments.slice(0, 7).map((seg) => (
+            {segments.map((seg) => (
               <button
                 key={seg.id || seg.name}
                 type="button"

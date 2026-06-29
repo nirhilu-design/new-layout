@@ -1937,10 +1937,8 @@ export default function UploadPage({ setReportData }) {
             <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0, direction: "ltr" }}>
               <svg width="54" height="54" viewBox="0 0 54 54" fill="none" style={{ flexShrink: 0 }}>
                 <circle cx="27" cy="27" r="27" fill="#00215D"/>
-                <g transform="rotate(-35, 27, 27)">
-                  <rect x="9" y="16" width="26" height="9" rx="4.5" fill="#FF2756"/>
-                  <rect x="19" y="29" width="26" height="9" rx="4.5" fill="#FFFFFF"/>
-                </g>
+                <rect x="15" y="15" width="24" height="8" rx="4" fill="#FF2756" transform="rotate(-35, 27, 19)"/>
+                <rect x="15" y="25" width="24" height="8" rx="4" fill="#FFFFFF" transform="rotate(-35, 27, 29)"/>
               </svg>
               <div style={{ lineHeight: 1.2, textAlign: "left" }}>
                 <div style={{ color: "#00215D", fontSize: 20, fontWeight: 900, letterSpacing: "-0.5px" }}>zviran</div>

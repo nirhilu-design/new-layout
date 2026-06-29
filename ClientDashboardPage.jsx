@@ -907,7 +907,7 @@ export default function ClientDashboardPage({
         <header className="client-topbar">
           <div className="client-topbar-title-wrap">
             <div className="client-topbar-eyebrow">מסך לקוח · תצוגת WEB</div>
-            <h1 className="client-page-title">דוח פנסיוני משפחתי מאוחד</h1>
+            <h1 className="client-page-title">{scope.isFamily ? "הפנסיה שלי" : (scope.name || "דוח אישי")}</h1>
             <div className="client-page-subtitle">{scope.isFamily ? "תצוגה מאוחדת לכל המשפחה" : `תצוגה אישית עבור ${scope.name}`}</div>
           </div>
 
@@ -1127,7 +1127,7 @@ function AssetProductRoutesTable({ rows }) {
           <tr>
             <th>מו״פיד</th>
             <th>שם נכס / מסלול</th>
-            <th>שווי במסלול</th>
+            <th>סך צבירה</th>
             <th>תשואה 12 חודשים</th>
             <th>תשואה 36 חודשים</th>
             <th>תשואה 60 חודשים</th>
@@ -2920,14 +2920,14 @@ const clientDashboardCss = `
   .client-product-accordion { border: 1px solid #E7D9CA; border-radius: 20px; background: #FFFFFF; overflow: hidden; box-shadow: 0 2px 10px rgba(16,42,67,0.04); }
   .client-product-summary { width: 100%; min-height: 72px; border: 0; background: #FFFFFF; color: ${theme.navy}; cursor: pointer; font-family: Calibri, Arial, sans-serif; display: grid; grid-template-columns: 30px minmax(124px, 1.05fr) repeat(6, minmax(72px, .72fr)); gap: 6px; align-items: center; padding: 10px 12px; text-align: right; }
   .client-product-summary:hover { background: #FCFBF8; }
-  .client-product-chevron { width: 28px; height: 28px; border-radius: 50%; border: 1px solid #D8DEE9; display: inline-flex; align-items: center; justify-content: center; color: ${theme.navy}; font-size: 20px; line-height: 1; }
+  .client-product-chevron { width: 28px; height: 28px; border-radius: 50%; border: 1px solid #D8DEE9; display: inline-flex; align-items: center; justify-content: center; color: ${theme.navy}; font-size: 14px; line-height: 1; padding-bottom: 1px; }
   .client-product-title { color: ${theme.navy}; font-size: 16px; line-height: 1.2; font-weight: 900; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .client-product-strip-item { min-height: 46px; border-right: 1px solid #EEE4D8; padding-right: 8px; display: flex; flex-direction: column; justify-content: center; gap: 3px; min-width: 0; overflow: hidden; }
   .client-product-strip-item small { color: ${theme.textSoft}; font-size: 10px; font-weight: 800; line-height: 1.15; white-space: normal; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
   .client-product-strip-item b { color: ${theme.navy}; font-size: 14px; font-weight: 900; direction: ltr; text-align: right; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .client-product-assets-table { min-width: 1040px; }
+  .client-product-assets-table { min-width: unset; width: 100%; }
   .client-product-assets-table th, .client-product-assets-table td { text-align: center; }
-  .client-product-assets-table th:nth-child(2), .client-product-assets-table td:nth-child(2) { text-align: right; min-width: 240px; }
+  .client-product-assets-table th:nth-child(2), .client-product-assets-table td:nth-child(2) { text-align: right; max-width: 140px; min-width: 100px; white-space: normal; word-break: break-word; }
   .positive-number { color: #07864E !important; font-weight: 900; }
 
   .client-drawer-overlay { position: fixed; inset: 0; z-index: 9999; background: rgba(0, 24, 69, .24); display: flex; justify-content: flex-start; direction: rtl; }

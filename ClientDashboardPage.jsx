@@ -935,18 +935,10 @@ export default function ClientDashboardPage({
           </div>
 
           <div className="client-topbar-actions">
-            {!isSharedMode ? (
-              <button type="button" onClick={onBack} className="client-back-button client-back-icon-btn" title="חזרה למסך העלאה">
-                ←
-              </button>
-            ) : null}
-
-            <button type="button" className="client-history-button" onClick={onOpenPreviousReports} title="הכנה לצפייה בנתונים קודמים">
-              <span className="client-history-icon">↺</span>
-              <span><strong>נתונים קודמים</strong><small>הכנה לגרסאות דוח קודמות</small></span>
+            <button type="button" className="client-pdf-button" onClick={() => setShowPdfModal(true)} title="ייצוא לדוח PDF">
+              <PdfIcon />
+              <span>ייצוא PDF</span>
             </button>
-
-            <div className="client-updated-box"><span>עודכן לאחרונה:</span><strong>{clientModel.lastUpdated || "—"}</strong></div>
 
             <label className="client-scope-select-wrap">
               <span>תצוגה</span>
@@ -956,10 +948,22 @@ export default function ClientDashboardPage({
               </select>
             </label>
 
-            <button type="button" className="client-pdf-button" onClick={() => setShowPdfModal(true)} title="ייצוא לדוח PDF">
-              <PdfIcon />
-              <span>ייצוא PDF</span>
+            <div className="client-updated-box"><span>עודכן לאחרונה:</span><strong>{clientModel.lastUpdated || "—"}</strong></div>
+
+            <button type="button" className="client-history-button" onClick={onOpenPreviousReports} title="הכנה לצפייה בנתונים קודמים">
+              <span className="client-history-icon">↺</span>
+              <span><strong>נתונים קודמים</strong><small>הכנה לגרסאות דוח קודמות</small></span>
             </button>
+
+            {!isSharedMode ? (
+              <button type="button" onClick={onBack} className="client-back-button client-back-icon-btn" title="חזרה למסך העלאה">
+                <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
+                  <path d="M11 3L11 14" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                  <path d="M7 7L11 3L15 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  <path d="M4 17H18" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                </svg>
+              </button>
+            ) : null}
 
             {reportData?.clientLogo ? (
               <div className="client-topbar-logo">

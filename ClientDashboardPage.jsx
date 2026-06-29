@@ -613,6 +613,22 @@ function buildProductAssetTables(products) {
     });
   });
 
+  const PRODUCT_SORT_ORDER = [
+    "פנסיה מקיפה",
+    "פנסיה משלימה כללית",
+    "ביטוח מנהלים",
+    "אובדן כושר עבודה",
+    "קרן השתלמות",
+    "קופת גמל",
+    "קופת גמל להשקעה",
+    "ביטוח חיים",
+  ];
+
+  const getProductSortIndex = (name) => {
+    const idx = PRODUCT_SORT_ORDER.findIndex((order) => String(name || "").includes(order));
+    return idx >= 0 ? idx : PRODUCT_SORT_ORDER.length;
+  };
+
   return Array.from(groupedProducts.values())
     .map((group) => {
       const rows = Array.from(group.routeMap.values())
@@ -648,7 +664,12 @@ function buildProductAssetTables(products) {
       };
     })
     .filter((group) => group.totalAssets > 0 || group.rows.length > 0)
-    .sort((a, b) => Number(b.totalAssets || 0) - Number(a.totalAssets || 0));
+    .sort((a, b) => {
+      const ai = getProductSortIndex(a.productName);
+      const bi = getProductSortIndex(b.productName);
+      if (ai !== bi) return ai - bi;
+      return Number(b.totalAssets || 0) - Number(a.totalAssets || 0);
+    });
 }
 
 function buildClientModelFromReportData(reportData) {
@@ -814,8 +835,8 @@ function EmptyDashboardState({ onBack }) {
 }
 
 const BASE_NAV_ITEMS = [
-  { id: "pension", label: "סיכום פנסיוני", icon: "▥" },
   { id: "personal", label: "פרטים אישיים", icon: "☷" },
+  { id: "pension", label: "סיכום פנסיוני", icon: "▥" },
   { id: "allocation", label: "התפלגות נכסים", icon: "◔" },
   { id: "insurance", label: "פירוט ביטוחים", icon: "🛡" },
   { id: "loans", label: "הלוואות", icon: "🏦" },
@@ -849,7 +870,7 @@ export default function ClientDashboardPage({
   onChangeView = () => {},
   onOpenPreviousReports = () => {},
 }) {
-  const [activeSection, setActiveSection] = useState("pension");
+  const [activeSection, setActiveSection] = useState("personal");
   const [selectedPieSegment, setSelectedPieSegment] = useState(null);
   const initialScopeId = viewMode === "member" && selectedMemberId ? selectedMemberId : "family";
   const [localScopeId, setLocalScopeId] = useState(initialScopeId);
@@ -1070,7 +1091,16 @@ function AllocationSection({ scope, onSegmentClick }) {
 
 function AssetProductTablesSection({ productTables }) {
   const tables = safeArray(productTables);
-  const [openId, setOpenId] = useState(tables[0]?.id || "");
+  const [openIds, setOpenIds] = useState(() => new Set(tables[0]?.id ? [tables[0].id] : []));
+
+  const toggleOpen = (id) => {
+    setOpenIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
 
   if (!tables.length) {
     return (
@@ -1091,10 +1121,10 @@ function AssetProductTablesSection({ productTables }) {
       </div>
 
       {tables.map((table) => {
-        const isOpen = openId === table.id;
+        const isOpen = openIds.has(table.id);
         return (
           <div key={table.id} className="client-product-accordion">
-            <button type="button" className="client-product-summary" onClick={() => setOpenId(isOpen ? "" : table.id)}>
+            <button type="button" className="client-product-summary" onClick={() => toggleOpen(table.id)}>
               <span className="client-product-chevron">{isOpen ? "⌃" : "⌄"}</span>
               <strong className="client-product-title">{table.productName}</strong>
               <span className="client-product-strip-item"><small>סך צבירה</small><b>{formatCurrency(table.totalAssets)}</b></span>
@@ -2836,8 +2866,9 @@ const clientDashboardCss = `
   .client-zviran-mark-red { top: 15px; background: ${theme.accent}; } .client-zviran-mark-white { top: 25px; background: #fff; }
   .client-brand-title { font-size: 21px; line-height: 1.2; font-weight: 900; } .client-brand-subtitle { margin-top: 4px; font-size: 12px; color: rgba(255,255,255,0.72); }
   .client-sidebar-nav { display: flex; flex-direction: column; gap: 8px; padding-top: 8px; }
-  .client-nav-item { width: 100%; min-height: 58px; border: 0; border-radius: 14px; padding: 0 14px; background: transparent; color: rgba(255,255,255,0.82); cursor: pointer; display: grid; grid-template-columns: 30px minmax(0, 1fr); gap: 12px; align-items: center; text-align: right; font-family: Calibri, Arial, sans-serif; font-size: 15px; font-weight: 800; transition: 0.18s ease; }
-  .client-nav-item:hover, .client-nav-item.active { background: linear-gradient(135deg, ${theme.accent} 0%, ${theme.navy} 100%); color: #fff; box-shadow: 0 10px 24px rgba(255,39,86,0.18); transform: translateX(-2px); }
+  .client-nav-item { width: 100%; min-height: 58px; border: 1px solid rgba(255,255,255,0.14); border-radius: 14px; padding: 0 14px; background: rgba(255,255,255,0.07); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); color: rgba(255,255,255,0.82); cursor: pointer; display: grid; grid-template-columns: 30px minmax(0, 1fr); gap: 12px; align-items: center; text-align: right; font-family: Calibri, Arial, sans-serif; font-size: 15px; font-weight: 800; transition: 0.18s ease; }
+  .client-nav-item:hover { background: rgba(255,255,255,0.14); border-color: rgba(255,255,255,0.28); color: #fff; transform: translateX(-2px); }
+  .client-nav-item.active { background: linear-gradient(135deg, ${theme.accent} 0%, ${theme.navy} 100%); border-color: transparent; color: #fff; box-shadow: 0 10px 24px rgba(255,39,86,0.18); transform: translateX(-2px); }
   .client-nav-icon { font-size: 21px; text-align: center; }
   .client-main { min-width: 0; padding: 24px 28px 36px; }
   .client-topbar { min-height: 108px; background: linear-gradient(135deg, ${theme.navy}, ${theme.navyDark}); color: #fff; border: 1px solid rgba(0,33,93,0.20); border-radius: 24px; padding: 20px 22px; box-shadow: 0 8px 28px rgba(0,33,93,0.14); display: flex; justify-content: space-between; gap: 18px; align-items: center; margin-bottom: 18px; }

@@ -910,7 +910,7 @@ export default function ClientDashboardPage({
         <div className="client-sidebar-brand">
           <ZviranMark />
           <div>
-            <div className="client-brand-title">הפנסיה שלי</div>
+            <div className="client-brand-title">דוח פנסיוני מאוחד</div>
             <div className="client-brand-subtitle">דוח פנסיוני משפחתי</div>
           </div>
         </div>
@@ -935,6 +935,12 @@ export default function ClientDashboardPage({
           </div>
 
           <div className="client-topbar-actions">
+            {!isSharedMode ? (
+              <button type="button" onClick={onBack} className="client-back-button client-back-icon-btn" title="חזרה למסך העלאה">
+                ←
+              </button>
+            ) : null}
+
             <button type="button" className="client-history-button" onClick={onOpenPreviousReports} title="הכנה לצפייה בנתונים קודמים">
               <span className="client-history-icon">↺</span>
               <span><strong>נתונים קודמים</strong><small>הכנה לגרסאות דוח קודמות</small></span>
@@ -955,7 +961,11 @@ export default function ClientDashboardPage({
               <span>ייצוא PDF</span>
             </button>
 
-            {!isSharedMode ? <button type="button" onClick={onBack} className="client-back-button">חזרה ל־REPORT</button> : null}
+            {reportData?.clientLogo ? (
+              <div className="client-topbar-logo">
+                <img src={reportData.clientLogo} alt="לוגו" />
+              </div>
+            ) : null}
           </div>
         </header>
 
@@ -3088,6 +3098,10 @@ const clientDashboardCss = `
   .client-scope-select-wrap::after { content: "⌄"; position: absolute; left: 12px; top: 50%; transform: translateY(-60%); color: rgba(255,255,255,0.7); font-size: 16px; pointer-events: none; line-height: 1; }
   .client-scope-select { min-height: 32px; border: 0; outline: 0; color: #fff; font-family: Calibri, Arial, sans-serif; font-size: 14px; font-weight: 900; background: transparent; cursor: pointer; -webkit-appearance: none; appearance: none; padding-left: 4px; } .client-scope-select option { color: ${theme.text}; background: #fff; font-weight: 700; }
   .client-back-button { padding: 0 16px; font-size: 13px; font-weight: 900; cursor: pointer; }
+  .client-back-icon-btn { min-width: 54px; width: 54px; padding: 0; display: flex; align-items: center; justify-content: center; font-size: 22px; position: relative; }
+  .client-back-icon-btn:hover::after { content: attr(title); position: absolute; bottom: calc(100% + 8px); left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.82); color: #fff; font-size: 12px; font-weight: 700; white-space: nowrap; padding: 5px 10px; border-radius: 8px; pointer-events: none; z-index: 100; }
+  .client-topbar-logo { min-height: 54px; width: 80px; border-radius: 16px; background: rgba(255,255,255,0.11); border: 1px solid rgba(255,255,255,0.18); display: flex; align-items: center; justify-content: center; overflow: hidden; padding: 4px; }
+  .client-topbar-logo img { max-height: 46px; max-width: 72px; object-fit: contain; border-radius: 10px; }
   .client-content-card { background: #fff; border: 1px solid ${theme.border}; border-radius: 24px; padding: 22px; box-shadow: 0 8px 26px rgba(16,42,67,0.05); min-height: calc(100vh - 174px); }
   .client-section-title-row { display: flex; justify-content: space-between; gap: 16px; align-items: flex-start; margin-bottom: 18px; } .client-section-title-row h2 { margin: 0; color: ${theme.navy}; font-size: 22px; line-height: 1.25; font-weight: 900; }
   .client-section-title-row p, .client-panel-subtitle { margin: 6px 0 0; color: ${theme.textSoft}; font-size: 13px; line-height: 1.6; }

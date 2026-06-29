@@ -1016,7 +1016,6 @@ function PersonalDetailsCard({ member, index }) {
       <div className="client-personal-card-header">
         <div className="client-personal-avatar"><GenderIcon gender={gender} /></div>
         <div>
-          <div className="client-personal-card-kicker">{title}</div>
           <h3>{details.name || member?.name || "ללא שם"}</h3>
         </div>
       </div>

@@ -928,7 +928,7 @@ export default function ClientDashboardPage({
         <header className="client-topbar">
           <div className="client-topbar-title-wrap">
             <div className="client-topbar-eyebrow">מסך לקוח · תצוגת WEB</div>
-            <h1 className="client-page-title">{scope.isFamily ? "הפנסיה שלי" : (scope.name || "דוח אישי")}</h1>
+            <h1 className="client-page-title">{scope.isFamily ? "מבט משפחתי" : (scope.name || "דוח אישי")}</h1>
             <div className="client-page-subtitle">{scope.isFamily ? "תצוגה מאוחדת לכל המשפחה" : `תצוגה אישית עבור ${scope.name}`}</div>
           </div>
 

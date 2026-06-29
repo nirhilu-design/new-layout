@@ -1002,7 +1002,7 @@ function PdfIcon() {
 function renderSectionContent(sectionId, { scope, detailedMembers, specialSections, clientModel, reportData }) {
   if (sectionId === "pension") return <PensionSection scope={scope} />;
   if (sectionId === "personal") return <PersonalDetailsSection members={detailedMembers} />;
-  if (sectionId === "allocation") return <AllocationSection scope={scope} onSegmentClick={() => {}} />;
+  if (sectionId === "allocation") return <AllocationSection scope={scope} onSegmentClick={() => {}} printMode />;
   if (sectionId === "insurance") return <InsuranceSection scope={scope} />;
   if (sectionId === "loans") return <LoansSection scope={scope} />;
   if (sectionId === "capitalClassification") return <CapitalClassificationSection sections={specialSections.capitalClassification} />;
@@ -1181,7 +1181,7 @@ function PersonalField({ label, value }) {
   );
 }
 
-function AllocationSection({ scope, onSegmentClick }) {
+function AllocationSection({ scope, onSegmentClick, printMode = false }) {
   const total = Number(scope?.summary?.totalAssets || scope?.totalAssets || 0);
   const totalLabel = total > 0 ? ` (${formatCurrency(total)})` : "";
   return (
@@ -1215,14 +1215,14 @@ function AllocationSection({ scope, onSegmentClick }) {
         />
       </div>
 
-      <AssetProductTablesSection productTables={scope.assetProductTables} />
+      <AssetProductTablesSection productTables={scope.assetProductTables} printMode={printMode} />
     </div>
   );
 }
 
-function AssetProductTablesSection({ productTables }) {
+function AssetProductTablesSection({ productTables, printMode = false }) {
   const tables = safeArray(productTables);
-  const [openIds, setOpenIds] = useState(() => new Set(tables[0]?.id ? [tables[0].id] : []));
+  const [openIds, setOpenIds] = useState(() => printMode ? new Set(tables.map((t) => t.id)) : new Set(tables[0]?.id ? [tables[0].id] : []));
 
   const toggleOpen = (id) => {
     setOpenIds((prev) => {

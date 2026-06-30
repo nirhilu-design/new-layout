@@ -937,18 +937,18 @@ export default function ClientDashboardPage({
           <div className="client-topbar-actions">
             <button type="button" className="client-pdf-button" onClick={() => setShowPdfModal(true)} title="ייצוא לדוח PDF">
               <PdfIcon />
-              <span>ייצוא PDF</span>
             </button>
 
-            <label className="client-scope-select-wrap">
-              <span>תצוגה</span>
+            <div className="client-scope-select-wrap">
+              <span className="client-scope-label">תצוגה</span>
               <select value={localScopeId} onChange={handleScopeChange} className="client-scope-select">
                 <option value="family">משפחה מאוחדת</option>
                 {detailedMembers.map((member) => <option key={member.id || member.name} value={member.id || member.name}>{member.name || "ללא שם"}</option>)}
               </select>
-            </label>
+              <svg className="client-scope-chevron" width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M3 5L7 9L11 5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
+            </div>
 
-            <div className="client-updated-box"><span>עודכן לאחרונה:</span><strong>{clientModel.lastUpdated || "—"}</strong></div>
+            <div className="client-updated-inline"><span className="client-updated-label">תאריך עדכון</span><span className="client-updated-value">{clientModel.lastUpdated || "—"}</span></div>
 
             <button type="button" className="client-history-button" onClick={onOpenPreviousReports} title="הכנה לצפייה בנתונים קודמים">
               <span className="client-history-icon">↺</span>
@@ -3077,9 +3077,9 @@ const clientDashboardCss = `
   .client-web-shell { min-height: 100vh; background: ${theme.pageBg}; color: ${theme.text}; direction: rtl; font-family: Calibri, Arial, sans-serif; display: grid; grid-template-columns: 292px minmax(0, 1fr); }
   .client-sidebar { position: sticky; top: 0; height: 100vh; background: linear-gradient(180deg, ${theme.navyDark} 0%, ${theme.navy} 52%, #001733 100%); color: #fff; padding: 24px 16px; border-left: 1px solid rgba(255,255,255,0.08); overflow-y: auto; }
   .client-sidebar-brand { display: grid; grid-template-columns: 58px minmax(0, 1fr); gap: 12px; align-items: center; padding: 0 8px 24px; margin-bottom: 10px; border-bottom: 1px solid rgba(255,255,255,0.14); }
-  .client-zviran-mark { width: 54px; height: 54px; border-radius: 50%; background: rgba(255,255,255,0.14); border: 1px solid rgba(255,255,255,0.24); position: relative; flex-shrink: 0; }
-  .client-zviran-mark-red, .client-zviran-mark-white { position: absolute; width: 24px; height: 8px; border-radius: 999px; left: 15px; transform: rotate(-35deg); }
-  .client-zviran-mark-red { top: 15px; background: ${theme.accent}; } .client-zviran-mark-white { top: 25px; background: #fff; }
+  .client-zviran-mark { width: 58px; height: 58px; border-radius: 50%; background: #00215D; border: 2px solid rgba(255,255,255,0.30); box-shadow: 0 4px 14px rgba(0,0,0,0.25); position: relative; flex-shrink: 0; }
+  .client-zviran-mark-red, .client-zviran-mark-white { position: absolute; width: 28px; height: 9px; border-radius: 999px; left: 50%; transform: translateX(-50%) rotate(-35deg); }
+  .client-zviran-mark-red { top: 16px; background: ${theme.accent}; } .client-zviran-mark-white { top: 30px; background: #fff; }
   .client-brand-title { font-size: 21px; line-height: 1.2; font-weight: 900; } .client-brand-subtitle { margin-top: 4px; font-size: 12px; color: rgba(255,255,255,0.72); }
   .client-sidebar-nav { display: flex; flex-direction: column; gap: 4px; padding: 6px; margin-top: 8px; position: relative; background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.15); border-radius: 18px; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
   .client-nav-pill { position: absolute; right: 0; left: 0; height: 54px; border-radius: 14px; background: linear-gradient(135deg, ${theme.accent} 0%, ${theme.navy} 100%); box-shadow: 0 8px 22px rgba(255,39,86,0.22); transition: top 0.3s cubic-bezier(0.4, 0, 0.2, 1); pointer-events: none; z-index: 0; }
@@ -3093,19 +3093,24 @@ const clientDashboardCss = `
   .client-topbar-eyebrow { color: rgba(255,255,255,0.76); font-size: 12px; font-weight: 800; margin-bottom: 7px; }
   .client-page-title { margin: 0; font-size: 30px; line-height: 1.2; color: #fff; font-weight: 900; } .client-page-subtitle { margin-top: 7px; color: rgba(255,255,255,0.86); font-size: 13px; font-weight: 700; }
   .client-topbar-actions { display: flex; align-items: stretch; gap: 12px; flex-wrap: wrap; justify-content: flex-end; }
-  .client-history-button, .client-updated-box, .client-scope-select-wrap, .client-back-button { min-height: 54px; border-radius: 16px; background: rgba(255,255,255,0.11); border: 1px solid rgba(255,255,255,0.18); color: #fff; font-family: Calibri, Arial, sans-serif; }
+  .client-history-button, .client-scope-select-wrap, .client-back-button { min-height: 54px; border-radius: 16px; background: rgba(255,255,255,0.11); border: 1px solid rgba(255,255,255,0.18); color: #fff; font-family: Calibri, Arial, sans-serif; }
+  .client-updated-inline { display: flex; flex-direction: column; justify-content: center; gap: 2px; padding: 0 4px; }
+  .client-updated-label { color: rgba(255,255,255,0.60); font-size: 11px; font-weight: 700; }
+  .client-updated-value { color: #fff; font-size: 14px; font-weight: 900; }
   .client-history-button { min-width: 188px; padding: 8px 12px; display: grid; grid-template-columns: 34px minmax(0, 1fr); gap: 10px; align-items: center; text-align: right; cursor: pointer; }
   .client-history-button strong { display: block; color: #fff; font-size: 13px; line-height: 1.2; } .client-history-button small { display: block; color: rgba(255,255,255,0.72); margin-top: 3px; font-size: 10px; line-height: 1.2; }
   .client-history-icon { width: 34px; height: 34px; border-radius: 12px; background: rgba(255,255,255,0.14); display: flex; align-items: center; justify-content: center; color: ${theme.accent}; font-size: 20px; font-weight: 900; }
   .client-updated-box { padding: 8px 12px; display: flex; flex-direction: column; justify-content: center; gap: 3px; color: rgba(255,255,255,0.72); font-size: 11px; } .client-updated-box strong { color: #fff; font-size: 13px; }
-  .client-scope-select-wrap { padding: 7px 12px 7px 36px; position: relative; display: grid; grid-template-columns: auto minmax(150px, 1fr); gap: 10px; align-items: center; color: rgba(255,255,255,0.72); font-size: 12px; font-weight: 800; }
-  .client-scope-select-wrap::after { content: "⌄"; position: absolute; left: 12px; top: 50%; transform: translateY(-60%); color: rgba(255,255,255,0.7); font-size: 16px; pointer-events: none; line-height: 1; }
-  .client-scope-select { min-height: 32px; border: 0; outline: 0; color: #fff; font-family: Calibri, Arial, sans-serif; font-size: 14px; font-weight: 900; background: transparent; cursor: pointer; -webkit-appearance: none; appearance: none; padding-left: 4px; } .client-scope-select option { color: ${theme.text}; background: #fff; font-weight: 700; }
+  .client-scope-select-wrap { padding: 8px 14px; position: relative; display: flex; align-items: center; gap: 10px; min-width: 180px; }
+  .client-scope-label { color: rgba(255,255,255,0.60); font-size: 11px; font-weight: 800; white-space: nowrap; flex-shrink: 0; }
+  .client-scope-select { flex: 1; min-height: 32px; border: 0; outline: 0; color: #fff; font-family: Calibri, Arial, sans-serif; font-size: 14px; font-weight: 900; background: transparent; cursor: pointer; -webkit-appearance: none; appearance: none; }
+  .client-scope-select option { color: ${theme.navy}; background: #fff; font-weight: 700; font-size: 13px; }
+  .client-scope-chevron { color: rgba(255,255,255,0.70); flex-shrink: 0; pointer-events: none; }
   .client-back-button { padding: 0 16px; font-size: 13px; font-weight: 900; cursor: pointer; }
   .client-back-icon-btn { min-width: 54px; width: 54px; padding: 0; display: flex; align-items: center; justify-content: center; font-size: 22px; position: relative; }
   .client-back-icon-btn:hover::after { content: attr(title); position: absolute; bottom: calc(100% + 8px); left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.82); color: #fff; font-size: 12px; font-weight: 700; white-space: nowrap; padding: 5px 10px; border-radius: 8px; pointer-events: none; z-index: 100; }
-  .client-topbar-logo { min-height: 54px; width: 80px; border-radius: 16px; background: rgba(255,255,255,0.11); border: 1px solid rgba(255,255,255,0.18); display: flex; align-items: center; justify-content: center; overflow: hidden; padding: 4px; }
-  .client-topbar-logo img { max-height: 46px; max-width: 72px; object-fit: contain; border-radius: 10px; }
+  .client-topbar-logo { min-height: 54px; display: flex; align-items: center; justify-content: center; }
+  .client-topbar-logo img { max-height: 64px; max-width: 120px; object-fit: contain; filter: drop-shadow(0 2px 6px rgba(0,0,0,0.18)); }
   .client-content-card { background: #fff; border: 1px solid ${theme.border}; border-radius: 24px; padding: 22px; box-shadow: 0 8px 26px rgba(16,42,67,0.05); min-height: calc(100vh - 174px); }
   .client-section-title-row { display: flex; justify-content: space-between; gap: 16px; align-items: flex-start; margin-bottom: 18px; } .client-section-title-row h2 { margin: 0; color: ${theme.navy}; font-size: 22px; line-height: 1.25; font-weight: 900; }
   .client-section-title-row p, .client-panel-subtitle { margin: 6px 0 0; color: ${theme.textSoft}; font-size: 13px; line-height: 1.6; }
@@ -3311,8 +3316,10 @@ const clientDashboardCss = `
   .client-capital-study-table th:first-child, .client-capital-study-table td:first-child { text-align: right; }
   .client-capital-note { border: 1px solid #D8DEE9; border-radius: 16px; background: #F8FBFF; color: #627D98; font-size: 12px; line-height: 1.7; padding: 12px 14px; }
 
-  .client-pdf-button { min-height: 54px; padding: 0 16px; border-radius: 16px; background: rgba(255,255,255,0.11); border: 1px solid rgba(255,255,255,0.18); color: #fff; font-family: Calibri, Arial, sans-serif; font-size: 13px; font-weight: 900; cursor: pointer; display: flex; align-items: center; gap: 8px; white-space: nowrap; }
+  .client-pdf-button { min-height: 54px; width: 54px; padding: 0; border-radius: 16px; background: rgba(255,255,255,0.11); border: 1px solid rgba(255,255,255,0.18); color: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center; position: relative; }
   .client-pdf-button:hover { background: rgba(255,255,255,0.18); }
+  .client-pdf-button::after { content: attr(title); position: absolute; bottom: calc(100% + 8px); left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.82); color: #fff; font-size: 12px; font-weight: 700; white-space: nowrap; padding: 5px 10px; border-radius: 8px; pointer-events: none; z-index: 100; opacity: 0; transition: opacity .15s; }
+  .client-pdf-button:hover::after { opacity: 1; }
 
   .pdf-modal-overlay { position: fixed; inset: 0; z-index: 10000; background: rgba(0,24,69,0.48); }
   .pdf-modal { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 10001; background: #fff; border-radius: 24px; padding: 28px; width: min(520px, 94vw); box-shadow: 0 24px 64px rgba(0,33,93,0.22); direction: rtl; font-family: Calibri, Arial, sans-serif; }

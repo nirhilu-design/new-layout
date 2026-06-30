@@ -3199,28 +3199,6 @@ export default function ReportPage({
               page-break-inside: avoid !important;
             }
 
-            .responsive-grid-4 {
-              grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
-            }
-
-            .responsive-grid-2 {
-              grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-            }
-
-            .responsive-bottom-grid {
-              grid-template-columns: 1fr !important;
-            }
-
-            .members-section {
-              break-before: page !important;
-              page-break-before: always !important;
-            }
-
-            .loans-section {
-              break-before: page !important;
-              page-break-before: always !important;
-            }
-
             html,
             body {
               width: 210mm !important;
@@ -3275,11 +3253,19 @@ export default function ReportPage({
               page-break-inside: avoid !important;
             }
 
-            .force-new-page-print,
-            .members-section,
+            .force-new-page-print {
+              break-before: page !important;
+              page-break-before: always !important;
+            }
+
+            .members-section {
+              break-before: page !important;
+              page-break-before: always !important;
+            }
+
             .loans-section {
-              break-before: auto !important;
-              page-break-before: auto !important;
+              break-before: page !important;
+              page-break-before: always !important;
             }
 
             table {
@@ -3332,7 +3318,6 @@ export default function ReportPage({
               white-space: normal !important;
               word-break: break-word !important;
             }
-          }
 
             .section-28-capping-section {
               width: 100% !important;

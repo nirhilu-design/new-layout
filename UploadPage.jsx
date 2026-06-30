@@ -3179,6 +3179,10 @@ export default function UploadPage({ setReportData }) {
 
       <style>
         {`
+          button, input, select, textarea {
+            font-family: Calibri, sans-serif;
+          }
+
           @keyframes loadingBar {
             0% { background-position: 200% 0; }
             100% { background-position: -200% 0; }

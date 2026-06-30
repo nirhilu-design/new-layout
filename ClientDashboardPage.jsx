@@ -932,13 +932,10 @@ export default function ClientDashboardPage({
             <div className="client-topbar-eyebrow">מסך לקוח · תצוגת WEB</div>
             <h1 className="client-page-title">{scope.isFamily ? "מבט משפחתי" : (scope.name || "דוח אישי")}</h1>
             <div className="client-page-subtitle">{scope.isFamily ? "תצוגה מאוחדת לכל המשפחה" : `תצוגה אישית עבור ${scope.name}`}</div>
+            <div className="client-updated-inline"><span className="client-updated-label">תאריך עדכון</span><span className="client-updated-value">{clientModel.lastUpdated || "—"}</span></div>
           </div>
 
           <div className="client-topbar-actions">
-            <button type="button" className="client-pdf-button" onClick={() => setShowPdfModal(true)} title="ייצוא לדוח PDF">
-              <PdfIcon />
-            </button>
-
             <div className="client-scope-select-wrap">
               <span className="client-scope-label">תצוגה</span>
               <select value={localScopeId} onChange={handleScopeChange} className="client-scope-select">
@@ -948,19 +945,20 @@ export default function ClientDashboardPage({
               <svg className="client-scope-chevron" width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M3 5L7 9L11 5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
             </div>
 
-            <div className="client-updated-inline"><span className="client-updated-label">תאריך עדכון</span><span className="client-updated-value">{clientModel.lastUpdated || "—"}</span></div>
-
             <button type="button" className="client-history-button" onClick={onOpenPreviousReports} title="הכנה לצפייה בנתונים קודמים">
               <span className="client-history-icon">↺</span>
               <span><strong>נתונים קודמים</strong><small>הכנה לגרסאות דוח קודמות</small></span>
             </button>
 
+            <button type="button" className="client-pdf-button" onClick={() => setShowPdfModal(true)} title="ייצוא לדוח PDF">
+              <PdfIcon />
+            </button>
+
             {!isSharedMode ? (
               <button type="button" onClick={onBack} className="client-back-button client-back-icon-btn" title="חזרה למסך העלאה">
                 <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
-                  <path d="M11 3L11 14" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-                  <path d="M7 7L11 3L15 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                  <path d="M4 17H18" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                  <path d="M19 11H5" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                  <path d="M10 6L5 11L10 16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                 </svg>
               </button>
             ) : null}
@@ -2253,7 +2251,7 @@ function Section28ComparisonBars({ rows }) {
         const afterClass = after >= before ? "primary" : "muted";
         const beforeBar = { value: before, displayValue: row.before, className: beforeClass };
         const afterBar = { value: after, displayValue: row.after, className: afterClass };
-        const orderedBars = [beforeBar, afterBar];
+        const orderedBars = beforeClass === "primary" ? [beforeBar, afterBar] : [afterBar, beforeBar];
 
         return (
           <div className="client-section28-bar-group" key={`${row.label}-${index}`}>
@@ -3095,8 +3093,9 @@ const clientDashboardCss = `
   .client-topbar-actions { display: flex; align-items: stretch; gap: 12px; flex-wrap: wrap; justify-content: flex-end; }
   .client-history-button, .client-scope-select-wrap, .client-back-button { min-height: 54px; border-radius: 16px; background: rgba(255,255,255,0.11); border: 1px solid rgba(255,255,255,0.18); color: #fff; font-family: Calibri, Arial, sans-serif; }
   .client-updated-inline { display: flex; flex-direction: column; justify-content: center; gap: 2px; padding: 0 4px; }
-  .client-updated-label { color: rgba(255,255,255,0.60); font-size: 11px; font-weight: 700; }
-  .client-updated-value { color: #fff; font-size: 14px; font-weight: 900; }
+  .client-updated-inline { margin-top: 8px; display: flex; flex-direction: column; gap: 1px; }
+  .client-updated-label { color: rgba(255,255,255,0.55); font-size: 11px; font-weight: 700; }
+  .client-updated-value { color: rgba(255,255,255,0.92); font-size: 13px; font-weight: 800; }
   .client-history-button { min-width: 188px; padding: 8px 12px; display: grid; grid-template-columns: 34px minmax(0, 1fr); gap: 10px; align-items: center; text-align: right; cursor: pointer; }
   .client-history-button strong { display: block; color: #fff; font-size: 13px; line-height: 1.2; } .client-history-button small { display: block; color: rgba(255,255,255,0.72); margin-top: 3px; font-size: 10px; line-height: 1.2; }
   .client-history-icon { width: 34px; height: 34px; border-radius: 12px; background: rgba(255,255,255,0.14); display: flex; align-items: center; justify-content: center; color: ${theme.accent}; font-size: 20px; font-weight: 900; }

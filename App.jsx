@@ -148,6 +148,10 @@ function App() {
     setCurrentPage("report");
   };
 
+  const handleUpdateReportData = (patch) => {
+    setReportData((prev) => ({ ...(prev || {}), ...patch }));
+  };
+
   const handleOpenClientDashboard = (options = {}) => {
     const view = options.view || "family";
 
@@ -272,6 +276,7 @@ function App() {
           reportData={reportData}
           onBack={() => setCurrentPage("report")}
           onCreateShareLink={handleCreateShareLink}
+          onUpdateReportData={handleUpdateReportData}
           isSharedMode={isSharedMode}
           sharePayload={sharePayload}
           viewMode={clientViewMode}

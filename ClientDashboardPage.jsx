@@ -3445,7 +3445,9 @@ const clientDashboardCss = `
     .client-section-title-row { break-inside: avoid; }
     .client-margin-top { margin-top: 6mm !important; }
     .client-kpi-grid { margin-bottom: 6mm !important; }
-    table { break-inside: avoid; page-break-inside: avoid; width: 100%; border-collapse: collapse; font-size: 8.5pt; }
+    /* Let a long table flow across pages (header repeats) instead of jumping whole onto the next sheet and stranding its heading on an empty page. Rows stay atomic. */
+    table { break-inside: auto; page-break-inside: auto; width: 100%; border-collapse: collapse; font-size: 8.5pt; }
+    tr { break-inside: avoid; page-break-inside: avoid; }
     th, td { border: 1px solid #E2D1BF; padding: 3px 5px; }
     thead { display: table-header-group; }
     /* shrink wide tables to fit the sheet instead of overflowing/being clipped by the scroll wrapper */
@@ -3457,6 +3459,9 @@ const clientDashboardCss = `
     .client-grid-3 { display: grid !important; grid-template-columns: repeat(3, 1fr) !important; }
     .client-personal-grid { display: grid !important; grid-template-columns: repeat(2, 1fr) !important; }
     .client-panel, .client-product-accordion, .client-personal-card, .client-kpi-card, .client-donut-panel { break-inside: avoid; page-break-inside: avoid; }
+    /* a panel/accordion wrapping a long table must be allowed to break, otherwise its heading gets stranded on its own page */
+    .client-panel:has(table), .client-product-accordion:has(table) { break-inside: auto !important; page-break-inside: auto !important; }
+    .client-panel:has(table) h3 { break-after: avoid; page-break-after: avoid; }
     button, .client-topbar, .client-drawer-overlay, .pdf-modal { display: none !important; }
     .client-content-card { box-shadow: none !important; border: none !important; }
     svg, canvas { max-width: 100% !important; }

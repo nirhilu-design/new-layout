@@ -869,6 +869,7 @@ export default function ClientDashboardPage({
   selectedMemberId = null,
   onChangeView = () => {},
   onOpenPreviousReports = () => {},
+  onUpdateReportData = () => {},
 }) {
   const [activeSection, setActiveSection] = useState("personal");
   const [selectedPieSegment, setSelectedPieSegment] = useState(null);
@@ -980,7 +981,15 @@ export default function ClientDashboardPage({
           {activeSection === "capitalClassification" ? <CapitalClassificationSection sections={specialSections.capitalClassification} /> : null}
           {activeSection === "section28" ? <Section28Section section28Capping={specialSections.section28Capping} /> : null}
           {activeSection === "recognizedPension" ? <RecognizedPensionSection entries={specialSections.recognizedPensionEntries} /> : null}
-          {activeSection === "summary" ? <ConversationSummarySection scope={scope} clientModel={clientModel} reportData={reportData} /> : null}
+          {activeSection === "summary" ? (
+            <ConversationSummarySection
+              scope={scope}
+              clientModel={clientModel}
+              reportData={reportData}
+              isSharedMode={isSharedMode}
+              onUpdateReportData={onUpdateReportData}
+            />
+          ) : null}
         </section>
       </main>
 
@@ -1021,7 +1030,7 @@ function renderSectionContent(sectionId, { scope, detailedMembers, specialSectio
   if (sectionId === "capitalClassification") return <CapitalClassificationSection sections={specialSections.capitalClassification} />;
   if (sectionId === "section28") return <Section28Section section28Capping={specialSections.section28Capping} />;
   if (sectionId === "recognizedPension") return <RecognizedPensionSection entries={specialSections.recognizedPensionEntries} />;
-  if (sectionId === "summary") return <ConversationSummarySection scope={scope} clientModel={clientModel} reportData={reportData} />;
+  if (sectionId === "summary") return <ConversationSummarySection scope={scope} clientModel={clientModel} reportData={reportData} printMode />;
   return null;
 }
 
@@ -2582,24 +2591,152 @@ function handleMockEmailSend() {
   alert("שליחת מייל תתווסף בהמשך. כרגע זה כפתור דמה בלבד.");
 }
 
-function ConversationSummarySection({ scope, clientModel, reportData }) {
+function downloadAgentNotePdf(noteText, scopeName) {
+  const printWindow = window.open("", "_blank", "width=900,height=700");
+
+  if (!printWindow) {
+    alert("הדפדפן חסם את חלון ההדפסה. יש לאפשר popups ולנסות שוב.");
+    return;
+  }
+
+  const safeNote = escapeHtml(noteText || "לא הוזנה נקודה לטיפול הסוכן.");
+  const today = new Intl.DateTimeFormat("he-IL").format(new Date());
+
+  printWindow.document.open();
+  printWindow.document.write(`<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <title>נקודה לטיפול סוכן</title>
+  <style>
+    @page { size: A4 portrait; margin: 14mm; }
+    * { box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    html, body { margin: 0; padding: 0; direction: rtl; font-family: Calibri, Arial, sans-serif; color: #102A43; background: #ffffff; }
+    .agent-note-brand { display: flex; align-items: center; gap: 14px; padding-bottom: 16px; border-bottom: 3px solid #00215D; margin-bottom: 22px; }
+    .agent-note-logo { width: 54px; height: 54px; border-radius: 50%; background: #00215D; position: relative; box-shadow: 0 8px 20px rgba(0,33,93,.16); flex: 0 0 54px; }
+    .agent-note-logo::before, .agent-note-logo::after { content: ""; position: absolute; width: 26px; height: 8px; border-radius: 999px; right: 14px; transform: rotate(-35deg); }
+    .agent-note-logo::before { top: 17px; background: #FF2756; }
+    .agent-note-logo::after { top: 28px; background: #ffffff; }
+    .agent-note-brand-title { color: #00215D; font-size: 22px; font-weight: 900; line-height: 1.15; }
+    .agent-note-brand-subtitle { color: #627D98; font-size: 12px; font-weight: 700; margin-top: 4px; }
+    h1 { margin: 0 0 6px; color: #00215D; font-size: 26px; line-height: 1.25; font-weight: 900; }
+    .agent-note-meta { color: #627D98; font-size: 13px; margin: 0 0 18px; }
+    .agent-note-box { border: 1px solid #E2D1BF; border-radius: 16px; padding: 18px; background: #FCFBF8; font-size: 14.5px; line-height: 1.8; white-space: pre-wrap; word-break: break-word; }
+  </style>
+</head>
+<body>
+  <header class="agent-note-brand">
+    <div class="agent-note-logo" aria-hidden="true"></div>
+    <div>
+      <div class="agent-note-brand-title">צבירן</div>
+      <div class="agent-note-brand-subtitle">דוח פנסיוני משפחתי מאוחד</div>
+    </div>
+  </header>
+  <h1>נקודה לטיפול סוכן</h1>
+  <p class="agent-note-meta">${escapeHtml(scopeName || "")} · ${today}</p>
+  <div class="agent-note-box">${safeNote}</div>
+  <script>
+    window.onload = function () {
+      window.focus();
+      window.print();
+    };
+  </script>
+</body>
+</html>`);
+  printWindow.document.close();
+}
+
+function ConversationSummarySection({ scope, clientModel, reportData, isSharedMode = false, onUpdateReportData = () => {}, printMode = false }) {
   const savedSummary = reportData?.conversationSummary || reportData?.clientConversationSummary || clientModel?.conversationSummary || "";
   const savedActions = reportData?.actionRecommendations || reportData?.recommendationsText || clientModel?.actionRecommendations || "";
+  const savedAgentNote = reportData?.agentHandlingNote || "";
   const fallbackSummary = `כאן יוצג סיכום השיחה עם הלקוח עבור ${scope.name}. בשלב זה זהו אזור הכנה, וניתן לחבר אליו בהמשך שדה טקסט מה־REPORT או ממנגנון שמירת הדוח.`;
   const fallbackActions = "כאן יוצגו המלצות פעולה, נקודות לבדיקה, החלטות שהתקבלו או משימות להמשך טיפול.";
   const actionsForPdf = savedActions || fallbackActions;
 
+  const [summaryDraft, setSummaryDraft] = useState(savedSummary);
+  const [actionsDraft, setActionsDraft] = useState(savedActions);
+  const [agentNoteDraft, setAgentNoteDraft] = useState(savedAgentNote);
+
+  const handleSummaryChange = (event) => {
+    const value = event.target.value;
+    setSummaryDraft(value);
+    onUpdateReportData({ conversationSummary: value, clientConversationSummary: value, summaryText: value });
+  };
+
+  const handleActionsChange = (event) => {
+    const value = event.target.value;
+    setActionsDraft(value);
+    onUpdateReportData({ actionRecommendations: value, clientActionRecommendations: value, recommendationsText: value, recommendations: value });
+  };
+
+  const handleAgentNoteChange = (event) => {
+    const value = event.target.value;
+    setAgentNoteDraft(value);
+    onUpdateReportData({ agentHandlingNote: value });
+  };
+
+  if (isSharedMode || printMode) {
+    return (
+      <div>
+        <SectionTitle title="סיכום שיחה והמלצות פעולה" subtitle="אזור ייעודי להצגת סיכום פגישה, תובנות והמלצות פעולה ללקוח." />
+        <div className="client-grid-2">
+          <TextPanel title="סיכום שיחה" text={savedSummary || fallbackSummary} />
+          <TextPanel title="המלצות פעולה" text={savedActions || fallbackActions}>
+            {printMode ? null : (
+              <div className="client-action-buttons">
+                <button type="button" className="client-action-button primary" onClick={() => downloadActionsPdf(actionsForPdf)}>הורדת PDF</button>
+                <button type="button" className="client-action-button" onClick={handleMockEmailSend}>שליחת מייל</button>
+              </div>
+            )}
+          </TextPanel>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div>
-      <SectionTitle title="סיכום שיחה והמלצות פעולה" subtitle="אזור ייעודי להצגת סיכום פגישה, תובנות והמלצות פעולה ללקוח." />
+      <SectionTitle title="סיכום שיחה והמלצות פעולה" subtitle="כתיבה ישירה מהמסך — סיכום השיחה והמלצות הפעולה יתעדכנו בדוח ה־PDF המלא." />
       <div className="client-grid-2">
-        <TextPanel title="סיכום שיחה" text={savedSummary || fallbackSummary} />
-        <TextPanel title="המלצות פעולה" text={savedActions || fallbackActions}>
+        <div className="client-panel">
+          <h3>סיכום שיחה</h3>
+          <textarea
+            className="client-text-editor"
+            value={summaryDraft}
+            onChange={handleSummaryChange}
+            placeholder={fallbackSummary}
+          />
+        </div>
+
+        <div className="client-panel">
+          <h3>המלצות פעולה</h3>
+          <textarea
+            className="client-text-editor"
+            value={actionsDraft}
+            onChange={handleActionsChange}
+            placeholder={fallbackActions}
+          />
           <div className="client-action-buttons">
-            <button type="button" className="client-action-button primary" onClick={() => downloadActionsPdf(actionsForPdf)}>הורדת PDF</button>
+            <button type="button" className="client-action-button primary" onClick={() => downloadActionsPdf(actionsDraft || fallbackActions)}>הורדת PDF</button>
             <button type="button" className="client-action-button" onClick={handleMockEmailSend}>שליחת מייל</button>
           </div>
-        </TextPanel>
+        </div>
+      </div>
+
+      <div className="client-panel client-margin-top">
+        <h3>נקודה לטיפול סוכן</h3>
+        <p className="client-panel-badge">גלוי ליועץ בלבד — לא מוצג ללקוח ואינו נכלל בדוח ה־PDF המלא.</p>
+        <textarea
+          className="client-text-editor"
+          value={agentNoteDraft}
+          onChange={handleAgentNoteChange}
+          placeholder="כתוב כאן נקודה לטיפול הסוכן, לצורך ייצוא ל־PDF ייעודי ושליחה נפרדת."
+        />
+        <div className="client-action-buttons">
+          <button type="button" className="client-action-button primary" onClick={() => downloadAgentNotePdf(agentNoteDraft, scope.name)}>ייצוא ל־PDF ייעודי</button>
+          <button type="button" className="client-action-button" onClick={handleMockEmailSend}>שליחת מייל</button>
+        </div>
       </div>
     </div>
   );
@@ -3173,6 +3310,9 @@ const clientDashboardCss = `
   .client-insurance-table.member .client-insurance-col-currentValue { width: 14%; }
   .client-insurance-table.member .client-insurance-col-deathCoverage { width: 15%; }
   .client-empty-state { border: 1px dashed ${theme.border}; border-radius: 16px; background: ${theme.surfaceAlt}; padding: 18px; color: ${theme.textSoft}; font-size: 13px; text-align: center; line-height: 1.7; } .client-text-panel { min-height: 210px; border: 1px solid ${theme.divider}; border-radius: 16px; background: #FFFDFB; padding: 16px; color: ${theme.text}; font-size: 13px; line-height: 1.9; white-space: pre-wrap; }
+  .client-text-editor { width: 100%; min-height: 210px; border: 1px solid ${theme.divider}; border-radius: 16px; background: #FFFDFB; padding: 16px; color: ${theme.text}; font-size: 13px; line-height: 1.9; font-family: Calibri, Arial, sans-serif; resize: vertical; }
+  .client-text-editor:focus { outline: none; border-color: ${theme.navy}; box-shadow: 0 0 0 3px rgba(0,33,93,.10); }
+  .client-panel-badge { margin: -4px 0 10px; color: ${theme.textSoft}; font-size: 11.5px; font-weight: 800; }
 
   .client-section-title-row.compact { margin-top: 18px; margin-bottom: 12px; }
   .client-asset-products { display: flex; flex-direction: column; gap: 12px; }

@@ -3332,7 +3332,6 @@ export default function ReportPage({
               white-space: normal !important;
               word-break: break-word !important;
             }
-          }
 
             .section-28-capping-section {
               width: 100% !important;
@@ -5849,7 +5848,7 @@ function PrintReportA4({ reportData, conversationSummary = "", actionRecommendat
       @page { size: A4 portrait; margin: 0; }
       html, body { width: 210mm; margin: 0 !important; padding: 0 !important; background: #fff !important; }
       .print-report-root { display: block !important; direction: rtl; font-family: Calibri, Arial, sans-serif; color: #102A43; }
-      .print-a4-page { width: 210mm; height: 297mm; padding: 9mm 10mm; background: #fff; page-break-after: always; break-after: page; overflow: hidden; box-sizing: border-box; position: relative; }
+      .print-a4-page { width: 210mm; min-height: 297mm; padding: 9mm 10mm; background: #fff; page-break-after: always; break-after: page; overflow: visible; box-sizing: border-box; position: relative; }
       .print-a4-page:last-child { page-break-after: auto; break-after: auto; }
       .print-page-header { display: flex; justify-content: space-between; align-items: center; padding-bottom: 4mm; margin-bottom: 5mm; border-bottom: 1px solid #E2D1BF; }
       .print-logo-text { color: #00215D; font-size: 22px; font-weight: 300; direction: ltr; }
@@ -5897,7 +5896,7 @@ function PrintReportA4({ reportData, conversationSummary = "", actionRecommendat
       .print-half-page { height: 123mm; }
       .print-appendix-grid { display: grid; grid-template-columns: minmax(0, 1.78fr) minmax(0, 0.82fr); gap: 4.5mm; align-items: start; direction: rtl; }
       .print-appendix-block { min-height: auto !important; break-inside: auto !important; page-break-inside: auto !important; }
-      .print-appendix-card { border: 1px solid #E2D1BF; border-radius: 5mm; padding: 3.2mm; background: #FFFFFF; box-sizing: border-box; overflow: hidden; }
+      .print-appendix-card { border: 1px solid #E2D1BF; border-radius: 5mm; padding: 3.2mm; background: #FFFFFF; box-sizing: border-box; overflow: visible; }
       .print-appendix-page { padding: 7mm 9mm !important; }
       .print-appendix-page .print-page-header { margin-bottom: 3.5mm; padding-bottom: 3mm; }
       .print-appendix-page .print-section-heading { font-size: 12px; margin-bottom: 2.2mm; }
@@ -5907,7 +5906,7 @@ function PrintReportA4({ reportData, conversationSummary = "", actionRecommendat
       .print-section28-summary-box { border: 1px solid #E2D1BF; border-radius: 4mm; background: #FCFBF8; padding: 3mm 4mm; margin-top: 2.5mm; }
       .print-capital-page { padding: 7mm 8mm !important; }
       .print-capital-page .print-page-header { margin-bottom: 3mm; padding-bottom: 3mm; }
-      .print-capital-owner { border: 1px solid #E2D1BF; border-radius: 5mm; background: #FFFFFF; overflow: hidden; margin-bottom: 4mm; }
+      .print-capital-owner { border: 1px solid #E2D1BF; border-radius: 5mm; background: #FFFFFF; overflow: visible; margin-bottom: 4mm; break-inside: avoid; page-break-inside: avoid; }
       .print-capital-owner-header { display: flex; justify-content: space-between; align-items: center; gap: 3mm; padding: 3mm 4mm; border-bottom: 1px solid #EEE4D8; background: #FCFBF8; }
       .print-capital-owner-title { color: #00215D; font-size: 12px; font-weight: 900; }
       .print-capital-owner-source { color: #627D98; font-size: 8.2px; margin-top: 1mm; }

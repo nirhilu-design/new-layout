@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 
 const theme = {
   pageBg: "#F9F7F3",
@@ -840,7 +840,7 @@ const BASE_NAV_ITEMS = [
   { id: "allocation", label: "התפלגות נכסים", icon: "◔" },
   { id: "insurance", label: "פירוט ביטוחים", icon: "🛡" },
   { id: "loans", label: "הלוואות", icon: "🏦" },
-  { id: "summary", label: "סיכום שיחה והמלצות פעולה", icon: "✎" },
+  { id: "summary", label: "סיכום שיחה", icon: "✎" },
 ];
 
 function buildNavItems(specialSections) {
@@ -2473,47 +2473,6 @@ function TaxSavingGapSummary({ pdfTotal, manualTotal }) {
   );
 }
 
-function cleanActionRecommendationLine(line) {
-  return String(line || "")
-    .replace(/^\s*(?:[-•*]+\s*)+/, "")
-    .replace(/^\s*\d+\s*[.)\-–:]\s*/, "")
-    .replace(/^\s*[א-ת]{1,3}[׳'״\"]?\s*[.)\-–:]\s*/, "")
-    .trim();
-}
-
-function splitActionRecommendations(text) {
-  const raw = String(text || "").replace(/\r/g, "").trim();
-  if (!raw) return [];
-
-  const numberedMatches = Array.from(
-    raw.matchAll(/(?:^|\n)\s*(?:\d+\s*[.)\-–:]|[א-ת]{1,3}[׳'״\"]?\s*[.)\-–:])\s+([\s\S]*?)(?=(?:\n\s*(?:\d+\s*[.)\-–:]|[א-ת]{1,3}[׳'״\"]?\s*[.)\-–:])\s+)|$)/g)
-  )
-    .map((match) => cleanActionRecommendationLine(match[1]))
-    .filter(Boolean);
-
-  if (numberedMatches.length) {
-    return numberedMatches;
-  }
-
-  const bulletLines = raw
-    .split(/\n+/)
-    .map(cleanActionRecommendationLine)
-    .filter(Boolean);
-
-  if (bulletLines.length > 1) {
-    return bulletLines;
-  }
-
-  return raw
-    .split(/(?<=[.!?])\s+/)
-    .map(cleanActionRecommendationLine)
-    .filter(Boolean);
-}
-
-function getActionListMarker(index) {
-  return String(index + 1);
-}
-
 function escapeHtml(value) {
   return String(value || "")
     .replace(/&/g, "&amp;")
@@ -2523,75 +2482,11 @@ function escapeHtml(value) {
     .replace(/'/g, "&#039;");
 }
 
-function downloadActionsPdf(actionsText) {
-  const actions = splitActionRecommendations(actionsText);
-  const printWindow = window.open("", "_blank", "width=900,height=700");
-
-  if (!printWindow) {
-    alert("הדפדפן חסם את חלון ההדפסה. יש לאפשר popups ולנסות שוב.");
-    return;
-  }
-
-  const actionsHtml = actions.length
-    ? actions.map((action, index) => `<li class="action-row"><span class="action-number">${getActionListMarker(index)}</span><p class="action-text">${escapeHtml(action)}</p></li>`).join("")
-    : `<li class="action-row"><span class="action-number">1</span><p class="action-text">לא הוזנו המלצות פעולה בדוח זה.</p></li>`;
-
-  printWindow.document.open();
-  printWindow.document.write(`<!doctype html>
-<html lang="he" dir="rtl">
-<head>
-  <meta charset="utf-8" />
-  <title>פעולות אופרטיביות לביצוע</title>
-  <style>
-    @page { size: A4 portrait; margin: 12mm; }
-    * { box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-    html, body { margin: 0; padding: 0; direction: rtl; font-family: Calibri, Arial, sans-serif; color: #102A43; background: #ffffff; }
-    body { overflow: visible; }
-    .actions-pdf-page { width: 100%; min-height: auto; padding: 0; }
-    .actions-brand { display: flex; align-items: center; gap: 14px; padding-bottom: 16px; border-bottom: 3px solid #00215D; margin-bottom: 22px; }
-    .actions-logo { width: 54px; height: 54px; border-radius: 50%; background: #00215D; position: relative; box-shadow: 0 8px 20px rgba(0,33,93,.16); flex: 0 0 54px; }
-    .actions-logo::before, .actions-logo::after { content: ""; position: absolute; width: 26px; height: 8px; border-radius: 999px; right: 14px; transform: rotate(-35deg); }
-    .actions-logo::before { top: 17px; background: #FF2756; }
-    .actions-logo::after { top: 28px; background: #ffffff; }
-    .actions-brand-title { color: #00215D; font-size: 22px; font-weight: 900; line-height: 1.15; }
-    .actions-brand-subtitle { color: #627D98; font-size: 12px; font-weight: 700; margin-top: 4px; }
-    h1 { margin: 0 0 16px; color: #00215D; font-size: 28px; line-height: 1.25; font-weight: 900; }
-    .actions-intro { color: #627D98; font-size: 13px; line-height: 1.65; margin: 0 0 16px; }
-    ol { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 10px; }
-    .action-row { display: flex; flex-direction: row; align-items: flex-start; gap: 14px; border: 1px solid #E2D1BF; border-radius: 14px; padding: 12px 14px; background: #FCFBF8; break-inside: avoid; page-break-inside: avoid; width: 100%; min-width: 0; overflow: visible; }
-    .action-number { width: 34px; height: 34px; min-width: 34px; border-radius: 12px; background: #00215D; color: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 900; direction: ltr; line-height: 1; }
-    .action-text { flex: 1 1 auto; min-width: 0; margin: 2px 0 0; color: #102A43; font-size: 14.5px; line-height: 1.72; white-space: pre-wrap; overflow-wrap: anywhere; word-break: normal; text-align: right; padding-inline-start: 2px; }
-  </style>
-</head>
-<body>
-  <main class="actions-pdf-page">
-    <header class="actions-brand">
-      <div class="actions-logo" aria-hidden="true"></div>
-      <div>
-        <div class="actions-brand-title">צבירן</div>
-        <div class="actions-brand-subtitle">דוח פנסיוני משפחתי מאוחד</div>
-      </div>
-    </header>
-    <h1>פעולות אופרטיביות לביצוע</h1>
-    <p class="actions-intro">רשימת הפעולות להמשך טיפול כפי שהוגדרה באזור המלצות הפעולה בדוח הלקוח.</p>
-    <ol>${actionsHtml}</ol>
-  </main>
-  <script>
-    window.onload = function () {
-      window.focus();
-      window.print();
-    };
-  </script>
-</body>
-</html>`);
-  printWindow.document.close();
-}
-
 function handleMockEmailSend() {
   alert("שליחת מייל תתווסף בהמשך. כרגע זה כפתור דמה בלבד.");
 }
 
-function downloadAgentNotePdf(noteText, scopeName) {
+function openRichTextPdf(title, htmlContent, scopeName) {
   const printWindow = window.open("", "_blank", "width=900,height=700");
 
   if (!printWindow) {
@@ -2599,7 +2494,7 @@ function downloadAgentNotePdf(noteText, scopeName) {
     return;
   }
 
-  const safeNote = escapeHtml(noteText || "לא הוזנה נקודה לטיפול הסוכן.");
+  const safeHtml = htmlContent && htmlContent.trim() ? htmlContent : "<p>לא הוזן תוכן.</p>";
   const today = new Intl.DateTimeFormat("he-IL").format(new Date());
 
   printWindow.document.open();
@@ -2607,34 +2502,37 @@ function downloadAgentNotePdf(noteText, scopeName) {
 <html lang="he" dir="rtl">
 <head>
   <meta charset="utf-8" />
-  <title>נקודה לטיפול סוכן</title>
+  <title>${escapeHtml(title)}</title>
   <style>
     @page { size: A4 portrait; margin: 14mm; }
     * { box-sizing: border-box; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     html, body { margin: 0; padding: 0; direction: rtl; font-family: Calibri, Arial, sans-serif; color: #102A43; background: #ffffff; }
-    .agent-note-brand { display: flex; align-items: center; gap: 14px; padding-bottom: 16px; border-bottom: 3px solid #00215D; margin-bottom: 22px; }
-    .agent-note-logo { width: 54px; height: 54px; border-radius: 50%; background: #00215D; position: relative; box-shadow: 0 8px 20px rgba(0,33,93,.16); flex: 0 0 54px; }
-    .agent-note-logo::before, .agent-note-logo::after { content: ""; position: absolute; width: 26px; height: 8px; border-radius: 999px; right: 14px; transform: rotate(-35deg); }
-    .agent-note-logo::before { top: 17px; background: #FF2756; }
-    .agent-note-logo::after { top: 28px; background: #ffffff; }
-    .agent-note-brand-title { color: #00215D; font-size: 22px; font-weight: 900; line-height: 1.15; }
-    .agent-note-brand-subtitle { color: #627D98; font-size: 12px; font-weight: 700; margin-top: 4px; }
+    .rt-brand { display: flex; align-items: center; gap: 14px; padding-bottom: 16px; border-bottom: 3px solid #00215D; margin-bottom: 22px; }
+    .rt-logo { width: 54px; height: 54px; border-radius: 50%; background: #00215D; position: relative; box-shadow: 0 8px 20px rgba(0,33,93,.16); flex: 0 0 54px; }
+    .rt-logo::before, .rt-logo::after { content: ""; position: absolute; width: 26px; height: 8px; border-radius: 999px; right: 14px; transform: rotate(-35deg); }
+    .rt-logo::before { top: 17px; background: #FF2756; }
+    .rt-logo::after { top: 28px; background: #ffffff; }
+    .rt-brand-title { color: #00215D; font-size: 22px; font-weight: 900; line-height: 1.15; }
+    .rt-brand-subtitle { color: #627D98; font-size: 12px; font-weight: 700; margin-top: 4px; }
     h1 { margin: 0 0 6px; color: #00215D; font-size: 26px; line-height: 1.25; font-weight: 900; }
-    .agent-note-meta { color: #627D98; font-size: 13px; margin: 0 0 18px; }
-    .agent-note-box { border: 1px solid #E2D1BF; border-radius: 16px; padding: 18px; background: #FCFBF8; font-size: 14.5px; line-height: 1.8; white-space: pre-wrap; word-break: break-word; }
+    .rt-meta { color: #627D98; font-size: 13px; margin: 0 0 18px; }
+    .rt-box { border: 1px solid #E2D1BF; border-radius: 16px; padding: 18px; background: #FCFBF8; font-size: 14.5px; line-height: 1.8; word-break: break-word; }
+    .rt-box p { margin: 0 0 10px; }
+    .rt-box ul, .rt-box ol { margin: 0 0 10px; padding-inline-start: 22px; }
+    .rt-box b, .rt-box strong { font-weight: 900; }
   </style>
 </head>
 <body>
-  <header class="agent-note-brand">
-    <div class="agent-note-logo" aria-hidden="true"></div>
+  <header class="rt-brand">
+    <div class="rt-logo" aria-hidden="true"></div>
     <div>
-      <div class="agent-note-brand-title">צבירן</div>
-      <div class="agent-note-brand-subtitle">דוח פנסיוני משפחתי מאוחד</div>
+      <div class="rt-brand-title">צבירן</div>
+      <div class="rt-brand-subtitle">דוח פנסיוני משפחתי מאוחד</div>
     </div>
   </header>
-  <h1>נקודה לטיפול סוכן</h1>
-  <p class="agent-note-meta">${escapeHtml(scopeName || "")} · ${today}</p>
-  <div class="agent-note-box">${safeNote}</div>
+  <h1>${escapeHtml(title)}</h1>
+  <p class="rt-meta">${escapeHtml(scopeName || "")} · ${today}</p>
+  <div class="rt-box">${safeHtml}</div>
   <script>
     window.onload = function () {
       window.focus();
@@ -2646,50 +2544,112 @@ function downloadAgentNotePdf(noteText, scopeName) {
   printWindow.document.close();
 }
 
+function downloadSummaryPdf(html, scopeName) {
+  openRichTextPdf("סיכום שיחה", html, scopeName);
+}
+
+function downloadAgentNotePdf(html, scopeName) {
+  openRichTextPdf("נקודה לטיפול סוכן", html, scopeName);
+}
+
+function RichTextToolbar({ onCommand }) {
+  const buttons = [
+    { command: "bold", label: "מודגש", icon: <b>B</b> },
+    { command: "italic", label: "נטוי", icon: <i>I</i> },
+    { command: "underline", label: "קו תחתון", icon: <u>U</u> },
+    { command: "insertUnorderedList", label: "רשימת תבליטים", icon: "•" },
+    { command: "insertOrderedList", label: "רשימה ממוספרת", icon: "1." },
+  ];
+
+  return (
+    <div className="client-rich-toolbar">
+      {buttons.map((btn) => (
+        <button
+          key={btn.command}
+          type="button"
+          title={btn.label}
+          className="client-rich-toolbar-button"
+          onMouseDown={(event) => event.preventDefault()}
+          onClick={() => onCommand(btn.command)}
+        >
+          {btn.icon}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function RichTextEditor({ value, onChange, placeholder }) {
+  const editableRef = useRef(null);
+
+  useEffect(() => {
+    if (editableRef.current) {
+      editableRef.current.innerHTML = value || "";
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const handleInput = () => {
+    onChange(editableRef.current?.innerHTML || "");
+  };
+
+  const handleCommand = (command) => {
+    editableRef.current?.focus();
+    document.execCommand(command, false, null);
+    handleInput();
+  };
+
+  const handlePaste = (event) => {
+    event.preventDefault();
+    const text = event.clipboardData.getData("text/plain");
+    document.execCommand("insertText", false, text);
+  };
+
+  return (
+    <div className="client-rich-editor">
+      <RichTextToolbar onCommand={handleCommand} />
+      <div
+        ref={editableRef}
+        className="client-rich-editable"
+        contentEditable
+        suppressContentEditableWarning
+        onInput={handleInput}
+        onPaste={handlePaste}
+        data-placeholder={placeholder}
+      />
+    </div>
+  );
+}
+
 function ConversationSummarySection({ scope, clientModel, reportData, isSharedMode = false, onUpdateReportData = () => {}, printMode = false }) {
   const savedSummary = reportData?.conversationSummary || reportData?.clientConversationSummary || clientModel?.conversationSummary || "";
-  const savedActions = reportData?.actionRecommendations || reportData?.recommendationsText || clientModel?.actionRecommendations || "";
   const savedAgentNote = reportData?.agentHandlingNote || "";
   const fallbackSummary = `כאן יוצג סיכום השיחה עם הלקוח עבור ${scope.name}. בשלב זה זהו אזור הכנה, וניתן לחבר אליו בהמשך שדה טקסט מה־REPORT או ממנגנון שמירת הדוח.`;
-  const fallbackActions = "כאן יוצגו המלצות פעולה, נקודות לבדיקה, החלטות שהתקבלו או משימות להמשך טיפול.";
-  const actionsForPdf = savedActions || fallbackActions;
 
   const [summaryDraft, setSummaryDraft] = useState(savedSummary);
-  const [actionsDraft, setActionsDraft] = useState(savedActions);
   const [agentNoteDraft, setAgentNoteDraft] = useState(savedAgentNote);
 
-  const handleSummaryChange = (event) => {
-    const value = event.target.value;
-    setSummaryDraft(value);
-    onUpdateReportData({ conversationSummary: value, clientConversationSummary: value, summaryText: value });
+  const handleSummaryChange = (html) => {
+    setSummaryDraft(html);
+    onUpdateReportData({ conversationSummary: html, clientConversationSummary: html, summaryText: html });
   };
 
-  const handleActionsChange = (event) => {
-    const value = event.target.value;
-    setActionsDraft(value);
-    onUpdateReportData({ actionRecommendations: value, clientActionRecommendations: value, recommendationsText: value, recommendations: value });
-  };
-
-  const handleAgentNoteChange = (event) => {
-    const value = event.target.value;
-    setAgentNoteDraft(value);
-    onUpdateReportData({ agentHandlingNote: value });
+  const handleAgentNoteChange = (html) => {
+    setAgentNoteDraft(html);
+    onUpdateReportData({ agentHandlingNote: html });
   };
 
   if (isSharedMode || printMode) {
     return (
       <div>
-        <SectionTitle title="סיכום שיחה והמלצות פעולה" subtitle="אזור ייעודי להצגת סיכום פגישה, תובנות והמלצות פעולה ללקוח." />
-        <div className="client-grid-2">
-          <TextPanel title="סיכום שיחה" text={savedSummary || fallbackSummary} />
-          <TextPanel title="המלצות פעולה" text={savedActions || fallbackActions}>
-            {printMode ? null : (
-              <div className="client-action-buttons">
-                <button type="button" className="client-action-button primary" onClick={() => downloadActionsPdf(actionsForPdf)}>הורדת PDF</button>
-                <button type="button" className="client-action-button" onClick={handleMockEmailSend}>שליחת מייל</button>
-              </div>
-            )}
-          </TextPanel>
+        <SectionTitle title="סיכום שיחה" subtitle="אזור ייעודי להצגת סיכום פגישה ותובנות ללקוח." />
+        <div className="client-panel">
+          <h3>סיכום שיחה</h3>
+          {savedSummary ? (
+            <div className="client-rich-readonly" dangerouslySetInnerHTML={{ __html: savedSummary }} />
+          ) : (
+            <div className="client-rich-readonly">{fallbackSummary}</div>
+          )}
         </div>
       </div>
     );
@@ -2697,38 +2657,20 @@ function ConversationSummarySection({ scope, clientModel, reportData, isSharedMo
 
   return (
     <div>
-      <SectionTitle title="סיכום שיחה והמלצות פעולה" subtitle="כתיבה ישירה מהמסך — סיכום השיחה והמלצות הפעולה יתעדכנו בדוח ה־PDF המלא." />
-      <div className="client-grid-2">
-        <div className="client-panel">
-          <h3>סיכום שיחה</h3>
-          <textarea
-            className="client-text-editor"
-            value={summaryDraft}
-            onChange={handleSummaryChange}
-            placeholder={fallbackSummary}
-          />
-        </div>
-
-        <div className="client-panel">
-          <h3>המלצות פעולה</h3>
-          <textarea
-            className="client-text-editor"
-            value={actionsDraft}
-            onChange={handleActionsChange}
-            placeholder={fallbackActions}
-          />
-          <div className="client-action-buttons">
-            <button type="button" className="client-action-button primary" onClick={() => downloadActionsPdf(actionsDraft || fallbackActions)}>הורדת PDF</button>
-            <button type="button" className="client-action-button" onClick={handleMockEmailSend}>שליחת מייל</button>
-          </div>
+      <SectionTitle title="סיכום שיחה" subtitle="כתיבה ישירה מהמסך — סיכום השיחה יתעדכן בדוח ה־PDF המלא." />
+      <div className="client-panel">
+        <h3>סיכום שיחה</h3>
+        <RichTextEditor value={summaryDraft} onChange={handleSummaryChange} placeholder={fallbackSummary} />
+        <div className="client-action-buttons">
+          <button type="button" className="client-action-button primary" onClick={() => downloadSummaryPdf(summaryDraft, scope.name)}>הורדת PDF</button>
+          <button type="button" className="client-action-button" onClick={handleMockEmailSend}>שליחת מייל</button>
         </div>
       </div>
 
       <div className="client-panel client-margin-top">
         <h3>נקודה לטיפול סוכן</h3>
         <p className="client-panel-badge">גלוי ליועץ בלבד — לא מוצג ללקוח ואינו נכלל בדוח ה־PDF המלא.</p>
-        <textarea
-          className="client-text-editor"
+        <RichTextEditor
           value={agentNoteDraft}
           onChange={handleAgentNoteChange}
           placeholder="כתוב כאן נקודה לטיפול הסוכן, לצורך ייצוא ל־PDF ייעודי ושליחה נפרדת."
@@ -3082,10 +3024,6 @@ function PieSegmentDrawer({ selected, onClose }) {
 }
 
 
-function TextPanel({ title, text, children }) {
-  return <div className="client-panel"><h3>{title}</h3><div className="client-text-panel">{text}</div>{children}</div>;
-}
-
 function buildSegments(items) {
   const colors = ["#00215D", "#FF2756", "#1F77B4", "#43B5D9", "#8F63C9", "#F0B43C", "#9FD0E6", "#8FB996"];
   const safeItems = safeArray(items).filter((item) => Number(item?.value || 0) > 0);
@@ -3309,10 +3247,20 @@ const clientDashboardCss = `
   .client-insurance-table.member .client-insurance-col-policyNo { width: 15%; }
   .client-insurance-table.member .client-insurance-col-currentValue { width: 14%; }
   .client-insurance-table.member .client-insurance-col-deathCoverage { width: 15%; }
-  .client-empty-state { border: 1px dashed ${theme.border}; border-radius: 16px; background: ${theme.surfaceAlt}; padding: 18px; color: ${theme.textSoft}; font-size: 13px; text-align: center; line-height: 1.7; } .client-text-panel { min-height: 210px; border: 1px solid ${theme.divider}; border-radius: 16px; background: #FFFDFB; padding: 16px; color: ${theme.text}; font-size: 13px; line-height: 1.9; white-space: pre-wrap; }
-  .client-text-editor { width: 100%; min-height: 210px; border: 1px solid ${theme.divider}; border-radius: 16px; background: #FFFDFB; padding: 16px; color: ${theme.text}; font-size: 13px; line-height: 1.9; font-family: Calibri, Arial, sans-serif; resize: vertical; }
-  .client-text-editor:focus { outline: none; border-color: ${theme.navy}; box-shadow: 0 0 0 3px rgba(0,33,93,.10); }
+  .client-empty-state { border: 1px dashed ${theme.border}; border-radius: 16px; background: ${theme.surfaceAlt}; padding: 18px; color: ${theme.textSoft}; font-size: 13px; text-align: center; line-height: 1.7; }
+  .client-rich-readonly { min-height: 210px; border: 1px solid ${theme.divider}; border-radius: 16px; background: #FFFDFB; padding: 16px; color: ${theme.text}; font-size: 13px; line-height: 1.9; white-space: pre-wrap; }
+  .client-rich-readonly p { margin: 0 0 10px; }
+  .client-rich-readonly ul, .client-rich-readonly ol { margin: 0 0 10px; padding-inline-start: 22px; }
   .client-panel-badge { margin: -4px 0 10px; color: ${theme.textSoft}; font-size: 11.5px; font-weight: 800; }
+  .client-rich-editor { border: 1px solid ${theme.divider}; border-radius: 16px; background: #FFFDFB; overflow: hidden; }
+  .client-rich-toolbar { display: flex; gap: 6px; padding: 8px; border-bottom: 1px solid ${theme.divider}; background: ${theme.surfaceAlt}; }
+  .client-rich-toolbar-button { width: 32px; height: 32px; border-radius: 10px; border: 1px solid ${theme.divider}; background: #FFFFFF; color: ${theme.navy}; font-size: 13px; font-family: Calibri, Arial, sans-serif; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: .15s ease; }
+  .client-rich-toolbar-button:hover { border-color: ${theme.navy}; background: #EAF1FB; }
+  .client-rich-editable { min-height: 210px; padding: 16px; color: ${theme.text}; font-size: 13px; line-height: 1.9; font-family: Calibri, Arial, sans-serif; outline: none; }
+  .client-rich-editable p { margin: 0 0 10px; }
+  .client-rich-editable ul, .client-rich-editable ol { margin: 0 0 10px; padding-inline-start: 22px; }
+  .client-rich-editable:empty:before { content: attr(data-placeholder); color: ${theme.textSoft}; }
+  .client-rich-editor:focus-within { border-color: ${theme.navy}; box-shadow: 0 0 0 3px rgba(0,33,93,.10); }
 
   .client-section-title-row.compact { margin-top: 18px; margin-bottom: 12px; }
   .client-asset-products { display: flex; flex-direction: column; gap: 12px; }

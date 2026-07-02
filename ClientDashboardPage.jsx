@@ -3431,18 +3431,27 @@ const clientDashboardCss = `
 
   @media print {
     @page { size: A4 landscape; margin: 10mm; }
-    html, body { direction: rtl !important; font-family: Calibri, Arial, sans-serif !important; background: #fff !important; }
+    /* Override App-level portrait PrintStyles that clamp body to 210mm and leave a wide empty band on this landscape export */
+    html, body { direction: rtl !important; font-family: Calibri, Arial, sans-serif !important; background: #fff !important; width: auto !important; max-width: none !important; min-height: 0 !important; margin: 0 !important; padding: 0 !important; }
     .client-sidebar, .client-main, .pdf-modal-overlay, .pdf-modal { display: none !important; }
-    .client-web-shell { display: block !important; background: #fff !important; padding: 0 !important; }
+    .client-web-shell { display: block !important; background: #fff !important; padding: 0 !important; width: auto !important; max-width: none !important; }
     .pdf-print-container { visibility: visible !important; position: static !important; top: auto !important; left: auto !important; width: auto !important; height: auto !important; overflow: visible !important; display: block !important; }
     .pdf-print-header { margin-bottom: 10mm; border-bottom: 2px solid #00215D; padding-bottom: 5mm; }
     .pdf-print-title { font-size: 20pt; font-weight: 900; color: #00215D; }
     .pdf-print-subtitle { font-size: 10pt; color: #627D98; margin-top: 2mm; }
-    .pdf-print-section { break-inside: avoid; page-break-inside: avoid; margin-bottom: 10mm; }
+    /* Let sections flow across pages so content fills each sheet instead of jumping whole sections to a new page and leaving big gaps. Atomic cards/tables below stay unbreakable. */
+    .pdf-print-section { margin-bottom: 8mm; }
     .pdf-print-section-title { font-size: 13pt; font-weight: 900; color: #00215D; border-right: 4px solid #FF2756; padding-right: 7px; margin-bottom: 5mm; break-after: avoid; page-break-after: avoid; }
+    .client-section-title-row { break-inside: avoid; }
+    .client-margin-top { margin-top: 6mm !important; }
+    .client-kpi-grid { margin-bottom: 6mm !important; }
     table { break-inside: avoid; page-break-inside: avoid; width: 100%; border-collapse: collapse; font-size: 8.5pt; }
     th, td { border: 1px solid #E2D1BF; padding: 3px 5px; }
     thead { display: table-header-group; }
+    /* shrink wide tables to fit the sheet instead of overflowing/being clipped by the scroll wrapper */
+    .client-table-wrap { overflow: visible !important; }
+    table, .client-table, .client-insurance-table, .client-product-assets-table, .client-drawer-table, .client-special-table, .client-section28-table, .client-vested-table, .client-manual-recognized-table, .client-capital-table, .client-capital-inner-table, .client-capital-study-table { min-width: 0 !important; width: 100% !important; table-layout: fixed !important; }
+    td, th { word-break: break-word; overflow-wrap: anywhere; }
     .client-kpi-grid { display: grid !important; grid-template-columns: repeat(4, 1fr) !important; }
     .client-grid-2, .client-allocation-top-pies { display: grid !important; grid-template-columns: repeat(2, 1fr) !important; }
     .client-grid-3 { display: grid !important; grid-template-columns: repeat(3, 1fr) !important; }

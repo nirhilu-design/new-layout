@@ -493,11 +493,27 @@ function getPersonalDetailsFromSources(member, rawFile) {
     firstPolicy?.salary,
   ]);
 
+  const rawGender = getFirstText([
+    member?.personalDetails?.gender,
+    member?.gender,
+    rawDetails?.gender,
+    rawDetails?.Gender,
+    rawDetails?.sex,
+    rawDetails?.Sex,
+  ]).toLowerCase();
+  const gender =
+    rawGender === "female" || rawGender === "נקבה" || rawGender === "f" || rawGender === "2"
+      ? "female"
+      : rawGender === "male" || rawGender === "זכר" || rawGender === "m" || rawGender === "1"
+      ? "male"
+      : "";
+
   return {
     name,
     birthDate,
     lastWorkplace,
     currentSalary,
+    gender,
   };
 }
 

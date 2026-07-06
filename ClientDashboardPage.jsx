@@ -1135,10 +1135,10 @@ function PensionSection({ scope }) {
     <div>
       <SectionTitle title="סיכום פנסיוני" subtitle="ריכוז נתוני הצבירה, ההפקדות והתחזית לגיל פרישה — ללא רכיבי פאי בעמוד הראשי." />
       <div className="client-kpi-grid">
-        <KpiCard icon={<CalendarDepositIcon />} title="הפקדה חודשית כוללת" value={formatCurrency(summary.monthlyDeposits)} subtext="לפי התצוגה שנבחרה" />
-        <KpiCard icon={<VaultSavingsIcon />} title="סך נכסים" value={formatCurrency(summary.totalAssets)} subtext="סך הצבירה הקיימת" />
-        <KpiCard icon={<SafePensionIcon />} title="קצבה חודשית צפויה" value={formatCurrency(summary.monthlyPensionWithDeposits)} subtext="עם המשך הפקדות" />
-        <KpiCard icon={<SavingsGrowthIcon />} title="צבירה צפויה" value={formatCurrency(summary.projectedLumpSumWithDeposits)} subtext="עם המשך הפקדות" />
+        <KpiCard icon={<CalendarDepositIcon />} title="הפקדה חודשית כוללת" value={formatCurrency(summary.monthlyDeposits)} />
+        <KpiCard icon={<CoinsStackIcon />} title="סך נכסים" value={formatCurrency(summary.totalAssets)} subtext="סך הצבירה הקיימת" />
+        <KpiCard icon={<SafePensionIcon />} title="קצבה חודשית צפויה" value={formatCurrency(summary.monthlyPensionWithDeposits)} />
+        <KpiCard icon={<SavingsGrowthIcon />} title="צבירה צפויה" value={formatCurrency(summary.projectedLumpSumWithDeposits)} />
       </div>
       <div className="client-grid-2 client-margin-top">
         <ComparisonCard title="השוואת צבירה צפויה" explanation="פער בין צבירה עתידית עם המשך הפקדות לבין מצב ללא המשך הפקדות." withValue={summary.projectedLumpSumWithDeposits} withoutValue={summary.projectedLumpSumWithoutDeposits} />
@@ -1413,11 +1413,11 @@ function AssetProductTablesSection({ productTables, printMode = false }) {
               <span className="client-product-chevron">{isOpen ? "⌃" : "⌄"}</span>
               <strong className="client-product-title">{table.productName}</strong>
               <span className="client-product-strip-item"><small>סך צבירה</small><b>{formatCurrency(table.totalAssets)}</b></span>
-              <span className="client-product-strip-item"><small>תשואה 12<br />משוקללת</small><b>{formatSignedPercent(table.weightedReturn12)}</b></span>
-              <span className="client-product-strip-item"><small>תשואה 36<br />משוקללת</small><b>{formatSignedPercent(table.weightedReturn36)}</b></span>
-              <span className="client-product-strip-item"><small>תשואה 60<br />משוקללת</small><b>{formatSignedPercent(table.weightedReturn60)}</b></span>
-              <span className="client-product-strip-item"><small>סטיית תקן<br />36</small><b>{formatSignedPercent(table.weightedSt36)}</b></span>
-              <span className="client-product-strip-item"><small>שארפ<br />36</small><b>{formatDecimal(table.weightedSharp36, 2)}</b></span>
+              <span className="client-product-strip-item"><small>תשואה 12 מצטברת</small><b>{formatSignedPercent(table.weightedReturn12)}</b></span>
+              <span className="client-product-strip-item"><small>תשואה 36 מצטברת</small><b>{formatSignedPercent(table.weightedReturn36)}</b></span>
+              <span className="client-product-strip-item"><small>תשואה 60 מצטברת</small><b>{formatSignedPercent(table.weightedReturn60)}</b></span>
+              <span className="client-product-strip-item"><small>סטיית תקן 36</small><b>{formatSignedPercent(table.weightedSt36)}</b></span>
+              <span className="client-product-strip-item"><small>שארפ 36</small><b>{formatDecimal(table.weightedSharp36, 2)}</b></span>
             </button>
 
             {isOpen ? <AssetProductRoutesTable rows={table.rows} /> : null}
@@ -3226,6 +3226,16 @@ function SavingsGrowthIcon() {
     <path d="M20 5H24V9" stroke="#00215D" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
   </svg>;
 }
+function CoinsStackIcon() {
+  return <svg width="30" height="30" viewBox="0 0 30 30" fill="none">
+    <ellipse cx="11" cy="8" rx="7" ry="2.8" fill="#C8EDD8" stroke="#00215D" strokeWidth="1.3"/>
+    <path d="M4 8v4c0 1.55 3.13 2.8 7 2.8s7-1.25 7-2.8V8" stroke="#00215D" strokeWidth="1.3" fill="none"/>
+    <path d="M4 12v4c0 1.55 3.13 2.8 7 2.8s7-1.25 7-2.8v-4" stroke="#00215D" strokeWidth="1.3" fill="none"/>
+    <ellipse cx="20" cy="19" rx="7" ry="2.8" fill="#4DB87A" stroke="#00215D" strokeWidth="1.3"/>
+    <path d="M13 19v4c0 1.55 3.13 2.8 7 2.8s7-1.25 7-2.8v-4" stroke="#00215D" strokeWidth="1.3" fill="none"/>
+    <path d="M18.4 19.2l1.2 1.2 2.2-2.4" stroke="#00215D" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
+  </svg>;
+}
 function VaultSavingsIcon() {
   return <svg width="34" height="34" viewBox="0 0 34 34" fill="none">
     <rect x="2" y="5" width="22" height="20" rx="3" fill="#C8EDD8" stroke="#00215D" strokeWidth="1.5"/>
@@ -3370,10 +3380,11 @@ const clientDashboardCss = `
   .client-donut-svg:hover .client-donut-slice:not(:hover) { opacity: .62; }
   .client-donut-center { pointer-events: none; filter: drop-shadow(0 1px 4px rgba(0,33,93,0.06)); }
   .client-legend { display: flex; flex-direction: column; gap: 9px; min-width: 0; }
-  .client-legend-row { display: grid; grid-template-columns: 10px minmax(0, 1fr) auto; gap: 8px; align-items: center; color: ${theme.text}; font-size: 12px; }
+  .client-legend-row { display: flex; align-items: center; gap: 7px; color: ${theme.text}; font-size: 12px; }
+  .client-legend-row strong { flex-shrink: 0; }
   .client-legend-button { width: 100%; border: 0; background: transparent; padding: 5px 2px; text-align: right; cursor: pointer; border-radius: 10px; font-family: Calibri, Arial, sans-serif; }
   .client-legend-button:hover, .client-legend-button:focus { background: #F4F7FB; outline: 0; }
-  .client-legend-dot { width: 10px; height: 10px; border-radius: 50%; } .client-legend-name { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+  .client-legend-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; } .client-legend-name { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; min-width: 0; flex: 0 1 auto; }
   .client-table-wrap { overflow-x: auto; border: 1px solid ${theme.divider}; border-radius: 18px; background: #fff; }
   .client-table { width: 100%; min-width: 760px; border-collapse: collapse; table-layout: auto; }
   .client-table th { background: ${theme.navy}; color: #fff; padding: 12px 10px; font-size: 12px; text-align: right; white-space: nowrap; }

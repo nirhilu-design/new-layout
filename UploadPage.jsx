@@ -2304,7 +2304,7 @@ export default function UploadPage({ setReportData }) {
                             fontFamily: "Calibri, sans-serif",
                           }}
                         >
-                          נקה קובץ
+                          הסר קובץ
                         </button>
                       )}
 
@@ -2686,7 +2686,7 @@ export default function UploadPage({ setReportData }) {
                       minWidth: 120,
                     }}
                   >
-                    הסר PDF
+                    הסר קובץ
                   </button>
                 )}
               </div>
@@ -2866,7 +2866,7 @@ export default function UploadPage({ setReportData }) {
                             zIndex: 10,
                             boxShadow: "0 4px 12px rgba(0,0,0,0.18)",
                           }}>
-                            מקור הנתונים קובץ הורדה מפקדיקט
+                            מקור הנתונים קובץ הורדה מפרדיקט
                           </div>
                         )}
                       </div>
@@ -2888,7 +2888,7 @@ export default function UploadPage({ setReportData }) {
                             fontFamily: "Calibri, sans-serif",
                           }}
                         >
-                          נקה קובץ
+                          הסר קובץ
                         </button>
                       )}
 
@@ -3089,7 +3089,7 @@ export default function UploadPage({ setReportData }) {
                     flexShrink: 0,
                   }}
                 >
-                  הסר
+                  הסר קובץ
                 </button>
               </div>
             ))}

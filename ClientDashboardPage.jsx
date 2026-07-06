@@ -55,9 +55,19 @@ function formatDate(value) {
   if (!value) return "—";
   const str = String(value).trim();
   if (!str) return "—";
+  // YYYYMMDD
   if (/^\d{8}$/.test(str)) return `${str.slice(6, 8)}/${str.slice(4, 6)}/${str.slice(0, 4)}`;
+  // ISO YYYY-MM-DD (optionally with time) — parse as string to avoid timezone shifts
+  const iso = str.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+  if (iso) return `${iso[3].padStart(2, "0")}/${iso[2].padStart(2, "0")}/${iso[1]}`;
+  // D.M.YYYY / D-M-YYYY / D/M/YYYY — normalize the separator to a slash
+  const parts = str.split(/[.\-/]/).filter(Boolean);
+  if (parts.length === 3 && parts.every((part) => /^\d+$/.test(part))) {
+    return `${parts[0].padStart(2, "0")}/${parts[1].padStart(2, "0")}/${parts[2]}`;
+  }
   const date = new Date(str);
-  return Number.isNaN(date.getTime()) ? str : new Intl.DateTimeFormat("he-IL").format(date);
+  if (Number.isNaN(date.getTime())) return str;
+  return `${String(date.getDate()).padStart(2, "0")}/${String(date.getMonth() + 1).padStart(2, "0")}/${date.getFullYear()}`;
 }
 
 function normalizeDistributionItems(items) {
@@ -896,8 +906,7 @@ export default function ClientDashboardPage({
 
   if (!reportData || !reportData.family) return <EmptyDashboardState onBack={onBack} />;
 
-  const handleScopeChange = (event) => {
-    const nextScopeId = event.target.value;
+  const handleSelectScope = (nextScopeId) => {
     setLocalScopeId(nextScopeId);
     if (nextScopeId === "family") onChangeView("family", null);
     else onChangeView("member", nextScopeId);
@@ -937,14 +946,11 @@ export default function ClientDashboardPage({
           </div>
 
           <div className="client-topbar-actions">
-            <div className="client-scope-select-wrap">
-              <span className="client-scope-label">תצוגה</span>
-              <select value={localScopeId} onChange={handleScopeChange} className="client-scope-select">
-                <option value="family">משפחה מאוחדת</option>
-                {detailedMembers.map((member) => <option key={member.id || member.name} value={member.id || member.name}>{member.name || "ללא שם"}</option>)}
-              </select>
-              <svg className="client-scope-chevron" width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M3 5L7 9L11 5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
-            </div>
+            <ScopeDropdown
+              members={detailedMembers}
+              valueId={localScopeId}
+              onSelect={handleSelectScope}
+            />
 
             <button type="button" className="client-history-button" onClick={onOpenPreviousReports} title="הכנה לצפייה בנתונים קודמים">
               <span className="client-history-icon">↺</span>
@@ -1164,10 +1170,136 @@ function PersonalDetailsSection({ members }) {
   );
 }
 
-function GenderIcon({ gender }) {
-  const src = gender === "female" ? "/icon-female.png" : "/icon-male.png";
+function ScopeFamilyGlyph() {
   return (
-    <img src={src} alt={gender === "female" ? "נקבה" : "זכר"} style={{ width: 66, height: 66, objectFit: "cover", borderRadius: "50%", display: "block", flexShrink: 0 }} />
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+      <circle cx="5" cy="5.5" r="2.2" fill="currentColor" />
+      <circle cx="11" cy="5.5" r="2.2" fill="currentColor" />
+      <path d="M1 14c0-2.4 1.8-4 4-4s4 1.6 4 4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+      <path d="M7 14c0-2.4 1.8-4 4-4s4 1.6 4 4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function ScopePersonGlyph() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+      <circle cx="8" cy="5.5" r="2.6" fill="currentColor" />
+      <path d="M2.5 14c0-3 2.5-5 5.5-5s5.5 2 5.5 5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function ScopeDropdown({ members, valueId, onSelect }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+
+  useEffect(() => {
+    if (!open) return undefined;
+    const onDocClick = (event) => {
+      if (ref.current && !ref.current.contains(event.target)) setOpen(false);
+    };
+    const onKey = (event) => {
+      if (event.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("mousedown", onDocClick);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDocClick);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+
+  const options = [
+    { id: "family", name: "משפחה מאוחדת", isFamily: true },
+    ...safeArray(members).map((member) => ({
+      id: member.id || member.name,
+      name: member.name || "ללא שם",
+      isFamily: false,
+    })),
+  ];
+  const current = options.find((option) => String(option.id) === String(valueId)) || options[0];
+
+  return (
+    <div className={`client-scope-dd ${open ? "open" : ""}`} ref={ref}>
+      <button
+        type="button"
+        className="client-scope-dd-trigger"
+        onClick={() => setOpen((value) => !value)}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+      >
+        <span className="client-scope-dd-icon">{current.isFamily ? <ScopeFamilyGlyph /> : <ScopePersonGlyph />}</span>
+        <span className="client-scope-dd-text">
+          <span className="client-scope-dd-label">תצוגה</span>
+          <span className="client-scope-dd-value">{current.name}</span>
+        </span>
+        <svg className="client-scope-dd-chevron" width="14" height="14" viewBox="0 0 14 14" fill="none">
+          <path d="M3 5L7 9L11 5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      </button>
+
+      {open ? (
+        <div className="client-scope-dd-menu" role="listbox">
+          {options.map((option) => {
+            const active = String(option.id) === String(current.id);
+            return (
+              <button
+                type="button"
+                key={option.id}
+                role="option"
+                aria-selected={active}
+                className={`client-scope-dd-item ${active ? "active" : ""}`}
+                onClick={() => {
+                  onSelect(option.id);
+                  setOpen(false);
+                }}
+              >
+                <span className="client-scope-dd-item-icon">{option.isFamily ? <ScopeFamilyGlyph /> : <ScopePersonGlyph />}</span>
+                <span className="client-scope-dd-item-name">{option.name}</span>
+                {active ? (
+                  <svg className="client-scope-dd-check" width="14" height="14" viewBox="0 0 14 14" fill="none">
+                    <path d="M2.5 7.5L6 11L11.5 4" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                ) : null}
+              </button>
+            );
+          })}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function GenderIcon({ gender }) {
+  const female = gender === "female";
+  const bg = female ? "#FFF0F3" : "#EEF3FB";
+  const fg = female ? "#FF2756" : "#1E5FAD";
+  return (
+    <svg
+      width="66"
+      height="66"
+      viewBox="0 0 66 66"
+      role="img"
+      aria-label={female ? "נקבה" : "זכר"}
+      style={{ display: "block", flexShrink: 0 }}
+    >
+      <circle cx="33" cy="33" r="33" fill={bg} />
+      <circle cx="33" cy="24" r="8.5" fill={fg} />
+      {female ? (
+        // אישה — צללית עם שמלה משולשת
+        <path
+          d="M33 30.5 L21.5 52.8 A2 2 0 0 0 23.3 55.7 H42.7 A2 2 0 0 0 44.5 52.8 Z"
+          fill={fg}
+        />
+      ) : (
+        // גבר — צללית עם כתפיים מעוגלות
+        <path
+          d="M19.5 55.5 V47 a13.5 13.5 0 0 1 27 0 V55.5 a1 1 0 0 1 -1 1 H20.5 a1 1 0 0 1 -1 -1 Z"
+          fill={fg}
+        />
+      )}
+    </svg>
   );
 }
 
@@ -3180,6 +3312,25 @@ const clientDashboardCss = `
   .client-scope-select { flex: 1; min-height: 32px; border: 0; outline: 0; color: #fff; font-family: Calibri, Arial, sans-serif; font-size: 14px; font-weight: 900; background: transparent; cursor: pointer; -webkit-appearance: none; appearance: none; }
   .client-scope-select option { color: ${theme.navy}; background: #fff; font-weight: 700; font-size: 13px; }
   .client-scope-chevron { color: rgba(255,255,255,0.70); flex-shrink: 0; pointer-events: none; }
+  .client-scope-dd { position: relative; }
+  .client-scope-dd-trigger { min-height: 54px; min-width: 210px; width: 100%; border-radius: 16px; background: rgba(255,255,255,0.11); border: 1px solid rgba(255,255,255,0.18); color: #fff; font-family: Calibri, Arial, sans-serif; display: flex; align-items: center; gap: 10px; padding: 8px 14px; cursor: pointer; text-align: right; transition: background .16s ease, border-color .16s ease; }
+  .client-scope-dd-trigger:hover { background: rgba(255,255,255,0.17); border-color: rgba(255,255,255,0.30); }
+  .client-scope-dd.open .client-scope-dd-trigger { background: rgba(255,255,255,0.18); border-color: rgba(255,255,255,0.42); }
+  .client-scope-dd-icon { width: 30px; height: 30px; border-radius: 10px; background: rgba(255,255,255,0.14); color: #fff; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .client-scope-dd-text { display: flex; flex-direction: column; gap: 1px; min-width: 0; flex: 1; }
+  .client-scope-dd-label { color: rgba(255,255,255,0.55); font-size: 10px; font-weight: 800; letter-spacing: .3px; }
+  .client-scope-dd-value { color: #fff; font-size: 14px; font-weight: 900; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .client-scope-dd-chevron { color: rgba(255,255,255,0.75); flex-shrink: 0; transition: transform .18s ease; }
+  .client-scope-dd.open .client-scope-dd-chevron { transform: rotate(180deg); }
+  .client-scope-dd-menu { position: absolute; top: calc(100% + 8px); right: 0; left: 0; background: #fff; border: 1px solid ${theme.border}; border-radius: 16px; box-shadow: 0 16px 36px rgba(16,42,67,0.22); padding: 6px; z-index: 60; max-height: 320px; overflow-y: auto; animation: scopeDdIn .14s ease; }
+  @keyframes scopeDdIn { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: translateY(0); } }
+  .client-scope-dd-item { width: 100%; display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 0; background: transparent; border-radius: 11px; cursor: pointer; text-align: right; font-family: Calibri, Arial, sans-serif; color: ${theme.navy}; transition: background .12s ease; }
+  .client-scope-dd-item:hover { background: ${theme.surfaceAlt}; }
+  .client-scope-dd-item.active { background: #EAF1FB; }
+  .client-scope-dd-item-icon { width: 30px; height: 30px; border-radius: 9px; background: #EAF1FB; color: ${theme.navy}; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .client-scope-dd-item.active .client-scope-dd-item-icon { background: #fff; }
+  .client-scope-dd-item-name { flex: 1; font-size: 13.5px; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .client-scope-dd-check { color: ${theme.navy}; flex-shrink: 0; }
   .client-back-button { padding: 0 16px; font-size: 13px; font-weight: 900; cursor: pointer; }
   .client-back-icon-btn { min-width: 54px; width: 54px; padding: 0; display: flex; align-items: center; justify-content: center; font-size: 22px; position: relative; }
   .client-back-icon-btn:hover::after { content: attr(title); position: absolute; bottom: calc(100% + 8px); left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.82); color: #fff; font-size: 12px; font-weight: 700; white-space: nowrap; padding: 5px 10px; border-radius: 8px; pointer-events: none; z-index: 100; }

@@ -407,6 +407,13 @@ function getPolicyDisabilityValue(policy) {
   ]);
 }
 
+function hasActivePolicyDeposits(policy) {
+  const deposits = policy?.monthlyDeposits || {};
+  return [deposits.sumCost, deposits.worker, deposits.employer, deposits.compensation].some(
+    (value) => Number(value || 0) > 0
+  );
+}
+
 function getPlanWeightedExposure(policy, key) {
   const plans = safeArray(policy?.investPlans);
   if (!plans.length) return 0;
@@ -527,6 +534,7 @@ function buildMemberProductsFromRawFile(rawFile) {
       disabilityValue: getPolicyDisabilityValue(policy),
       widowPension: Number(policy?.coverage?.widowPension || 0),
       orphanPension: Number(policy?.coverage?.orphanPension || 0),
+      hasActiveDeposits: hasActivePolicyDeposits(policy),
     };
   });
 }
@@ -571,7 +579,7 @@ function buildDeathCoverageRows(products) {
 
 function buildPensionDeathBenefitRows(products) {
   return safeArray(products)
-    .filter((product) => isPensionFundProduct(product))
+    .filter((product) => isPensionFundProduct(product) && product.hasActiveDeposits)
     .map((product, index) => {
       const widowPension = Number(product.widowPension || 0);
       const orphanPension = Number(product.orphanPension || 0);

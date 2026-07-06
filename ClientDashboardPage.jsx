@@ -525,6 +525,8 @@ function buildMemberProductsFromRawFile(rawFile) {
       })),
       deathCoverage: getPolicyDeathCoverage(policy),
       disabilityValue: getPolicyDisabilityValue(policy),
+      widowPension: Number(policy?.coverage?.widowPension || 0),
+      orphanPension: Number(policy?.coverage?.orphanPension || 0),
     };
   });
 }
@@ -540,13 +542,20 @@ function groupItemsByValue(items, getName, getValue) {
   return Array.from(map.entries()).map(([name, value]) => ({ id: name, name, value })).sort((a, b) => b.value - a.value);
 }
 
+function isPensionFundProduct(product) {
+  const text = `${product?.productType || ""} ${product?.planName || ""}`;
+  return (
+    text.includes("קרן פנסיה") ||
+    text.includes("פנסיה מקיפה") ||
+    text.includes("פנסיה כללית") ||
+    text.includes("פנסיה חדשה") ||
+    text.includes("פנסיה ותיקה")
+  );
+}
+
 function buildDeathCoverageRows(products) {
   return safeArray(products)
-    .filter((product) => {
-      const typeText = String(product?.productType || product?.planName || "");
-      const isPensionFund = typeText.includes("קרן פנסיה") || typeText.includes("פנסיה מקיפה") || typeText.includes("פנסיה כללית");
-      return !isPensionFund;
-    })
+    .filter((product) => !isPensionFundProduct(product))
     .map((product, index) => ({
       id: product.id || `${product.planName}-${index}`,
       planName: product.planName || "מוצר ללא שם",
@@ -558,6 +567,24 @@ function buildDeathCoverageRows(products) {
     }))
     .filter((row) => row.currentValue > 0 || row.deathCoverage > 0)
     .sort((a, b) => Number(b.deathCoverage || 0) + Number(b.currentValue || 0) - (Number(a.deathCoverage || 0) + Number(a.currentValue || 0)));
+}
+
+function buildPensionDeathBenefitRows(products) {
+  return safeArray(products)
+    .filter((product) => isPensionFundProduct(product))
+    .map((product, index) => {
+      const widowPension = Number(product.widowPension || 0);
+      const orphanPension = Number(product.orphanPension || 0);
+      return {
+        id: product.id || `${product.planName}-pension-${index}`,
+        planName: product.planName || "מוצר ללא שם",
+        widowPension,
+        orphanPension,
+        totalPension: widowPension + orphanPension,
+      };
+    })
+    .filter((row) => row.totalPension > 0)
+    .sort((a, b) => Number(b.totalPension || 0) - Number(a.totalPension || 0));
 }
 
 
@@ -761,6 +788,7 @@ function buildDetailedMembers(reportData, clientModel) {
       productTypes: groupItemsByValue(products, (product) => product.productType, (product) => product.currentValue),
       assetProductTables: buildProductAssetTables(products),
       deathCoverageProducts: buildDeathCoverageRows(products),
+      pensionDeathBenefitProducts: buildPensionDeathBenefitRows(products),
       exposures: {
         equity: Math.round(weightedEquity),
         foreign: Math.round(weightedForeign),
@@ -781,6 +809,12 @@ function aggregateDeathCoverageRows(members) {
   return safeArray(members)
     .flatMap((member) => safeArray(member.deathCoverageProducts).map((row) => ({ ...row, memberName: member.name })))
     .sort((a, b) => Number(b.deathCoverage || 0) + Number(b.currentValue || 0) - (Number(a.deathCoverage || 0) + Number(a.currentValue || 0)));
+}
+
+function aggregatePensionDeathBenefitRows(members) {
+  return safeArray(members)
+    .flatMap((member) => safeArray(member.pensionDeathBenefitProducts).map((row) => ({ ...row, memberName: member.name })))
+    .sort((a, b) => Number(b.totalPension || 0) - Number(a.totalPension || 0));
 }
 
 function getSelectedScope(clientModel, detailedMembers, selectedScopeId) {
@@ -804,6 +838,7 @@ function getSelectedScope(clientModel, detailedMembers, selectedScopeId) {
       ),
       assetProductTables: buildProductAssetTables(detailedMembers.flatMap((member) => safeArray(member.products))),
       deathCoverageProducts: aggregateDeathCoverageRows(detailedMembers),
+      pensionDeathBenefitProducts: aggregatePensionDeathBenefitRows(detailedMembers),
     };
   }
 
@@ -829,6 +864,7 @@ function getSelectedScope(clientModel, detailedMembers, selectedScopeId) {
     },
     assetProductTables: member.assetProductTables || [],
     deathCoverageProducts: member.deathCoverageProducts || [],
+    pensionDeathBenefitProducts: member.pensionDeathBenefitProducts || [],
   };
 }
 
@@ -848,7 +884,7 @@ const BASE_NAV_ITEMS = [
   { id: "personal", label: "פרטים אישיים", icon: "☷" },
   { id: "pension", label: "סיכום פנסיוני", icon: "▥" },
   { id: "allocation", label: "התפלגות נכסים", icon: "◔" },
-  { id: "insurance", label: "פירוט ביטוחים", icon: "🛡" },
+  { id: "insurance", label: "סכומים למקרה פטירה", icon: "🛡" },
   { id: "loans", label: "הלוואות", icon: "🏦" },
   { id: "summary", label: "סיכום שיחה", icon: "✎" },
 ];
@@ -1472,10 +1508,11 @@ function AssetProductRoutesTable({ rows }) {
 function InsuranceSection({ scope }) {
   const insurance = scope.insurance || {};
   const deathCoverageRows = safeArray(scope.deathCoverageProducts);
+  const pensionDeathBenefitRows = safeArray(scope.pensionDeathBenefitProducts);
 
   return (
     <div>
-      <SectionTitle title="פירוט ביטוחים" />
+      <SectionTitle title="סכומים למקרה פטירה" />
 
       {scope.isFamily ? (
         <div className="client-kpi-grid" style={{ gridTemplateColumns: "1fr" }}>
@@ -1493,9 +1530,72 @@ function InsuranceSection({ scope }) {
       )}
 
       <div className="client-panel client-margin-top">
-        <h3>פירוט ביטוח חיים לפי מוצרים וצבירה</h3>
+        <h3>סכומים חד פעמיים במקרה פטירה</h3>
         <InsuranceProductsTable rows={deathCoverageRows} isFamily={Boolean(scope.isFamily)} />
       </div>
+
+      <div className="client-panel client-margin-top">
+        <h3>סכום פיצוי חודשי מקרן הפנסיה</h3>
+        <PensionDeathBenefitTable rows={pensionDeathBenefitRows} isFamily={Boolean(scope.isFamily)} />
+        <div className="client-empty-state client-margin-top">
+          סך הקצבה החודשית לאלמנה וליתומים אינה יכולה לעלות על השכר המבוטח; הפיצוי לכל יתום משולם עד גיל 21.
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function PensionDeathBenefitTable({ rows, isFamily }) {
+  const safeRows = safeArray(rows);
+
+  if (!safeRows.length) {
+    return (
+      <div className="client-empty-state client-margin-top">
+        אין נתוני פיצוי חודשי מקרן פנסיה להצגה.
+      </div>
+    );
+  }
+
+  const columns = isFamily
+    ? [
+        { key: "memberName", label: "בן משפחה", className: "text-col", render: (row) => row.memberName || "—" },
+        { key: "planName", label: "שם מוצר", className: "wide-col", render: (row) => row.planName || "—" },
+        { key: "widowPension", label: "סכום לאלמנה", className: "money-col", render: (row) => formatCurrency(row.widowPension) },
+        { key: "orphanPension", label: "סכום ליתום", className: "money-col", render: (row) => formatCurrency(row.orphanPension) },
+        { key: "totalPension", label: "סך קצבה", className: "money-col", render: (row) => formatCurrency(row.totalPension) },
+      ]
+    : [
+        { key: "planName", label: "שם מוצר", className: "wide-col", render: (row) => row.planName || "—" },
+        { key: "widowPension", label: "סכום לאלמנה", className: "money-col", render: (row) => formatCurrency(row.widowPension) },
+        { key: "orphanPension", label: "סכום ליתום", className: "money-col", render: (row) => formatCurrency(row.orphanPension) },
+        { key: "totalPension", label: "סך קצבה", className: "money-col", render: (row) => formatCurrency(row.totalPension) },
+      ];
+
+  return (
+    <div className="client-table-wrap client-margin-top">
+      <table className={isFamily ? "client-table client-insurance-table family" : "client-table client-insurance-table member"}>
+        <colgroup>
+          {columns.map((column) => (
+            <col key={column.key} className={`client-insurance-col-${column.key}`} />
+          ))}
+        </colgroup>
+        <thead>
+          <tr>
+            {columns.map((column) => (
+              <th key={column.key} className={column.className}>{column.label}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {safeRows.map((row, rowIndex) => (
+            <tr key={row.id || `${row.planName || "plan"}-${rowIndex}`}>
+              {columns.map((column) => (
+                <td key={column.key} className={column.className} title={String(column.render(row) || "")}>{column.render(row)}</td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }
@@ -3409,6 +3509,12 @@ const clientDashboardCss = `
   .client-insurance-table.member .client-insurance-col-policyNo { width: 15%; }
   .client-insurance-table.member .client-insurance-col-currentValue { width: 14%; }
   .client-insurance-table.member .client-insurance-col-deathCoverage { width: 15%; }
+  .client-insurance-table .client-insurance-col-widowPension { width: 20%; }
+  .client-insurance-table .client-insurance-col-orphanPension { width: 20%; }
+  .client-insurance-table .client-insurance-col-totalPension { width: 20%; }
+  .client-insurance-table.member .client-insurance-col-widowPension { width: 25%; }
+  .client-insurance-table.member .client-insurance-col-orphanPension { width: 25%; }
+  .client-insurance-table.member .client-insurance-col-totalPension { width: 25%; }
   .client-empty-state { border: 1px dashed ${theme.border}; border-radius: 16px; background: ${theme.surfaceAlt}; padding: 18px; color: ${theme.textSoft}; font-size: 13px; text-align: center; line-height: 1.7; }
   .client-rich-readonly { min-height: 210px; border: 1px solid ${theme.divider}; border-radius: 16px; background: #FFFDFB; padding: 16px; color: ${theme.text}; font-size: 13px; line-height: 1.9; white-space: pre-wrap; }
   .client-rich-readonly p { margin: 0 0 10px; }

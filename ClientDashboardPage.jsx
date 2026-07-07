@@ -1366,7 +1366,6 @@ function GenderIcon({ gender }) {
 function PersonalDetailsCard({ member, index }) {
   const details = member?.personalDetails || {};
   const gender = details.gender || member?.gender || (index === 1 ? "female" : "male");
-  const title = index === 0 ? "בעל" : index === 1 ? "אישה" : "בן/בת משפחה";
   return (
     <div className="client-personal-card">
       <div className="client-personal-card-header">

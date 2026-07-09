@@ -1132,6 +1132,21 @@ function PdfExportModal({ navItems, onClose, scope, detailedMembers, specialSect
   const selectedItems = navItems.filter((item) => selected.has(item.id));
   const printProps = { scope, detailedMembers, specialSections, clientModel, reportData };
 
+  // Individual policies with weighted returns, for the new-design "נכסים ברמת מוצר" page.
+  const productFunds = safeArray(scope?.products)
+    .map((p) => {
+      const routes = safeArray(p.investmentRoutes);
+      const avg = (k) => (routes.length ? routes.reduce((s, r) => s + Number(r?.[k] || 0), 0) / routes.length : 0);
+      return {
+        name: p.planName || p.productType || "מוצר",
+        policyNo: p.policyNo || "",
+        value: Number(p.currentValue || 0),
+        return12: avg("return12"), return36: avg("return36"), return60: avg("return60"),
+        st36: avg("st36"), sharp36: avg("sharp36"),
+      };
+    })
+    .filter((f) => f.value > 0);
+
   return (
     <>
       <div className="pdf-modal-overlay" onClick={onClose} />
@@ -1177,6 +1192,7 @@ function PdfExportModal({ navItems, onClose, scope, detailedMembers, specialSect
           <PrintReportA4
             reportData={reportData}
             sections={selected}
+            productFunds={productFunds}
             conversationSummary={reportData?.conversationSummary || reportData?.clientConversationSummary || ""}
             actionRecommendations={reportData?.actionRecommendations || reportData?.recommendationsText || ""}
           />

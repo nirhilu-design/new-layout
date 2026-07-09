@@ -5797,7 +5797,7 @@ function GiftIcon() {
   );
 }
 
-export function PrintReportA4({ reportData, conversationSummary = "", actionRecommendations = "", sections = null }) {
+export function PrintReportA4({ reportData, conversationSummary = "", actionRecommendations = "", sections = null, productFunds = [] }) {
   const data = reportData || {};
   const family = data.family || {};
   const printConversationSummary =
@@ -6159,35 +6159,55 @@ export function PrintReportA4({ reportData, conversationSummary = "", actionReco
 
       {/* ============ PAGES 4+ — נכסים ברמת מוצר ============ */}
       {show("allocation") && (() => {
-        const sorted = [...products].map((p) => ({ name: p.name || "ללא שם", value: Number(p.value || 0) })).sort((a, b) => b.value - a.value);
+        const funds = (Array.isArray(productFunds) ? productFunds : [])
+          .map((f) => ({
+            name: f.name || "מוצר", policyNo: f.policyNo || "", value: Number(f.value || 0),
+            return12: Number(f.return12 || 0), return36: Number(f.return36 || 0), return60: Number(f.return60 || 0),
+            st36: Number(f.st36 || 0), sharp36: Number(f.sharp36 || 0),
+          }))
+          .filter((f) => f.value > 0)
+          .sort((a, b) => b.value - a.value);
+        if (!funds.length) {
+          return (
+            <section className="rp-section" style={pageStyle}>
+              <SectionHeader title="נכסים ברמת מוצר" subtitle="פירוט אחזקות לפי מוצר" />
+              <EmptyPanel title="לא התקבלו נתוני מוצרים להצגה" subtitle="ככל שיועברו נתוני מוצרים, יוצגו כאן אחזקות לפי מוצר." />
+            </section>
+          );
+        }
+        const per = 9;
         const chunks = [];
-        for (let i = 0; i < sorted.length; i += 8) chunks.push(sorted.slice(i, i + 8));
-        if (!chunks.length) chunks.push([]);
+        for (let i = 0; i < funds.length; i += per) chunks.push(funds.slice(i, i + per));
+        const Metric = ({ label, value, decimal, signed }) => (
+          <div>
+            <div style={{ color: MUTED, fontSize: 10 }}>{label}</div>
+            <div style={{ fontWeight: 700, color: signed && value < 0 ? PINK : NAVY, fontSize: 12, direction: "ltr", textAlign: "right" }}>
+              {decimal ? value.toFixed(2) : `${value.toFixed(2)}%`}
+            </div>
+          </div>
+        );
         return chunks.map((chunk, pageIndex) => (
           <section className="rp-section" style={pageStyle} key={`products-page-${pageIndex}`}>
-            <SectionHeader title="נכסים ברמת מוצר" subtitle={pageIndex === 0 ? "פירוט אחזקות לפי מוצר" : "המשך"} />
-            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-              {chunk.length ? chunk.map((prod, i) => {
-                const share = productTotal > 0 ? (prod.value / productTotal) * 100 : 0;
-                return (
-                  <div className="rp-avoid" key={`${prod.name}-${i}`} style={{ background: OFFWHITE, border: `1px solid ${TAN}`, borderLeft: `3px solid ${NAVY}`, borderRadius: 14, padding: "20px 22px" }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
-                      <div style={{ fontSize: 16, fontWeight: 700, color: NAVY }}>{prod.name}</div>
-                      <div style={{ fontSize: 18, fontWeight: 800, direction: "ltr" }}>{fmtCurrency(prod.value)}</div>
+            <SectionHeader title="נכסים ברמת מוצר" subtitle={pageIndex === 0 ? "תשואות ומדדי סיכון לפי מסלול" : "המשך"} />
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              {chunk.map((f, i) => (
+                <div className="rp-avoid" key={`${f.name}-${f.policyNo}-${i}`} style={{ background: OFFWHITE, border: `1px solid ${TAN}`, borderLeft: `3px solid ${NAVY}`, borderRadius: 12, padding: "14px 18px" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: NAVY }}>
+                      {f.name}{f.policyNo ? <span style={{ fontSize: 11, color: MUTED, fontWeight: 400 }}>{` · מס' ${f.policyNo}`}</span> : null}
                     </div>
-                    <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                      <div style={{ flex: 1, background: DESK, borderRadius: 8, height: 12, overflow: "hidden" }}>
-                        <div style={{ width: `${Math.max(share, prod.value ? 3 : 0)}%`, height: "100%", background: NAVY, borderRadius: 8 }} />
-                      </div>
-                      <div style={{ fontSize: 13, color: MUTED, width: 64, textAlign: "left", direction: "ltr" }}>{share.toFixed(1)}% מהתיק</div>
-                    </div>
+                    <div style={{ fontSize: 16, fontWeight: 800, direction: "ltr" }}>{fmtCurrency(f.value)}</div>
                   </div>
-                );
-              }) : <EmptyPanel title="לא התקבלו נתוני מוצרים להצגה" subtitle="ככל שיועברו נתוני מוצרים, יוצגו כאן אחזקות לפי מוצר." />}
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 8 }}>
+                    <Metric label="תשואה 12ח'" value={f.return12} />
+                    <Metric label="תשואה 36ח'" value={f.return36} />
+                    <Metric label="תשואה 60ח'" value={f.return60} />
+                    <Metric label="סטיית תקן 36ח'" value={f.st36} />
+                    <Metric label="שארפ 36ח'" value={f.sharp36} decimal signed />
+                  </div>
+                </div>
+              ))}
             </div>
-            {pageIndex === chunks.length - 1 && chunk.length ? (
-              <div style={{ marginTop: 24, fontSize: 12, color: MUTED, lineHeight: 1.6 }}>נתוני תשואה ומדדי סיכון (12/36/60 חודשים, סטיית תקן, שארפ) יוצגו כאשר יתקבלו נתוני תשואה ברמת המסלול.</div>
-            ) : null}
           </section>
         ));
       })()}
@@ -6280,17 +6300,17 @@ export function PrintReportA4({ reportData, conversationSummary = "", actionReco
             { name: "קרנות השתלמות (צבירה בלבד)", value: capStudyBalance },
           ]} />
           {allCapitalPension.length ? (
-            <table style={{ fontSize: 11.5, marginTop: 6 }}>
+            <table style={{ fontSize: 8.5, marginTop: 6, tableLayout: "fixed", width: "100%" }}>
               <thead>
                 <tr style={{ background: NAVY, color: OFFWHITE }}>
-                  {capitalColumns.map((c) => <th key={c.key} style={{ padding: "8px 10px", textAlign: "right" }}>{c.label}</th>)}
+                  {capitalColumns.map((c) => <th key={c.key} style={{ padding: "6px 4px", textAlign: "right", wordBreak: "break-word", lineHeight: 1.2, width: c.key === "planName" ? "16%" : "14%" }}>{c.label}</th>)}
                 </tr>
               </thead>
               <tbody>
                 {allCapitalPension.slice(0, 10).map((row, i) => (
                   <tr key={row.id || i} style={{ background: i % 2 === 0 ? OFFWHITE : DESK }}>
                     {capitalColumns.map((c) => (
-                      <td key={c.key} style={{ padding: "7px 10px", borderBottom: `1px solid ${TAN}`, textAlign: "right", direction: c.num ? "ltr" : "rtl" }}>
+                      <td key={c.key} style={{ padding: "5px 4px", borderBottom: `1px solid ${TAN}`, textAlign: "right", direction: c.num ? "ltr" : "rtl", wordBreak: "break-word" }}>
                         {getCapitalDisplayValue(row, c.key)}
                       </td>
                     ))}
@@ -6298,7 +6318,7 @@ export function PrintReportA4({ reportData, conversationSummary = "", actionReco
                 ))}
                 <tr style={{ background: NAVY, color: OFFWHITE, fontWeight: 700 }}>
                   {capitalColumns.map((c, i) => (
-                    <td key={c.key} style={{ padding: "9px 10px", textAlign: "right", direction: c.num ? "ltr" : "rtl" }}>
+                    <td key={c.key} style={{ padding: "6px 4px", textAlign: "right", direction: c.num ? "ltr" : "rtl", wordBreak: "break-word" }}>
                       {i === 0 ? 'סה"כ' : c.num ? getCapitalRowValue({ value: summarizeCapitalDerivedRows(allCapitalPension, c.key) }, "value") : ""}
                     </td>
                   ))}
@@ -6368,11 +6388,18 @@ export function PrintReportA4({ reportData, conversationSummary = "", actionReco
       {show("section28") && hasSavingSimulation ? (
         <section className="rp-section" style={pageStyle}>
           <SectionHeader title="סימולציית חיסכון וגיל פרישה" subtitle="קופת גמל להשקעה · חיסכון אישי" />
-          <div style={{ display: "grid", gridTemplateColumns: savingRows.length >= 3 ? "repeat(3, 1fr)" : "repeat(2, 1fr)", gap: 18 }}>
-            {savingRows.slice(0, 6).map((row, i) => (
-              <Kpi key={`${row.label}-${i}`} tone={i === savingRows.length - 1 ? "pink" : "outline"} label={row.label} value={formatSection28DisplayValue(row.value)} />
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 18, marginBottom: 24 }}>
+            {savingRows.slice(0, 3).map((row, i) => (
+              <Kpi key={`sv-${i}`} tone={i === 2 ? "pink" : "outline"} label={row.label} value={formatSection28DisplayValue(row.value)} />
             ))}
           </div>
+          {savingRows.length > 3 ? (
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24 }}>
+              {savingRows.slice(3, 5).map((row, i) => (
+                <Kpi key={`sv2-${i}`} tone={i === 0 ? "navy" : "soft"} label={row.label} value={formatSection28DisplayValue(row.value)} />
+              ))}
+            </div>
+          ) : null}
         </section>
       ) : null}
 

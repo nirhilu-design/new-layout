@@ -5923,8 +5923,7 @@ export function PrintReportA4({ reportData, conversationSummary = "", actionReco
             <div key={`${title}-${seg.name}-${i}`} style={{ display: "flex", alignItems: "center", gap: 12 }}>
               <div style={{ width: 13, height: 13, borderRadius: 4, background: seg.color, flexShrink: 0 }} />
               <div style={{ flex: 1, fontSize: 14, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }} title={seg.name}>{seg.name}</div>
-              <div style={{ fontSize: 14, fontWeight: 700, direction: "ltr" }}>{fmtCurrency(seg.value)}</div>
-              <div style={{ fontSize: 12, color: MUTED, width: 48, textAlign: "left", direction: "ltr" }}>{seg.percent.toFixed(1)}%</div>
+              <div style={{ fontSize: 15, fontWeight: 800, color: "#00215D", width: 64, textAlign: "left", direction: "ltr" }}>{seg.percent.toFixed(1)}%</div>
             </div>
           )) : <div style={{ fontSize: 14, color: MUTED }}>אין נתונים להצגה</div>}
           {note ? <div style={{ fontSize: 11, color: MUTED, marginTop: 4 }}>{note}</div> : null}

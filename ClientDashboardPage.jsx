@@ -927,7 +927,7 @@ export default function ClientDashboardPage({
               </select>
             </label>
 
-            {!isSharedMode ? <button type="button" onClick={onBack} className="client-back-button">חזרה ל־REPORT</button> : null}
+            {!isSharedMode ? <button type="button" onClick={onBack} className="client-back-button">חזרה למסך העלאה</button> : null}
           </div>
         </header>
 

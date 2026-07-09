@@ -145,7 +145,8 @@ function App() {
     setReportData(data);
     setClientViewMode("family");
     setSelectedMemberId(null);
-    setCurrentPage("report");
+    // Skip the advisor report screen — go straight to the client WEB view.
+    setCurrentPage("client");
   };
 
   const handleOpenClientDashboard = (options = {}) => {
@@ -270,7 +271,7 @@ function App() {
 
         <ClientDashboardPage
           reportData={reportData}
-          onBack={() => setCurrentPage("report")}
+          onBack={() => setCurrentPage("upload")}
           onCreateShareLink={handleCreateShareLink}
           isSharedMode={isSharedMode}
           sharePayload={sharePayload}

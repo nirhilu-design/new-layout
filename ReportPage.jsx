@@ -5868,7 +5868,7 @@ export function PrintReportA4({ reportData, conversationSummary = "", actionReco
 
   const pageStyle = {
     minHeight: "1122px",
-    padding: "64px",
+    padding: "44px 48px",
     background: OFFWHITE,
     color: INK,
     direction: "rtl",
@@ -5880,7 +5880,7 @@ export function PrintReportA4({ reportData, conversationSummary = "", actionReco
   };
 
   const SectionHeader = ({ title, subtitle }) => (
-    <div style={{ display: "flex", alignItems: "baseline", gap: 14, borderBottom: `3px solid ${NAVY}`, paddingBottom: 18, marginBottom: 32 }}>
+    <div style={{ display: "flex", alignItems: "baseline", gap: 14, borderBottom: `3px solid ${NAVY}`, paddingBottom: 14, marginBottom: 22 }}>
       <div style={{ fontSize: 34, fontWeight: 800, color: NAVY }}>{title}</div>
       {subtitle ? <div style={{ fontSize: 15, color: MUTED }}>{subtitle}</div> : null}
     </div>

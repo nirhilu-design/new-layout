@@ -6027,6 +6027,8 @@ export function PrintReportA4({ reportData, conversationSummary = "", actionReco
     { key: "currentEmployerSeveranceTaxable", label: "פיצויים מעסיק נוכחי", num: true },
     { key: "totalPension", label: 'סה"כ קצבה', num: true },
     { key: "totalCapital", label: 'סה"כ הון', num: true },
+    { key: "conversionCoefficient", label: "מקדם המרה לקצבה (ערך)*", theoretical: true },
+    { key: "expectedRetirementCost", label: "עלות צפויה לגיל פרישה*", theoretical: true },
   ];
 
   // ---------- Section 28 helpers ----------
@@ -6294,32 +6296,59 @@ export function PrintReportA4({ reportData, conversationSummary = "", actionReco
             <Kpi tone="outline" label='סה"כ פיצויים' value={fmtCurrency(capTotalSeverance)} />
             <Kpi tone="pink" label='סה"כ הון' value={fmtCurrency(capTotalCapital)} />
           </div>
-          <Donut title="capital-split" centerLabel="הוני/קצבתי" items={[
-            { name: "הון (נזיל / כספים הוניים)", value: capTotalCapital },
-            { name: "קצבה (מיועד לקצבה חודשית)", value: capTotalPension },
-            { name: "קרנות השתלמות (צבירה בלבד)", value: capStudyBalance },
-          ]} />
+          {(() => {
+            const segs = [
+              { name: "הון (נזיל / כספים הוניים)", value: capTotalCapital, color: NAVY },
+              { name: "קצבה (מיועד לקצבה חודשית)", value: capTotalPension, color: PINK },
+              { name: "קרנות השתלמות (צבירה בלבד)", value: capStudyBalance, color: TAN },
+            ];
+            const tot = segs.reduce((s, x) => s + x.value, 0) || 1;
+            let cur = 0;
+            const stops = segs.map((s) => { const start = cur; cur += (s.value / tot) * 360; return `${s.color} ${start}deg ${cur}deg`; }).join(", ");
+            return (
+              <div className="rp-avoid" style={{ display: "grid", gridTemplateColumns: "300px 1fr", gap: 36, alignItems: "center", background: OFFWHITE, border: `1px solid ${TAN}`, borderRadius: 20, padding: 32, marginBottom: 28 }}>
+                <div style={{ display: "flex", justifyContent: "center" }}>
+                  <div style={{ width: 220, height: 220, borderRadius: "50%", background: `conic-gradient(${stops})`, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                    <div style={{ width: 130, height: 130, borderRadius: "50%", background: OFFWHITE, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
+                      <div style={{ fontSize: 11, color: MUTED }}>סיווג</div>
+                      <div style={{ fontSize: 14, fontWeight: 700, color: NAVY }}>הוני/קצבתי</div>
+                    </div>
+                  </div>
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+                  {segs.map((s, i) => (
+                    <div key={i} style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                      <div style={{ width: 14, height: 14, borderRadius: 4, background: s.color, flexShrink: 0 }} />
+                      <div style={{ flex: 1, fontSize: 15 }}>{s.name}</div>
+                      <div style={{ fontSize: 15, fontWeight: 700, direction: "ltr" }}>{fmtCurrency(s.value)}</div>
+                      <div style={{ fontSize: 13, color: MUTED, width: 52, textAlign: "left", direction: "ltr" }}>{((s.value / tot) * 100).toFixed(1)}%</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })()}
           {allCapitalPension.length ? (
-            <table style={{ fontSize: 8.5, marginTop: 6, tableLayout: "fixed", width: "100%" }}>
+            <table style={{ fontSize: 8, marginTop: 6, tableLayout: "fixed", width: "100%" }}>
               <thead>
                 <tr style={{ background: NAVY, color: OFFWHITE }}>
-                  {capitalColumns.map((c) => <th key={c.key} style={{ padding: "6px 4px", textAlign: "right", wordBreak: "break-word", lineHeight: 1.2, width: c.key === "planName" ? "16%" : "14%" }}>{c.label}</th>)}
+                  {capitalColumns.map((c) => <th key={c.key} style={{ padding: "6px 3px", textAlign: "right", wordBreak: "break-word", lineHeight: 1.2, width: c.key === "planName" ? "13%" : "10.8%" }}>{c.label}</th>)}
                 </tr>
               </thead>
               <tbody>
                 {allCapitalPension.slice(0, 10).map((row, i) => (
                   <tr key={row.id || i} style={{ background: i % 2 === 0 ? OFFWHITE : DESK }}>
                     {capitalColumns.map((c) => (
-                      <td key={c.key} style={{ padding: "5px 4px", borderBottom: `1px solid ${TAN}`, textAlign: "right", direction: c.num ? "ltr" : "rtl", wordBreak: "break-word" }}>
-                        {getCapitalDisplayValue(row, c.key)}
+                      <td key={c.key} style={{ padding: "5px 3px", borderBottom: `1px solid ${TAN}`, textAlign: "right", direction: c.num ? "ltr" : "rtl", wordBreak: "break-word", color: c.theoretical ? MUTED : undefined }}>
+                        {c.theoretical ? "—" : getCapitalDisplayValue(row, c.key)}
                       </td>
                     ))}
                   </tr>
                 ))}
                 <tr style={{ background: NAVY, color: OFFWHITE, fontWeight: 700 }}>
                   {capitalColumns.map((c, i) => (
-                    <td key={c.key} style={{ padding: "6px 4px", textAlign: "right", direction: c.num ? "ltr" : "rtl", wordBreak: "break-word" }}>
-                      {i === 0 ? 'סה"כ' : c.num ? getCapitalRowValue({ value: summarizeCapitalDerivedRows(allCapitalPension, c.key) }, "value") : ""}
+                    <td key={c.key} style={{ padding: "6px 3px", textAlign: "right", direction: c.num ? "ltr" : "rtl", wordBreak: "break-word", opacity: c.theoretical ? 0.7 : 1 }}>
+                      {i === 0 ? 'סה"כ' : c.theoretical ? "—" : c.num ? getCapitalRowValue({ value: summarizeCapitalDerivedRows(allCapitalPension, c.key) }, "value") : ""}
                     </td>
                   ))}
                 </tr>
@@ -6332,7 +6361,7 @@ export function PrintReportA4({ reportData, conversationSummary = "", actionReco
               <div style={{ fontSize: 20, fontWeight: 800, color: NAVY, direction: "ltr" }}>{fmtCurrency(capStudyBalance)}</div>
             </div>
           ) : null}
-          <div style={{ fontSize: 11, color: MUTED, marginTop: 10 }}>כספים הוניים כוללים רכיבי הון, תגמולים הוניים ותגמולים קצבתיים עד שנת 2000. קרנות השתלמות מוצגות כצבירה בלבד.</div>
+          <div style={{ fontSize: 11, color: MUTED, marginTop: 10, lineHeight: 1.6 }}>כספים הוניים כוללים רכיבי הון, תגמולים הוניים ותגמולים קצבתיים עד שנת 2000. קרנות השתלמות מוצגות כצבירה בלבד. * שתי העמודות האחרונות הן הערכה תיאורטית להמחשה בלבד ואינן מבוססות על מקדם בפועל שהתקבל מהגוף המנהל.</div>
         </section>
       ) : null}
 
@@ -6343,24 +6372,42 @@ export function PrintReportA4({ reportData, conversationSummary = "", actionReco
         const monthlyRow = allRows.find((r) => isSection28MonthlySavingRow(r.label));
         const costGroup = getSection28Group(groups, "employer-cost", "עלויות") || groups[0];
         const costRows = section28Meaningful(costGroup?.rows);
-        const comparisonRows = section28Meaningful(entry?.comparisonRows);
+        const employerRows = pickSection28Rows(costRows, ["השתלמות מעל תקרה", "פיצויים מעל לתקרה", "תגמולים מעל לתקרה"]);
+        const employerSummary = pickSection28Rows(costRows, ["סכום קיטום מעל לסעיף 28 ברוטו", "סכום נטו לאחר ניכוי מס שולי"]);
+        const employeeRows = pickSection28Rows(costRows, ["גידול בנטו בעקבות קיטום בפיצויים", "גידול בנטו בעקבות קיטום תגמולים", "גידול בנטו בעקבות קיטום קה\"ש מעל לתקרה", "הפרשות עובד קה\"ש מעל תקרה", "הפרשות עובד תגמולים"]);
+        const employeeSummary = pickSection28Rows(costRows, ['סה"כ גידול נטו', "סה״כ גידול נטו", "סך הכל גידול נטו"]);
+        const comparisonRows = Array.isArray(entry?.comparisonRows) ? entry.comparisonRows : [];
+        const chartRows = comparisonRows.filter((r) => {
+          const l = normalizeSection28Text(r.label).replace(/סהכ/g, 'סה"כ');
+          return (l === "קצבה" || l.includes('סה"כ הון')) && (isMeaningfulSection28Value(r.before) || isMeaningfulSection28Value(r.after));
+        });
+        const CostCard = ({ title, rows, summary }) => (
+          <div className="rp-avoid" style={{ background: OFFWHITE, border: `1px solid ${TAN}`, borderRadius: 16, padding: 26 }}>
+            <div style={{ fontSize: 16, fontWeight: 700, color: NAVY, marginBottom: 16 }}>{title}</div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 10, fontSize: 13.5 }}>
+              {rows.map((r, i) => (
+                <div key={`r-${i}`} style={{ display: "flex", justifyContent: "space-between" }}>
+                  <span>{r.label}</span><strong style={{ direction: "ltr" }}>{formatSection28DisplayValue(r.value)}</strong>
+                </div>
+              ))}
+              {summary.map((r, i) => {
+                const isBrut = normalizeSection28Text(r.label).includes("ברוטו");
+                return (
+                  <div key={`s-${i}`} style={{ display: "flex", justifyContent: "space-between", borderTop: i === 0 ? `1px solid ${TAN}` : "none", paddingTop: i === 0 ? 10 : 0 }}>
+                    <span>{r.label}</span><strong style={{ direction: "ltr", color: isBrut ? PINK : NAVY }}>{formatSection28DisplayValue(r.value)}</strong>
+                  </div>
+                );
+              })}
+              {!rows.length && !summary.length ? <div style={{ color: MUTED }}>אין נתון להצגה</div> : null}
+            </div>
+          </div>
+        );
         return (
           <section className="rp-section" style={pageStyle} key={`s28-${entryIndex}`}>
-            <SectionHeader title="קיטום סעיף 28" subtitle={`${entry.ownerLabel || "בן/בת זוג"} · פירוט עלויות ותרחיש לאחר קיטום`} />
-            <div className="rp-avoid" style={{ background: OFFWHITE, border: `1px solid ${TAN}`, borderRadius: 16, padding: 26, marginBottom: 24 }}>
-              <div style={{ fontSize: 16, fontWeight: 700, color: NAVY, marginBottom: 16 }}>פירוט עלויות</div>
-              <div style={{ display: "flex", flexDirection: "column", gap: 10, fontSize: 13.5 }}>
-                {(costRows.length ? costRows : allRows).slice(0, 10).map((row, i) => {
-                  const highlight = isSection28ImportantRow(row.label);
-                  return (
-                    <div key={`${row.label}-${i}`} style={{ display: "flex", justifyContent: "space-between", borderTop: highlight ? `1px solid ${TAN}` : "none", paddingTop: highlight ? 10 : 0 }}>
-                      <span>{row.label}</span>
-                      <strong style={{ direction: "ltr", color: highlight ? PINK : NAVY }}>{formatSection28DisplayValue(row.value)}</strong>
-                    </div>
-                  );
-                })}
-                {!costRows.length && !allRows.length ? <div style={{ color: MUTED }}>לא נמצאו נתונים להצגה.</div> : null}
-              </div>
+            <SectionHeader title="קיטום סעיף 28" subtitle={`${entry.ownerLabel || "מבוטח/ת ראשית"} · פירוט עלויות ותרחיש לאחר קיטום`} />
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24, marginBottom: 28 }}>
+              <CostCard title="חלק מעסיק" rows={employerRows} summary={employerSummary} />
+              <CostCard title="חלק עובד" rows={employeeRows} summary={employeeSummary} />
             </div>
             {monthlyRow ? (
               <div className="rp-avoid" style={{ background: NAVY, color: OFFWHITE, borderRadius: 16, padding: 26, display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 32 }}>
@@ -6368,15 +6415,35 @@ export function PrintReportA4({ reportData, conversationSummary = "", actionReco
                 <div style={{ fontSize: 30, fontWeight: 800, direction: "ltr" }}>{formatSection28DisplayValue(monthlyRow.value)}</div>
               </div>
             ) : null}
-            {comparisonRows.length ? (
+            {chartRows.length ? (
               <>
                 <div style={{ fontSize: 17, fontWeight: 700, color: NAVY, marginBottom: 14 }}>השוואה בין תרחישים</div>
-                <div className="rp-avoid" style={{ background: OFFWHITE, border: `1px solid ${TAN}`, borderRadius: 16, padding: 24, display: "flex", flexDirection: "column", gap: 10, fontSize: 13.5 }}>
-                  {comparisonRows.slice(0, 8).map((row, i) => (
-                    <div key={`${row.label}-${i}`} style={{ display: "flex", justifyContent: "space-between" }}>
-                      <span>{row.label}</span><strong style={{ direction: "ltr" }}>{formatSection28DisplayValue(row.value)}</strong>
-                    </div>
-                  ))}
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24 }}>
+                  {chartRows.map((row, i) => {
+                    const before = Math.abs(section28NumericValue(row.before));
+                    const after = Math.abs(section28NumericValue(row.after));
+                    const max = Math.max(before, after, 1);
+                    const gapNum = section28NumericValue(row.gap) || (section28NumericValue(row.after) - section28NumericValue(row.before));
+                    const title = normalizeSection28Text(row.label) === "קצבה" ? "קצבה חודשית" : row.label;
+                    return (
+                      <div className="rp-avoid" key={`cmp-${i}`} style={{ background: OFFWHITE, border: `1px solid ${TAN}`, borderRadius: 16, padding: 24 }}>
+                        <div style={{ fontSize: 14, color: MUTED, marginBottom: 14 }}>{title}</div>
+                        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                          {[{ l: "לפני קיטום", v: before, dv: row.before, c: NAVY }, { l: "אחרי קיטום", v: after, dv: row.after, c: PINK }].map((b, bi) => (
+                            <div key={bi}>
+                              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginBottom: 6 }}><span>{b.l}</span><strong style={{ direction: "ltr" }}>{formatSection28DisplayValue(b.dv)}</strong></div>
+                              <div style={{ background: DESK, borderRadius: 8, height: 14, overflow: "hidden" }}>
+                                <div style={{ width: `${Math.max((b.v / max) * 100, b.v ? 4 : 0)}%`, height: "100%", background: b.c, borderRadius: 8 }} />
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                        <div style={{ marginTop: 14, fontSize: 13, fontWeight: 700, color: gapNum < 0 ? PINK : NAVY, direction: "rtl" }}>
+                          פער: {gapNum < 0 ? "‎-" : "‎+"}{formatSection28DisplayValue(Math.abs(gapNum))}
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </>
             ) : null}

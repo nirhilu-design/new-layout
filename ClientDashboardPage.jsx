@@ -955,10 +955,10 @@ function PensionSection({ scope }) {
     <div>
       <SectionTitle title="סיכום פנסיוני" subtitle="ריכוז נתוני הצבירה, ההפקדות והתחזית לגיל פרישה — ללא רכיבי פאי בעמוד הראשי." />
       <div className="client-kpi-grid">
-        <KpiCard icon={<PiggyIcon />} title="הפקדה חודשית כוללת" value={formatCurrency(summary.monthlyDeposits)} subtext="לפי התצוגה שנבחרה" />
-        <KpiCard icon={<GrowthIcon />} title="סך נכסים" value={formatCurrency(summary.totalAssets)} subtext="סך הצבירה הקיימת" />
-        <KpiCard icon={<WalletIcon />} title="קצבה חודשית צפויה" value={formatCurrency(summary.monthlyPensionWithDeposits)} subtext="עם המשך הפקדות" />
-        <KpiCard icon={<BankIcon />} title="צבירה צפויה" value={formatCurrency(summary.projectedLumpSumWithDeposits)} subtext="עם המשך הפקדות" />
+        <KpiCard icon={<DepositIcon />} title="הפקדה חודשית כוללת" value={formatCurrency(summary.monthlyDeposits)} subtext="לפי התצוגה שנבחרה" />
+        <KpiCard icon={<GrowthIcon />} title="סך נכסים" value={formatCurrency(summary.totalAssets)} />
+        <KpiCard icon={<PensionIcon />} title="קצבה חודשית צפויה" value={formatCurrency(summary.monthlyPensionWithDeposits)} subtext="עם המשך הפקדות" />
+        <KpiCard icon={<ProjectionIcon />} title="צבירה צפויה" value={formatCurrency(summary.projectedLumpSumWithDeposits)} subtext="עם המשך הפקדות" />
       </div>
       <div className="client-grid-2 client-margin-top">
         <ComparisonCard title="השוואת צבירה צפויה" explanation="פער בין צבירה עתידית עם המשך הפקדות לבין מצב ללא המשך הפקדות." withValue={summary.projectedLumpSumWithDeposits} withoutValue={summary.projectedLumpSumWithoutDeposits} />
@@ -2817,6 +2817,9 @@ function PiggyIcon() { return <svg width="30" height="30" viewBox="0 0 24 24" fi
 function GrowthIcon() { return <svg width="30" height="30" viewBox="0 0 24 24" fill="none"><path d="M4 18V9" stroke="#00215D" strokeWidth="2.2" strokeLinecap="round"/><path d="M10 18V5" stroke="#00215D" strokeWidth="2.2" strokeLinecap="round"/><path d="M16 18V12" stroke="#00215D" strokeWidth="2.2" strokeLinecap="round"/><path d="M3 19H21" stroke="#FF2756" strokeWidth="2.2" strokeLinecap="round"/></svg>; }
 function WalletIcon() { return <svg width="30" height="30" viewBox="0 0 24 24" fill="none"><rect x="4" y="7" width="16" height="11" rx="3" stroke="#00215D" strokeWidth="2.2"/><path d="M17 12H20V16H17C15.9 16 15 15.1 15 14C15 12.9 15.9 12 17 12Z" stroke="#FF2756" strokeWidth="2.2"/><path d="M7 7L15 4" stroke="#00215D" strokeWidth="2.2" strokeLinecap="round"/></svg>; }
 function BankIcon() { return <svg width="30" height="30" viewBox="0 0 24 24" fill="none"><path d="M4 10L12 5L20 10" stroke="#00215D" strokeWidth="2.2" strokeLinejoin="round"/><path d="M6 10V18" stroke="#00215D" strokeWidth="2.2" strokeLinecap="round"/><path d="M10 10V18" stroke="#00215D" strokeWidth="2.2" strokeLinecap="round"/><path d="M14 10V18" stroke="#00215D" strokeWidth="2.2" strokeLinecap="round"/><path d="M18 10V18" stroke="#00215D" strokeWidth="2.2" strokeLinecap="round"/><path d="M4 19H20" stroke="#FF2756" strokeWidth="2.2" strokeLinecap="round"/></svg>; }
+function DepositIcon() { return <svg width="30" height="30" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="14.2" r="5.3" stroke="#00215D" strokeWidth="2.2"/><path d="M12 12.1V16.3M9.9 14.2H14.1" stroke="#00215D" strokeWidth="2.2" strokeLinecap="round"/><path d="M12 2.6V7.4" stroke="#FF2756" strokeWidth="2.2" strokeLinecap="round"/><path d="M9.6 5.2L12 7.6L14.4 5.2" stroke="#FF2756" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/></svg>; }
+function PensionIcon() { return <svg width="30" height="30" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="7.2" stroke="#00215D" strokeWidth="2.2"/><path d="M12 7.6V12.2L15 13.9" stroke="#FF2756" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/></svg>; }
+function ProjectionIcon() { return <svg width="30" height="30" viewBox="0 0 24 24" fill="none"><path d="M3 17.5L8.4 12L11.6 15.2L20.5 6.4" stroke="#00215D" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/><path d="M15.8 6.4H20.5V11.1" stroke="#FF2756" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/></svg>; }
 function ShieldIcon() { return <svg width="30" height="30" viewBox="0 0 24 24" fill="none"><path d="M12 4L19 7V12C19 16.6 16.1 19.4 12 21C7.9 19.4 5 16.6 5 12V7L12 4Z" stroke="#00215D" strokeWidth="2.2" strokeLinejoin="round"/><path d="M9 12L11 14L15.5 9.5" stroke="#FF2756" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/></svg>; }
 function PersonIcon() { return <svg width="30" height="30" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="7.5" r="3.5" stroke="#00215D" strokeWidth="2.2"/><path d="M5 20C5.7 16.7 8.2 14.8 12 14.8C15.8 14.8 18.3 16.7 19 20" stroke="#FF2756" strokeWidth="2.2" strokeLinecap="round"/></svg>; }
 

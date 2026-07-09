@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import { PrintReportA4 } from "./ReportPage";
 
 const theme = {
   pageBg: "#F9F7F3",
@@ -1172,17 +1173,13 @@ function PdfExportModal({ navItems, onClose, scope, detailedMembers, specialSect
       </div>
 
       {printing ? (
-        <div className="pdf-print-container">
-          <div className="pdf-print-header">
-            <div className="pdf-print-title">{scope.isFamily ? "מבט משפחתי" : scope.name || "דוח אישי"}</div>
-            <div className="pdf-print-subtitle">דוח פנסיוני · {new Intl.DateTimeFormat("he-IL").format(new Date())}</div>
-          </div>
-          {selectedItems.map((item) => (
-            <div key={item.id} className="pdf-print-section">
-              <div className="pdf-print-section-title">{item.label}</div>
-              {renderSectionContent(item.id, printProps)}
-            </div>
-          ))}
+        <div className="pdf-print-container pdf-print-container--report">
+          <PrintReportA4
+            reportData={reportData}
+            sections={selected}
+            conversationSummary={reportData?.conversationSummary || reportData?.clientConversationSummary || ""}
+            actionRecommendations={reportData?.actionRecommendations || reportData?.recommendationsText || ""}
+          />
         </div>
       ) : null}
     </>

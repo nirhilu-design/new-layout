@@ -5818,10 +5818,9 @@ function PrintReportA4({ reportData, conversationSummary = "", actionRecommendat
   const hasCapitalClassification = capitalClassificationEntries.length > 0;
   const hasSection28Capping = section28CappingEntries.length > 0;
   const hasRecognizedPension = recognizedPensionEntries.length > 0;
-  const shouldShowPensionAppendixPage = hasSection28Capping || hasRecognizedPension;
 
   const fmtCurrency = (value) => `₪${Math.round(Number(value || 0)).toLocaleString("en-US")}`;
-  const fmtPercent = (value) => `${Math.round(Number(value || 0))}%`;
+  const fmtPercentInt = (value) => `${Math.round(Number(value || 0))}%`;
   const fmtDate = (value) => {
     if (!value) return "—";
     const str = String(value).trim();
@@ -5832,145 +5831,63 @@ function PrintReportA4({ reportData, conversationSummary = "", actionRecommendat
 
   const totalLoansAmount = loanDetails.reduce((sum, loan) => sum + Number(loan.amount || 0), 0);
   const totalLoansBalance = loanDetails.reduce((sum, loan) => sum + Number(loan.balance || 0), 0);
-  const loanRatioToAssets = Number(family.totalAssets || 0) > 0 ? (totalLoansAmount / Number(family.totalAssets || 0)) * 100 : 0;
-  const memberPages = [];
-  for (let i = 0; i < members.length; i += 2) memberPages.push(members.slice(i, i + 2));
 
-  const capitalClassificationPageNumber = 3;
-  const appendixPageNumber = hasCapitalClassification ? 4 : 3;
-  const firstMemberPageNumber = appendixPageNumber + (shouldShowPensionAppendixPage ? 1 : 0);
-  const loansPageNumber = firstMemberPageNumber + memberPages.length;
+  // ---- Design tokens (from handoff) ----
+  const NAVY = "#00215D";
+  const PINK = "#FF2756";
+  const TAN = "#E2D1BF";
+  const OFFWHITE = "#F9F7F3";
+  const DESK = "#EDE7DD";
+  const MUTED = "#8A8580";
+  const INK = "#1A1A1A";
+  const DARKTAN = "#4A3B2C";
+  const PALETTE = [NAVY, PINK, TAN, "#C9BBA8", "#9CA3AF", "#6B7280", "#43B5D9", "#8F63C9"];
 
-  const colors = ["#00215D", "#FF2756", "#1F77B4", "#43B5D9", "#8F63C9", "#F0B43C", "#58BF78", "#A8B0BA"];
+  const today = new Intl.DateTimeFormat("he-IL").format(new Date());
+  const reportDate = family.lastUpdated || today;
+
+  const memberDetail = (member, key) =>
+    member?.personalDetails?.[key] ?? member?.[key] ?? member?.details?.[key] ?? null;
+  const combinedSalary = members.reduce((sum, m) => sum + Number(memberDetail(m, "currentSalary") || 0), 0);
+  const totalLifeCoverage = members.reduce((sum, m) => sum + Number(m.deathCoverage || 0), 0);
+  const productTotal = products.reduce((sum, p) => sum + Number(p.value || 0), 0);
 
   const css = `
     @media screen { .print-report-root { display: none; } }
     @media print {
       @page { size: A4 portrait; margin: 0; }
-      html, body { width: 210mm; margin: 0 !important; padding: 0 !important; background: #fff !important; }
-      .print-report-root { display: block !important; direction: rtl; font-family: Calibri, Arial, sans-serif; color: #102A43; }
-      .print-a4-page { width: 210mm; height: 297mm; padding: 9mm 10mm; background: #fff; page-break-after: always; break-after: page; overflow: hidden; box-sizing: border-box; position: relative; }
-      .print-a4-page:last-child { page-break-after: auto; break-after: auto; }
-      .print-page-header { display: flex; justify-content: space-between; align-items: center; padding-bottom: 4mm; margin-bottom: 5mm; border-bottom: 1px solid #E2D1BF; }
-      .print-logo-text { color: #00215D; font-size: 22px; font-weight: 300; direction: ltr; }
-      .print-page-title { color: #00215D; font-size: 18px; font-weight: 900; margin: 0; }
-      .print-muted { color: #627D98; font-size: 10.5px; line-height: 1.55; }
-      .print-grid-2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4mm; }
-      .print-grid-3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4mm; }
-      .print-grid-4 { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 3mm; }
-      .print-card { border: 1px solid #E2D1BF; border-radius: 5mm; padding: 4mm; background: #FFFFFF; break-inside: avoid; page-break-inside: avoid; }
-      .print-card-soft { background: #FCFBF8; border: 1px solid #EEE4D8; border-radius: 4mm; padding: 2.8mm; }
-      .print-kpi-label { color: #627D98; font-size: 10.5px; font-weight: 800; margin-bottom: 2mm; }
-      .print-kpi-value { color: #00215D; font-size: 19px; font-weight: 900; line-height: 1.1; direction: ltr; text-align: right; }
-      .print-section-heading { color: #00215D; font-size: 13px; font-weight: 900; margin: 0 0 3mm; }
-      .print-table { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 8.5px; }
-      .print-table th { background: #00215D; color: white; padding: 1.4mm; border-left: 1px solid rgba(255,255,255,.22); font-weight: 900; }
-      .print-table td { padding: 1.35mm; border: 1px solid #EEE4D8; vertical-align: top; word-break: break-word; }
-      .print-bar-track { height: 6mm; background: #EAF1FB; border-radius: 999px; overflow: hidden; }
-      .print-bar-fill { height: 100%; background: linear-gradient(90deg, #FF2756, #00215D); border-radius: 999px; }
-      .print-footer { position: absolute; bottom: 6mm; right: 10mm; left: 10mm; display: flex; justify-content: space-between; color: #8AA0B8; font-size: 9px; border-top: 1px solid #EEE4D8; padding-top: 3mm; }
-      .print-list-row { display: grid; grid-template-columns: 20mm minmax(0, 1fr) 28mm; gap: 2mm; align-items: center; border-bottom: 1px solid #EEE4D8; padding: 1.7mm 0; font-size: 9.2px; }
-      .print-swatch { width: 3mm; height: 3mm; border-radius: 50%; display: inline-block; margin-left: 2mm; }
-      .print-pie { width: 42mm; height: 42mm; border-radius: 50%; position: relative; box-shadow: inset 0 0 0 2px rgba(255,255,255,.95), inset 0 -5px 9px rgba(0,0,0,.12), 0 5px 12px rgba(0,33,93,.10); flex: 0 0 auto; }
-      .print-pie::after { content: ""; position: absolute; inset: 30%; border-radius: 50%; background: #fff; box-shadow: inset 0 4px 8px rgba(0,33,93,.06); }
-      .print-cover-top { background: linear-gradient(135deg, #00215D, #001845); color: #fff; border-radius: 8mm; padding: 8mm; height: 85mm; box-sizing: border-box; }
-      .print-cover-title { font-size: 28px; line-height: 1.18; margin: 8mm 0 4mm; font-weight: 900; text-align: center; }
-      .print-cover-subtitle { max-width: 158mm; margin: 0 auto; color: rgba(255,255,255,.86); text-align: center; font-size: 12px; line-height: 1.8; }
-      .print-cover-body { display: flex; flex-direction: column; gap: 4mm; margin-top: 5mm; height: 170mm; }
-      .print-cover-kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 3mm; align-content: start; }
-      .print-cover-bars { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4mm; }
-      .print-cover-pies { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4mm; }
-      .print-cover-pies .print-card { min-height: 62mm !important; }
-      .print-page-2-main { margin-bottom: 5mm; }
-      .print-page-2-main .print-card { min-height: 116mm !important; }
-      .print-page-2-exposures { display: grid; grid-template-columns: minmax(0, .95fr) minmax(0, 1.05fr); gap: 4mm; align-items: stretch; }
-      .print-page-2-exposures .print-card { min-height: 64mm !important; }
-      .print-page-2-exposures .print-pie-card { min-height: 66mm !important; }
-      .print-exposure-stack { border: 1px solid #E2D1BF; border-radius: 5mm; padding: 4mm; background: #FFFFFF; min-height: 66mm; display: flex; flex-direction: column; gap: 4mm; box-sizing: border-box; }
-      .print-exposure-card { background: #FCFBF8; border: 1px solid #EEE4D8; border-radius: 4mm; padding: 4mm; flex: 1; display: flex; flex-direction: column; justify-content: center; }
-      .print-exposure-row { display: flex; justify-content: space-between; align-items: baseline; gap: 3mm; margin-bottom: 3mm; }
-      .print-exposure-legend { display: flex; gap: 4mm; align-items: center; flex-wrap: wrap; color: #627D98; font-size: 9px; font-weight: 800; margin-top: 2.5mm; }
-      .print-exposure-dot { width: 3mm; height: 3mm; border-radius: 50%; display: inline-block; margin-left: 1mm; vertical-align: middle; }
-      .print-logo-box { width: 38mm; height: 16mm; border: 1px solid rgba(255,255,255,.25); border-radius: 4mm; display: flex; align-items: center; justify-content: center; overflow: hidden; padding: 2mm; background: rgba(255,255,255,.10); }
-      .print-logo-box img { max-width: 100%; max-height: 100%; object-fit: contain; }
-      .print-simple-logo { color: #fff; font-size: 24px; font-weight: 300; direction: ltr; }
-      .print-half-page { height: 123mm; }
-      .print-appendix-grid { display: grid; grid-template-columns: minmax(0, 1.78fr) minmax(0, 0.82fr); gap: 4.5mm; align-items: start; direction: rtl; }
-      .print-appendix-block { min-height: auto !important; break-inside: auto !important; page-break-inside: auto !important; }
-      .print-appendix-card { border: 1px solid #E2D1BF; border-radius: 5mm; padding: 3.2mm; background: #FFFFFF; box-sizing: border-box; overflow: hidden; }
-      .print-appendix-page { padding: 7mm 9mm !important; }
-      .print-appendix-page .print-page-header { margin-bottom: 3.5mm; padding-bottom: 3mm; }
-      .print-appendix-page .print-section-heading { font-size: 12px; margin-bottom: 2.2mm; }
-      .print-appendix-page .print-card-soft { border-radius: 5mm; background: linear-gradient(180deg, #FFFFFF 0%, #FCFBF8 100%); }
-      .print-appendix-grid > .print-appendix-card:first-child { min-height: auto; }
-      .print-appendix-grid > .print-appendix-card:nth-child(2) { min-height: auto; }
-      .print-section28-summary-box { border: 1px solid #E2D1BF; border-radius: 4mm; background: #FCFBF8; padding: 3mm 4mm; margin-top: 2.5mm; }
-      .print-capital-page { padding: 7mm 8mm !important; }
-      .print-capital-page .print-page-header { margin-bottom: 3mm; padding-bottom: 3mm; }
-      .print-capital-owner { border: 1px solid #E2D1BF; border-radius: 5mm; background: #FFFFFF; overflow: hidden; margin-bottom: 4mm; }
-      .print-capital-owner-header { display: flex; justify-content: space-between; align-items: center; gap: 3mm; padding: 3mm 4mm; border-bottom: 1px solid #EEE4D8; background: #FCFBF8; }
-      .print-capital-owner-title { color: #00215D; font-size: 12px; font-weight: 900; }
-      .print-capital-owner-source { color: #627D98; font-size: 8.2px; margin-top: 1mm; }
-      .print-capital-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2mm; min-width: 70mm; }
-      .print-capital-stat { background: #F4F7FB; border: 1px solid #D8E2EF; border-radius: 3mm; padding: 1.8mm; text-align: center; }
-      .print-capital-stat-label { color: #627D98; font-size: 7.6px; font-weight: 800; }
-      .print-capital-stat-value { color: #00215D; font-size: 9.2px; font-weight: 900; direction: ltr; margin-top: .8mm; }
-      .print-capital-legend { display: flex; gap: 12px; align-items: center; justify-content: flex-start; flex-wrap: wrap; margin: 0 0 6px; padding: 6px 8px; border: 1px solid #EEE4D8; border-radius: 8px; background: #FFFFFF; color: #486581; font-size: 8px; font-weight: 700; }
-      .print-capital-legend span { display: inline-flex; align-items: center; gap: 4px; }
-      .print-capital-legend i { width: 9px; height: 9px; border-radius: 3px; display: inline-block; }
-      .print-capital-legend .legend-capital { background: #FFFDF7; border: 1px solid #F1E4C8; }
-      .print-capital-legend .legend-pension { background: #F8FBFF; border: 1px solid #DDEAF8; }
-      .print-capital-table th.tone-capital, .print-capital-table td.tone-capital { background: #FFFDF7 !important; }
-      .print-capital-table th.tone-pension, .print-capital-table td.tone-pension { background: #F8FBFF !important; }
-      .print-capital-table-title { color: #00215D; font-size: 10.5px; font-weight: 900; margin: 3mm 0 1.5mm; }
-      .print-capital-table { width: 100%; border-collapse: collapse; table-layout: fixed; direction: rtl; }
-      .print-capital-table th { background: #EEF2FA; color: #243B53; border: 1px solid #D8E2EF; padding: 1.3mm .9mm; font-size: 6.4px; line-height: 1.2; font-weight: 900; text-align: center; }
-      .print-capital-table td { border: 1px solid #E4EAF2; padding: 1.2mm .8mm; font-size: 6.3px; line-height: 1.2; text-align: center; color: #102A43; word-break: break-word; }
-      .print-capital-total td { background: #EEF2FA; color: #1D4ED8; font-weight: 900; }
-      .print-section28-summary-label { color: #00215D; font-size: 9.2px; font-weight: 900; line-height: 1.35; margin-bottom: 1.5mm; }
-      .print-section28-summary-value { color: #FF2756; font-size: 12px; font-weight: 900; direction: ltr; text-align: left; }
-      .print-section28-compact-title { color: #00215D; font-size: 10.5px; font-weight: 900; margin: 0 0 2mm; padding-bottom: 1.5mm; border-bottom: 1px solid #EEE4D8; }
-      .print-mini-row { display: grid; grid-template-columns: minmax(0, 1fr) 32mm; gap: 2mm; padding: 1.7mm 0; border-bottom: 1px solid #EEE4D8; font-size: 9px; align-items: center; }
-      .print-mini-value { color: #00215D; font-weight: 900; direction: ltr; text-align: left; white-space: nowrap; }
-      .print-section28-two-cols { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 3mm; align-items: start; }
-      .print-section28-side-card { background: #FFFFFF; border: 1px solid #EEE4D8; border-radius: 4mm; padding: 2.6mm; }
-      .print-section28-side-title { color: #00215D; font-size: 10.5px; font-weight: 900; padding-bottom: 2mm; margin-bottom: 2mm; border-bottom: 1px solid #EEE4D8; }
-      .print-section28-line { display: grid; grid-template-columns: minmax(0, 1fr) 22mm; gap: 2mm; align-items: center; padding: 1.65mm 0; border-bottom: 1px solid #F0E6DA; }
-      .print-section28-line-label { color: #627D98; font-size: 7.8px; font-weight: 800; line-height: 1.22; }
-      .print-section28-line-value { color: #00215D; font-size: 8.8px; font-weight: 900; direction: ltr; text-align: left; white-space: nowrap; }
-      .print-section28-line-highlight { border: 1px solid #E2D1BF; border-radius: 4mm; padding: 2mm 2.5mm; margin-top: 2mm; background: linear-gradient(135deg, #FFF7E8 0%, #EEF2FA 100%); box-shadow: 0 1mm 3mm rgba(0,33,93,0.05); }
-      .print-section28-line-highlight .print-section28-line-label { color: #00215D; font-weight: 900; }
-      .print-section28-line-highlight .print-section28-line-value { color: #FF2756; }
-      .print-section28-monthly { margin-top: 2.5mm; border: 1px solid #D8DEE9; border-radius: 4mm; background: linear-gradient(135deg, #00215D 0%, #001845 100%); color: #fff; padding: 2.6mm; text-align: center; }
-      .print-section28-monthly-label { color: rgba(255,255,255,.82); font-size: 8.8px; font-weight: 800; margin-bottom: 1mm; }
-      .print-section28-monthly-value { color: #fff; font-size: 10.5px; font-weight: 900; direction: ltr; }
-
-      .print-appendix-page .print-kpi-label { font-size: 9px; margin-bottom: 1.2mm; }
-      .print-appendix-page .print-kpi-value { font-size: 16px; }
-      .print-appendix-page .print-table { font-size: 7.6px; }
-      .print-appendix-page .print-card-soft { margin-bottom: 2.2mm !important; }
+      html, body { margin: 0 !important; padding: 0 !important; background: ${OFFWHITE} !important; }
+      .print-report-root { display: block !important; }
+      .rp-section { break-before: page; page-break-before: always; }
+      .rp-section:first-child { break-before: avoid; page-break-before: avoid; }
+      .rp-section table { border-collapse: collapse; width: 100%; }
+      .rp-section tr, .rp-avoid { break-inside: avoid; page-break-inside: avoid; }
+      .rp-section, .rp-section * { -webkit-print-color-adjust: exact; print-color-adjust: exact; box-sizing: border-box; }
     }
   `;
 
-  const PrintHeader = ({ title, page }) => (
-    <>
-      <div className="print-page-header">
-        <h2 className="print-page-title">{title}</h2>
-        <div className="print-logo-text">zviran</div>
-      </div>
-      <div className="print-footer"><span>Zviran · Total Rewards Experts</span><span>עמוד {page}</span></div>
-    </>
-  );
+  const pageStyle = {
+    minHeight: "1122px",
+    padding: "64px",
+    background: OFFWHITE,
+    color: INK,
+    direction: "rtl",
+    textAlign: "right",
+    fontFamily: "'Calibri', 'Segoe UI', 'Assistant', sans-serif",
+    boxSizing: "border-box",
+    position: "relative",
+    overflow: "hidden",
+  };
 
-  const Kpi = ({ label, value, note }) => (
-    <div className="print-card">
-      <div className="print-kpi-label">{label}</div>
-      <div className="print-kpi-value">{value}</div>
-      {note ? <div className="print-muted" style={{ marginTop: 6 }}>{note}</div> : null}
+  const SectionHeader = ({ title, subtitle }) => (
+    <div style={{ display: "flex", alignItems: "baseline", gap: 14, borderBottom: `3px solid ${NAVY}`, paddingBottom: 18, marginBottom: 32 }}>
+      <div style={{ fontSize: 34, fontWeight: 800, color: NAVY }}>{title}</div>
+      {subtitle ? <div style={{ fontSize: 15, color: MUTED }}>{subtitle}</div> : null}
     </div>
   );
 
-  const getPieData = (items) => {
+  // Build conic-gradient donut segments from {name, value} items.
+  const donutData = (items) => {
     const clean = (Array.isArray(items) ? items : [])
       .map((item) => ({ name: item.name || "ללא שם", value: Number(item.value || 0) }))
       .filter((item) => item.value > 0)
@@ -5978,700 +5895,577 @@ function PrintReportA4({ reportData, conversationSummary = "", actionRecommendat
     const total = clean.reduce((sum, item) => sum + item.value, 0) || 1;
     let current = 0;
     const segments = clean.map((item, index) => {
-      const percent = (item.value / total) * 100;
-      const start = current;
-      const end = current + percent;
-      current = end;
-      return { ...item, percent, start, end, color: colors[index % colors.length] };
+      const deg = (item.value / total) * 360;
+      const seg = { ...item, percent: (item.value / total) * 100, start: current, end: current + deg, color: PALETTE[index % PALETTE.length] };
+      current += deg;
+      return seg;
     });
-    const gradient = segments.length ? segments.map((seg) => `${seg.color} ${seg.start}% ${seg.end}%`).join(", ") : "#D7DEE7 0% 100%";
-    return { clean, segments, total, gradient };
+    const gradient = segments.length
+      ? segments.map((s) => `${s.color} ${s.start}deg ${s.end}deg`).join(", ")
+      : "#D7DEE7 0deg 360deg";
+    return { segments, total, gradient };
   };
 
-  const PieBreakdown = ({ title, items, large = false, compactClassName = "" }) => {
-    const { segments, gradient } = getPieData(items);
+  const Donut = ({ title, centerLabel, items, note }) => {
+    const { segments, gradient } = donutData(items);
     return (
-      <div className={`print-card ${compactClassName}`} style={{ minHeight: large ? "112mm" : "auto" }}>
-        <h3 className="print-section-heading">{title}</h3>
-        <div style={{ display: "grid", gridTemplateColumns: large ? "1fr 58mm" : "1fr 45mm", gap: "4mm", alignItems: "center" }}>
-          <div>
-            {segments.slice(0, large ? 10 : 6).map((item, index) => (
-              <div
-                className="print-list-row"
-                key={`${title}-${item.name}-${index}`}
-                style={{ gridTemplateColumns: "minmax(0, 1fr) 14mm", gap: "2mm" }}
-              >
-                <div
-                  style={{
-                    minWidth: 0,
-                    whiteSpace: "nowrap",
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                    fontWeight: 800,
-                    color: "#102A43",
-                  }}
-                  title={item.name}
-                >
-                  <span className="print-swatch" style={{ background: item.color }} />
-                  {item.name}
-                </div>
-                <div style={{ direction: "ltr", color: "#00215D", fontWeight: 900, textAlign: "left" }}>
-                  {Math.round(item.percent)}%
-                </div>
-              </div>
-            ))}
-            {!segments.length ? <div className="print-muted">אין נתונים להצגה</div> : null}
-          </div>
-          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "3mm" }}>
-            <div className="print-pie" style={{ width: large ? "56mm" : "42mm", height: large ? "56mm" : "42mm", background: `conic-gradient(${gradient})` }} />
-          </div>
-        </div>
-      </div>
-    );
-  };
-
-  const ExposureCard = ({ label, value }) => {
-    const safeValue = Math.max(Math.min(Number(value || 0), 100), 0);
-
-    return (
-      <div className="print-exposure-card">
-        <div className="print-exposure-row">
-          <div className="print-kpi-label" style={{ marginBottom: 0 }}>{label}</div>
-          <div className="print-kpi-value">{fmtPercent(value)}</div>
-        </div>
-
-        <div className="print-bar-track">
-          <div className="print-bar-fill" style={{ width: `${safeValue}%` }} />
-        </div>
-
-        <div className="print-exposure-legend">
-          <span><span className="print-exposure-dot" style={{ background: "linear-gradient(90deg, #FF2756, #00215D)" }} />שיעור החשיפה</span>
-          <span><span className="print-exposure-dot" style={{ background: "#EAF1FB" }} />יתרה עד 100%</span>
-        </div>
-      </div>
-    );
-  };
-
-  const CompareBlock = ({ title, withValue, withoutValue, withLabel = "עם הפקדות", withoutLabel = "ללא הפקדות" }) => {
-    const maxValue = Math.max(Number(withValue || 0), Number(withoutValue || 0), 1);
-    return (
-      <div className="print-card">
-        <h3 className="print-section-heading">{title}</h3>
-        {[
-          { label: withLabel, value: Number(withValue || 0) },
-          { label: withoutLabel, value: Number(withoutValue || 0) },
-        ].map((row) => (
-          <div key={row.label} style={{ marginBottom: 12 }}>
-            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 5, fontSize: 10.5, fontWeight: 800 }}>
-              <span>{row.label}</span><span style={{ direction: "ltr" }}>{fmtCurrency(row.value)}</span>
+      <div className="rp-avoid" style={{ display: "grid", gridTemplateColumns: "300px 1fr", gap: 32, alignItems: "center", background: OFFWHITE, border: `1px solid ${TAN}`, borderRadius: 18, padding: 28, marginBottom: 22 }}>
+        <div style={{ display: "flex", justifyContent: "center" }}>
+          <div style={{ width: 220, height: 220, borderRadius: "50%", background: `conic-gradient(${gradient})`, display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <div style={{ width: 130, height: 130, borderRadius: "50%", background: OFFWHITE, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
+              <div style={{ fontSize: 11, color: MUTED }}>חלוקה לפי</div>
+              <div style={{ fontSize: 15, fontWeight: 700, color: NAVY, textAlign: "center" }}>{centerLabel}</div>
             </div>
-            <div className="print-bar-track"><div className="print-bar-fill" style={{ width: `${Math.max((row.value / maxValue) * 100, row.value ? 5 : 0)}%` }} /></div>
           </div>
-        ))}
+        </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+          {segments.length ? segments.map((seg, i) => (
+            <div key={`${title}-${seg.name}-${i}`} style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <div style={{ width: 13, height: 13, borderRadius: 4, background: seg.color, flexShrink: 0 }} />
+              <div style={{ flex: 1, fontSize: 14, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }} title={seg.name}>{seg.name}</div>
+              <div style={{ fontSize: 14, fontWeight: 700, direction: "ltr" }}>{fmtCurrency(seg.value)}</div>
+              <div style={{ fontSize: 12, color: MUTED, width: 48, textAlign: "left", direction: "ltr" }}>{seg.percent.toFixed(1)}%</div>
+            </div>
+          )) : <div style={{ fontSize: 14, color: MUTED }}>אין נתונים להצגה</div>}
+          {note ? <div style={{ fontSize: 11, color: MUTED, marginTop: 4 }}>{note}</div> : null}
+        </div>
       </div>
     );
   };
 
-  const renderSingleSection28PrintSummary = (entry) => {
-    const section28Groups = Array.isArray(entry?.groups) ? entry.groups : [];
-    const allSection28Rows = section28Groups.flatMap((group) =>
-      Array.isArray(group?.rows) ? group.rows.filter((row) => isMeaningfulSection28Value(row.value)) : []
-    );
-
-    const findRowsByParts = (rows, labelParts) =>
-      labelParts
-        .map((part) => rows.find((row) => normalizeSection28Text(row.label).includes(part)))
-        .filter(Boolean);
-
-    const costGroup = getSection28Group(section28Groups, "employer-cost", "עלויות") ||
-      section28Groups.find((group) => normalizeSection28Text(group?.title).includes("עובד") || normalizeSection28Text(group?.title).includes("מעסיק")) ||
-      section28Groups[0];
-
-    const costRows = Array.isArray(costGroup?.rows)
-      ? costGroup.rows.filter((row) => isMeaningfulSection28Value(row.value))
-      : allSection28Rows;
-
-    const monthlyRow = costRows.find((row) => isSection28MonthlySavingRow(row.label)) ||
-      allSection28Rows.find((row) => isSection28MonthlySavingRow(row.label));
-
-    const employerRows = findRowsByParts(costRows.length ? costRows : allSection28Rows, [
-      "השתלמות מעל תקרה",
-      "פיצויים מעל לתקרה",
-      "תגמולים מעל לתקרה",
-    ]);
-
-    const employerSummaryRows = findRowsByParts(allSection28Rows, [
-      "סכום קיטום מעל לסעיף 28 ברוטו",
-      "סכום נטו לאחר ניכוי מס שולי",
-    ]);
-
-    const employeeRows = findRowsByParts(costRows.length ? costRows : allSection28Rows, [
-      "גידול בנטו בעקבות קיטום בפיצויים",
-      "גידול בנטו בעקבות קיטום תגמולים",
-      "גידול בנטו בעקבות קיטום קה\"ל מעל לתקרה",
-      "הפרשות עובד קה\"ל מעל תקרה",
-      "הפרשות עובד תגמולים",
-    ]);
-
-    const employeeSummaryRows = findRowsByParts(allSection28Rows, [
-      'סה"כ גידול נטו',
-      "סה״כ גידול נטו",
-      "סך הכל גידול נטו",
-    ]);
-
-    const printRow = (row, index, forceHighlight = false) => {
-      const highlight = forceHighlight || isSection28ImportantRow(row.label);
-      return (
-        <div
-          className={`print-section28-line${highlight ? " print-section28-line-highlight" : ""}`}
-          key={`${row.label}-${index}`}
-        >
-          <div className="print-section28-line-label">{row.label}</div>
-          <div className="print-section28-line-value">{formatSection28DisplayValue(row.value)}</div>
-        </div>
-      );
-    };
-
-    const renderSide = (title, rows, summaryRows) => (
-      <div className="print-section28-side-card">
-        <div className="print-section28-side-title">{title}</div>
-        {rows.map((row, index) => printRow(row, index))}
-        {summaryRows.map((row, index) => printRow(row, index, true))}
-        {!rows.length && !summaryRows.length ? <div className="print-muted">אין נתון להצגה</div> : null}
-      </div>
-    );
-
-    const savingGroup = getSection28Group(section28Groups, "saving-simulation", "סימולציה לחיסכון");
-    const retirementGroup = getSection28Group(section28Groups, "retirement", "סימולציה לגיל פרישה");
-
-    const renderSimpleGroup = (group, titleOverride, limit = 4) => {
-      const rows = Array.isArray(group?.rows)
-        ? group.rows.filter((row) => isMeaningfulSection28Value(row.value)).slice(0, limit)
-        : [];
-
-      if (!rows.length) return null;
-
-      return (
-        <div className="print-card-soft" style={{ marginTop: "3mm" }}>
-          <div style={{ color: "#00215D", fontWeight: 900, fontSize: 10.5, marginBottom: "1.5mm" }}>
-            {titleOverride || group.title || "סעיף 28"}
-          </div>
-          {rows.map((row, index) => printRow(row, index, isSection28ImportantRow(row.label)))}
-        </div>
-      );
-    };
-
+  const CompareBars = ({ label, withValue, withoutValue }) => {
+    const withV = Number(withValue || 0);
+    const withoutV = Number(withoutValue || 0);
+    const max = Math.max(withV, withoutV, 1);
     return (
-      <div className="print-card-soft" style={{ marginBottom: "4mm" }}>
-        <div style={{ display: "flex", justifyContent: "space-between", gap: "3mm", marginBottom: "2mm" }}>
-          <div style={{ color: "#00215D", fontWeight: 900, fontSize: 11.5 }}>
-            סעיף 28 — {entry?.ownerLabel || "בן זוג"}
-          </div>
-          {entry?.sourceFileName ? (
-            <div style={{ color: "#627D98", fontSize: 9.5, fontWeight: 800 }}>
-              מקור: {entry.sourceFileName}
+      <div className="rp-avoid" style={{ background: OFFWHITE, border: `1px solid ${TAN}`, borderRadius: 16, padding: 26 }}>
+        <div style={{ fontSize: 17, fontWeight: 700, color: NAVY, marginBottom: 6 }}>{label}</div>
+        <div style={{ fontSize: 13, color: MUTED, marginBottom: 20 }}>עם המשך הפקדות מול הפסקתן</div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+          {[{ l: "עם המשך הפקדות", v: withV, c: NAVY }, { l: "ללא המשך הפקדות", v: withoutV, c: PINK }].map((row) => (
+            <div key={row.l}>
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 13, marginBottom: 6 }}><span>{row.l}</span><strong style={{ direction: "ltr" }}>{fmtCurrency(row.v)}</strong></div>
+              <div style={{ background: DESK, borderRadius: 8, height: 16, overflow: "hidden" }}>
+                <div style={{ width: `${Math.max((row.v / max) * 100, row.v ? 4 : 0)}%`, height: "100%", background: row.c, borderRadius: 8 }} />
+              </div>
             </div>
-          ) : null}
+          ))}
         </div>
-
-        <div className="print-card-soft" style={{ marginBottom: "3mm" }}>
-          <div style={{ color: "#00215D", fontWeight: 900, fontSize: 10.5, marginBottom: "2mm" }}>
-            פירוט עלויות עובד / מעסיק
-          </div>
-
-          <div className="print-section28-two-cols">
-            {renderSide("חלק מעסיק", employerRows, employerSummaryRows)}
-            {renderSide("חלק עובד", employeeRows, employeeSummaryRows)}
-          </div>
-
-          {monthlyRow ? (
-            <div className="print-section28-monthly">
-              <div className="print-section28-monthly-label">{monthlyRow.label}</div>
-              <div className="print-section28-monthly-value">{formatSection28DisplayValue(monthlyRow.value)}</div>
-            </div>
-          ) : null}
-        </div>
-
-        {renderSimpleGroup(savingGroup, "סימולציה לחיסכון", 3)}
-        {renderSimpleGroup(retirementGroup, "סימולציה לגיל פרישה", 3)}
       </div>
     );
   };
 
-  const Section28PrintSummary = () => {
-    if (!hasSection28Capping) {
-      return <div className="print-muted">לא קיימים נתוני סעיף 28 בדוח.</div>;
-    }
-
+  const Gauge = ({ label, sublabel, value, dark }) => {
+    const v = Math.max(Math.min(Number(value || 0), 100), 0);
+    const bg = dark ? NAVY : TAN;
+    const txt = dark ? OFFWHITE : DARKTAN;
+    const fill = dark ? PINK : NAVY;
+    const track = dark ? "rgba(249,247,243,0.15)" : "rgba(0,33,93,0.12)";
     return (
-      <div>
-        {section28CappingEntries.map((entry, index) => (
-          <React.Fragment key={`${entry.owner || "owner"}-${entry.sourceFileName || index}`}>
-            {renderSingleSection28PrintSummary(entry)}
-          </React.Fragment>
-        ))}
+      <div className="rp-avoid" style={{ background: bg, borderRadius: 16, padding: 26, color: txt }}>
+        <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 4, color: dark ? OFFWHITE : DARKTAN }}>{label}</div>
+        <div style={{ fontSize: 13, opacity: 0.75, marginBottom: 18, color: dark ? OFFWHITE : DARKTAN }}>{sublabel}</div>
+        <div style={{ fontSize: 36, fontWeight: 800, color: dark ? OFFWHITE : NAVY, marginBottom: 10, direction: "ltr", textAlign: "right" }}>{fmtPercentInt(v)}</div>
+        <div style={{ background: track, borderRadius: 8, height: 14, overflow: "hidden" }}>
+          <div style={{ width: `${v}%`, height: "100%", background: fill, borderRadius: 8 }} />
+        </div>
+        <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, opacity: 0.65, marginTop: 6, direction: "ltr", color: dark ? OFFWHITE : DARKTAN }}>
+          <span>0%</span><span>25%</span><span>50%</span><span>75%</span><span>100%</span>
+        </div>
       </div>
     );
   };
 
-  const RecognizedPensionPrintSummary = () => (
-    <div>
-      {recognizedPensionEntries.map((entry, entryIndex) => {
-        const vestedRows = Array.isArray(entry?.vestedBalanceTable?.rows) ? entry.vestedBalanceTable.rows : [];
-        const manualRecognizedRows = getManualRecognizedPensionRows(entry?.recognizedPensionAdjustments);
-        const pdfRecognizedTotal = getPdfExemptPaymentsTotal(vestedRows);
-        const manualRecognizedTotal = manualRecognizedRows.reduce((sum, row) => sum + Number(row.amount || 0), 0);
+  const Kpi = ({ label, value, tone }) => {
+    const styles = {
+      navy: { bg: NAVY, color: OFFWHITE, labelColor: "rgba(249,247,243,0.7)", border: "none" },
+      pink: { bg: PINK, color: OFFWHITE, labelColor: "rgba(249,247,243,0.85)", border: "none" },
+      outline: { bg: OFFWHITE, color: NAVY, labelColor: MUTED, border: `2px solid ${NAVY}` },
+      soft: { bg: TAN, color: NAVY, labelColor: DARKTAN, border: "none" },
+    }[tone || "outline"];
+    return (
+      <div className="rp-avoid" style={{ background: styles.bg, color: styles.color, border: styles.border, borderRadius: 16, padding: 22 }}>
+        <div style={{ fontSize: 13, color: styles.labelColor }}>{label}</div>
+        <div style={{ fontSize: 26, fontWeight: 800, marginTop: 8, direction: "ltr", textAlign: "right" }}>{value}</div>
+      </div>
+    );
+  };
 
-        return (
-          <div className="print-card-soft" style={{ marginBottom: "3mm" }} key={`${entry.owner || "owner"}-${entryIndex}`}>
-            <div style={{ color: "#00215D", fontWeight: 900, fontSize: 11, marginBottom: "2mm" }}>
-              קצבה מוכרת — {entry.ownerLabel || "בן/בת זוג"}
-            </div>
-
-            {vestedRows.length ? (
-              <div style={{ marginBottom: "3mm" }}>
-                <div style={{ color: "#00215D", fontWeight: 900, fontSize: 10.5, marginBottom: "2mm" }}>טבלת חישוב מתוך PDF</div>
-                <Kpi label="סה״כ תשלומים פטורים" value={formatReportNumber(pdfRecognizedTotal)} />
-                <table className="print-table" style={{ marginTop: "3mm" }}>
-                  <thead><tr><th>שם הקופה</th><th>תשלומים פטורים</th><th>קצבה מוכרת</th></tr></thead>
-                  <tbody>{vestedRows.slice(0, 6).map((row, index) => <tr key={row.id || index}><td>{row.fundName || "—"}</td><td>{row.exemptPayments || "—"}</td><td>{row.pension || "—"}</td></tr>)}</tbody>
-                </table>
-              </div>
-            ) : null}
-
-            {manualRecognizedRows.length ? (
-              <div>
-                <div style={{ color: "#00215D", fontWeight: 900, fontSize: 10.5, marginBottom: "2mm" }}>קצבה מוכרת שהוזנה ידנית</div>
-                <Kpi label="סה״כ קצבה מוכרת" value={formatReportNumber(manualRecognizedTotal)} />
-                <table className="print-table" style={{ marginTop: "3mm" }}>
-                  <thead><tr><th>חברת ביטוח</th><th>קצבה מוכרת</th></tr></thead>
-                  <tbody>{manualRecognizedRows.slice(0, 6).map((row) => <tr key={row.id}><td>{row.companyName}</td><td>{formatReportNumber(row.amount)}</td></tr>)}</tbody>
-                </table>
-              </div>
-            ) : null}
-
-            {pdfRecognizedTotal > 0 && manualRecognizedTotal > 0 ? (
-              <div className="print-card-soft" style={{ marginTop: "3mm" }}>
-                <div style={{ color: "#627D98", fontSize: 10.5, marginBottom: "1mm" }}>פער הצבירה לחיסכון במס</div>
-                <div style={{ color: "#00215D", fontSize: 18, fontWeight: 900, direction: "ltr" }}>{formatReportNumber(pdfRecognizedTotal - manualRecognizedTotal)}</div>
-              </div>
-            ) : null}
-          </div>
-        );
-      })}
-
-      {!recognizedPensionEntries.length ? <div className="print-muted">לא קיימים נתוני קצבה מוכרת בדוח.</div> : null}
+  const EmptyPanel = ({ title, subtitle }) => (
+    <div className="rp-avoid" style={{ background: TAN, borderRadius: 16, padding: 40, textAlign: "center", color: DARKTAN }}>
+      <div style={{ fontSize: 16, fontWeight: 600 }}>{title}</div>
+      {subtitle ? <div style={{ fontSize: 13, opacity: 0.75, marginTop: 6 }}>{subtitle}</div> : null}
     </div>
   );
 
-
-  const splitPrintParagraphs = (text) =>
-    String(text || "")
-      .split(/\n{2,}/)
-      .map((block) => block.trim())
-      .filter(Boolean);
-
-  const parsePrintActionBlocks = (text) =>
-    String(text || "")
-      .split(/\n{2,}/)
-      .map((block) => {
-        const lines = block
-          .split(/\n+/)
-          .map((line) => line.trim())
-          .filter(Boolean);
-
-        if (!lines.length) return null;
-
-        return {
-          title: lines[0],
-          lines: lines.slice(1),
-        };
-      })
-      .filter(Boolean)
-      .filter((block) => block.title || block.lines.length);
-
-  const printSummaryBlocks = splitPrintParagraphs(printConversationSummary);
-  const printActionBlocks = parsePrintActionBlocks(printActionRecommendations);
-
-  const PrintSummaryActionsPage = ({ page }) => (
-    <section className="print-a4-page print-summary-actions-page">
-      <PrintHeader title="סיכום שיחה ופעולות אופרטיביות" page={page} />
-
-      <div className="print-card" style={{ marginBottom: "5mm" }}>
-        <h3 className="print-section-heading">סיכום שיחה</h3>
-        {printSummaryBlocks.length ? (
-          <div style={{ display: "flex", flexDirection: "column", gap: "3mm" }}>
-            {printSummaryBlocks.map((block, index) => {
-              const lines = block.split(/\n+/).map((line) => line.trim()).filter(Boolean);
-              const isTopicBlock = lines.length > 1;
-              return (
-                <div
-                  key={`summary-print-block-${index}`}
-                  className="print-card-soft"
-                  style={{
-                    whiteSpace: "pre-wrap",
-                    fontSize: 10.8,
-                    lineHeight: 1.75,
-                    borderColor: isTopicBlock ? "#E2D1BF" : "#EEE4D8",
-                  }}
-                >
-                  {isTopicBlock ? (
-                    <>
-                      <div style={{ color: "#00215D", fontSize: 11.5, fontWeight: 900, marginBottom: "1.5mm" }}>
-                        {lines[0]}
-                      </div>
-                      <div>{lines.slice(1).join("\n")}</div>
-                    </>
-                  ) : (
-                    block
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        ) : (
-          <div className="print-muted">לא הוזן סיכום בדוח.</div>
-        )}
-      </div>
-
-      <div className="print-card">
-        <h3 className="print-section-heading">פעולות אופרטיביות לביצוע</h3>
-        {printActionBlocks.length ? (
-          <div style={{ display: "flex", flexDirection: "column", gap: "3mm" }}>
-            {printActionBlocks.map((block, blockIndex) => (
-              <div key={`action-print-block-${blockIndex}`} className="print-card-soft" style={{ borderColor: "#E2D1BF" }}>
-                <div style={{ color: "#00215D", fontSize: 11.5, fontWeight: 900, marginBottom: "2mm" }}>
-                  {block.title}
-                </div>
-                <div style={{ display: "flex", flexDirection: "column", gap: "1.8mm" }}>
-                  {block.lines.length ? (
-                    block.lines.map((line, lineIndex) => {
-                      const isManualFreeText = block.title === "פעולות ידניות כלליות";
-                      const isPersonHeader = ["בן זוג", "בת זוג", "כללי"].includes(line);
-                      const isNumberedAction = /^\s*\d+\s*[.)\-–:]\s+/.test(line);
-
-                      if (isManualFreeText) {
-                        return (
-                          <div
-                            key={`${block.title}-${line}-${lineIndex}`}
-                            style={{
-                              border: "1px solid #EEE4D8",
-                              borderRadius: "4mm",
-                              background: "#FFFFFF",
-                              padding: "2.2mm 3mm",
-                              fontSize: 10.5,
-                              lineHeight: 1.7,
-                              whiteSpace: "pre-wrap",
-                              wordBreak: "break-word",
-                            }}
-                          >
-                            {line}
-                          </div>
-                        );
-                      }
-
-                      return isPersonHeader ? (
-                        <div
-                          key={`${block.title}-${line}-${lineIndex}`}
-                          style={{
-                            color: "#627D98",
-                            fontSize: 9.6,
-                            fontWeight: 900,
-                            marginTop: lineIndex ? "1.5mm" : 0,
-                          }}
-                        >
-                          {line}
-                        </div>
-                      ) : (
-                        <div
-                          key={`${block.title}-${line}-${lineIndex}`}
-                          style={{
-                            border: "1px solid #EEE4D8",
-                            borderRadius: "4mm",
-                            background: "#FFFFFF",
-                            padding: "2.2mm 3mm",
-                            fontSize: 10.5,
-                            lineHeight: 1.7,
-                            whiteSpace: "pre-wrap",
-                            wordBreak: "break-word",
-                          }}
-                        >
-                          {isNumberedAction ? line : line}
-                        </div>
-                      );
-                    })
-                  ) : (
-                    <div className="print-muted">לא הוזנו פעולות לנושא זה.</div>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="print-muted">לא הוזנו המלצות לפעולה בדוח.</div>
-        )}
-      </div>
-    </section>
-  );
-
-
-  const PrintCapitalStat = ({ label, value }) => (
-    <div className="print-capital-stat">
-      <div className="print-capital-stat-label">{label}</div>
-      <div className="print-capital-stat-value">{getCapitalRowValue({ value }, "value")}</div>
+  const PageFooter = () => (
+    <div style={{ marginTop: 32, display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: 12, color: MUTED, borderTop: `1px solid ${TAN}`, paddingTop: 18 }}>
+      <div>מבט משפחתי · דוח פנסיוני</div>
+      <div style={{ direction: "ltr" }}>{reportDate}</div>
     </div>
   );
 
-  const PrintCapitalTable = ({ title, rows, type }) => {
-    const pensionColumns = [
-      { key: "planName", label: "מוצר / קבוצה", alwaysVisible: true },
-      { key: "policyNumber", label: "מספר פוליסה / קופה" },
-      { key: "managerName", label: "חברה מנהלת" },
-      { key: "capitalRewards", label: "תגמולים הוניים", type: "number" },
-      { key: "annuityRewards", label: "תגמולים קצבתיים", type: "number" },
-      { key: "annuityRewardsUntil2000", label: "תגמולים קצבתיים עד 1.1.2000", type: "number" },
-      { key: "previousEmployersSeveranceRightsSequence", label: "פיצויים ממעסיקים קודמים ברצף זכויות", type: "number" },
-      { key: "currentEmployerSeveranceTaxable", label: "פיצויים מעסיק נוכחי למס", type: "number" },
-      { key: "capitalSeverance", label: "פיצויים הוניים", type: "number" },
-      { key: "liquidExemptSeverance", label: "פיצויים הוניים פטורים / נזילים", type: "number" },
-      { key: "annuitySeverance", label: "פיצויים קצבתיים פטורים / נזילים", type: "number" },
-      { key: "totalCapital", label: "סה״כ הון", type: "number", alwaysVisible: true },
-      { key: "totalPension", label: "סה״כ קצבה", type: "number", alwaysVisible: true },
-    ];
-    const studyColumns = [
-      { key: "managerName", label: "חברה מנהלת", alwaysVisible: true },
-      { key: "policyNumber", label: "מספר קופה", alwaysVisible: true },
-      { key: "studyBalance", label: "צבירה", type: "number", alwaysVisible: true },
-    ];
-    const displayRows = type === "study"
-      ? normalizeCapitalReportArray(rows).map((row) => ({ ...row, studyBalance: getStudyFundBalance(row) }))
-      : normalizeCapitalReportArray(rows);
-    const columns = getCapitalActiveColumns(displayRows, type === "study" ? studyColumns : pensionColumns);
-    const totalKeys = columns.filter((column) => column.type === "number").map((column) => column.key);
+  const th = { padding: "10px 12px", textAlign: "right" };
+  const td = { padding: "9px 12px", borderBottom: `1px solid ${TAN}`, textAlign: "right" };
 
-    return (
-      <div>
-        {type !== "study" ? (
-          <div className="print-capital-legend">
-            <span><i className="legend-capital" /> כספים הוניים / נזילים / תגמולים עד 1.1.2000</span>
-            <span><i className="legend-pension" /> כספים קצבתיים</span>
-          </div>
-        ) : null}
-        <div className="print-capital-table-title">{title}</div>
-        <table className="print-capital-table">
-          <thead>
-            <tr>{columns.map((column) => <th key={column.key} className={`tone-${getCapitalCellTone(column)}`}>{column.label}</th>)}</tr>
-          </thead>
-          <tbody>
-            {displayRows.slice(0, type === "study" ? 8 : 7).map((row, rowIndex) => (
-              <tr key={row.id || `${row.policyNumber || row.planName || "row"}-${rowIndex}`}>
-                {columns.map((column) => (
-                  <td key={column.key} className={`tone-${type === "study" ? "neutral" : getCapitalCellTone(column)}`}>
-                    {getCapitalDisplayValue(row, column.key)}
-                  </td>
-                ))}
-              </tr>
-            ))}
-            <tr className="print-capital-total">
-              {columns.map((column, index) => {
-                const shouldTotal = totalKeys.includes(column.key);
-                return (
-                  <td key={column.key} className={`tone-${type === "study" ? "neutral" : getCapitalCellTone(column)}`}>
-                    {index === 0 ? 'סה"כ' : shouldTotal ? getCapitalRowValue({ value: summarizeCapitalDerivedRows(displayRows, column.key) }, "value") : ""}
-                  </td>
-                );
-              })}
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    );
-  };
+  // ---------- Capital breakdown aggregates ----------
+  const allCapitalPension = capitalClassificationEntries.flatMap((e) => normalizeCapitalReportArray(e.pensionPolicies));
+  const allCapitalStudy = capitalClassificationEntries.flatMap((e) => normalizeCapitalReportArray(e.studyFunds));
+  const allCapitalRows = [...allCapitalPension, ...allCapitalStudy];
+  const capTotalBalance = summarizeCapitalRows(allCapitalRows, "totalBalance") || summarizeCapitalRows(allCapitalStudy, "redemptionValue");
+  const capTotalRewards = summarizeCapitalRows(allCapitalRows, "totalRewards");
+  const capTotalSeverance = summarizeCapitalRows(allCapitalRows, "totalSeverance");
+  const capTotalCapital = summarizeCapitalDerivedRows(allCapitalRows, "totalCapital");
+  const capTotalPension = summarizeCapitalDerivedRows(allCapitalPension, "totalPension");
+  const capStudyBalance = allCapitalStudy.reduce((sum, r) => sum + getStudyFundBalance(r), 0);
 
-  const PrintCapitalClassificationPage = () => (
-    <section className="print-a4-page print-capital-page">
-      <PrintHeader title="פירוט פוליסות וקרנות" page={capitalClassificationPageNumber} />
-      <div className="print-muted" style={{ marginBottom: "3mm" }}>
-        פירוק נכסים ללקוח דוגמא זכר — פיצויים מעסיק נוכחי מוצגים תמיד כפיצויים למס.
-      </div>
-      {capitalClassificationEntries.map((entry, entryIndex) => {
-        const pensionRows = normalizeCapitalReportArray(entry.pensionPolicies);
-        const studyRows = normalizeCapitalReportArray(entry.studyFunds);
-        const allRows = [...pensionRows, ...studyRows];
-        const totalBalance = summarizeCapitalRows(allRows, "totalBalance") || summarizeCapitalRows(studyRows, "redemptionValue");
-        const totalRewards = summarizeCapitalRows(allRows, "totalRewards");
-        const totalSeverance = summarizeCapitalRows(allRows, "totalSeverance");
-        const totalCapital = summarizeCapitalDerivedRows(allRows, "totalCapital");
-        const totalPension = summarizeCapitalDerivedRows(allRows, "totalPension");
+  const capitalColumns = [
+    { key: "planName", label: "מוצר / קבוצה" },
+    { key: "capitalRewards", label: "תגמולים הוניים", num: true },
+    { key: "annuityRewardsUntil2000", label: "תגמולים קצבתיים עד 1.1.2000", num: true },
+    { key: "previousEmployersSeveranceRightsSequence", label: "פיצויים קודמים ברצף", num: true },
+    { key: "currentEmployerSeveranceTaxable", label: "פיצויים מעסיק נוכחי", num: true },
+    { key: "totalPension", label: 'סה"כ קצבה', num: true },
+    { key: "totalCapital", label: 'סה"כ הון', num: true },
+  ];
 
-        return (
-          <div className="print-capital-owner" key={`${entry.owner}-${entryIndex}`}>
-            <div className="print-capital-owner-header">
-              <div>
-                <div className="print-capital-owner-title">{entry.ownerLabel || "בן/בת זוג"}</div>
-                <div className="print-capital-owner-source">{entry.sourceFileName ? `מקור הנתונים: ${entry.sourceFileName}` : "נתוני סיווג כספים"}</div>
-              </div>
-              <div className="print-capital-stats">
-                <PrintCapitalStat label="סה״כ קופה" value={totalBalance} />
-                <PrintCapitalStat label="סה״כ תגמולים" value={totalRewards} />
-                <PrintCapitalStat label="סה״כ פיצויים" value={totalSeverance} />
-                <PrintCapitalStat label="סה״כ הון" value={totalCapital} />
-                <PrintCapitalStat label="סה״כ קצבה" value={totalPension} />
-              </div>
-            </div>
-            <div style={{ padding: "2.5mm 3mm 3mm" }}>
-              {pensionRows.length ? <PrintCapitalTable title="פירוט פוליסות וקרנות" rows={pensionRows} type="pension" /> : null}
-              {studyRows.length ? <PrintCapitalTable title="קרנות השתלמות" rows={studyRows} type="study" /> : null}
-            </div>
-          </div>
-        );
-      })}
-      <div className="print-footer"><span>Zviran · Total Rewards Experts</span><span>עמוד {capitalClassificationPageNumber}</span></div>
-    </section>
-  );
+  // ---------- Section 28 helpers ----------
+  const section28Meaningful = (rows) =>
+    (Array.isArray(rows) ? rows : []).filter((row) => isMeaningfulSection28Value(row.value));
+
+  // ---------- Savings simulation rows (from section 28 entry) ----------
+  const firstSection28 = section28CappingEntries[0];
+  const section28Groups = Array.isArray(firstSection28?.groups) ? firstSection28.groups : [];
+  const savingGroup = getSection28Group(section28Groups, "saving-simulation", "סימולציה לחיסכון");
+  const retirementGroup = getSection28Group(section28Groups, "retirement", "סימולציה לגיל פרישה");
+  const savingRows = section28Meaningful(savingGroup?.rows).concat(section28Meaningful(retirementGroup?.rows));
+  const hasSavingSimulation = savingRows.length > 0;
+
+  const summaryParagraphs = String(printConversationSummary || "")
+    .split(/\n{2,}/)
+    .map((b) => b.trim())
+    .filter(Boolean);
 
   return (
     <div className="print-report-root" aria-hidden="true">
       <style>{css}</style>
 
-      <section className="print-a4-page">
-        <div className="print-cover-top">
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "8mm" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "4mm", direction: "ltr" }}>
-              <ZviranLogo light />
+      {/* ============ PAGE 0 — COVER ============ */}
+      <section className="rp-section" style={{ ...pageStyle, padding: "96px 72px", color: NAVY, display: "flex", flexDirection: "column", justifyContent: "space-between", borderTop: `10px solid ${NAVY}` }}>
+        <div>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 64 }}>
+            <div style={{ width: 8, height: 8, borderRadius: "50%", background: PINK }} />
+            <div style={{ fontSize: 14, letterSpacing: "0.3px", color: MUTED }}>מבט משפחתי · דוח פנסיוני</div>
+          </div>
+          <div style={{ fontSize: 48, fontWeight: 700, lineHeight: 1.25, maxWidth: 640, color: NAVY }}>דוח ידע פנסיוני מלא ומאוחד</div>
+          <div style={{ marginTop: 20, fontSize: 16, color: "#5C5650", maxWidth: 520, lineHeight: 1.7 }}>ריכוז נכסים, תזרים עתידי, כיסויים ביטוחיים והשלכות מס — לכל בני המשפחה במקום אחד.</div>
+        </div>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", borderTop: `1px solid ${TAN}`, paddingTop: 24 }}>
+          <div style={{ display: "flex", gap: 40 }}>
+            <div>
+              <div style={{ fontSize: 12, color: MUTED }}>תאריך הפקה</div>
+              <div style={{ fontSize: 17, fontWeight: 600, marginTop: 4, direction: "ltr", textAlign: "right" }}>{reportDate}</div>
             </div>
+            <div>
+              <div style={{ fontSize: 12, color: MUTED }}>סך נכסים משפחתי</div>
+              <div style={{ fontSize: 17, fontWeight: 600, marginTop: 4, direction: "ltr", textAlign: "right" }}>{fmtCurrency(family.totalAssets)}</div>
+            </div>
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+            {data?.clientLogo ? <img src={data.clientLogo} alt="לוגו" style={{ maxHeight: 40, maxWidth: 120, objectFit: "contain" }} /> : null}
+            <div style={{ fontSize: 12, color: MUTED }}>מקור: נתוני פנסיה</div>
+          </div>
+        </div>
+      </section>
 
-            <div style={{ display: "flex", alignItems: "center", gap: "4mm" }}>
-              {data?.clientLogo ? (
-                <div className="print-logo-box">
-                  <img src={data.clientLogo} alt="לוגו חברה" />
+      {/* ============ PAGE 1 — פרטים אישיים ============ */}
+      <section className="rp-section" style={pageStyle}>
+        <SectionHeader title="פרטים אישיים" subtitle="בני המשפחה המבוטחים בדוח" />
+        <div style={{ display: "grid", gridTemplateColumns: members.length > 1 ? "1fr 1fr" : "1fr", gap: 28 }}>
+          {(members.length ? members : [{ name: "—" }]).slice(0, 4).map((member, i) => {
+            const cardNavy = i % 2 === 0;
+            const bg = cardNavy ? NAVY : PINK;
+            const bubble = cardNavy ? "rgba(255,39,86,0.25)" : "rgba(0,33,93,0.28)";
+            const avatarBg = cardNavy ? PINK : NAVY;
+            const roleLabel = i === 0 ? "מבוטח/ת ראשי/ת" : "בן/בת זוג";
+            const name = member.name || "—";
+            return (
+              <div className="rp-avoid" key={member.id || member.name || i} style={{ background: bg, color: OFFWHITE, borderRadius: 20, padding: 32, position: "relative", overflow: "hidden" }}>
+                <div style={{ position: "absolute", left: -60, top: -60, width: 180, height: 180, borderRadius: "50%", background: bubble }} />
+                <div style={{ position: "relative", zIndex: 1 }}>
+                  <div style={{ width: 56, height: 56, borderRadius: "50%", background: avatarBg, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, fontWeight: 700, marginBottom: 20 }}>{String(name).trim().slice(0, 1) || "?"}</div>
+                  <div style={{ fontSize: 26, fontWeight: 700 }}>{name}</div>
+                  <div style={{ fontSize: 13, opacity: 0.8, marginTop: 2 }}>{roleLabel}</div>
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20, marginTop: 28 }}>
+                    <div>
+                      <div style={{ fontSize: 12, opacity: 0.7 }}>תאריך לידה</div>
+                      <div style={{ fontSize: 18, fontWeight: 600, marginTop: 4, direction: "ltr", textAlign: "right" }}>{fmtDate(memberDetail(member, "birthDate"))}</div>
+                    </div>
+                    <div>
+                      <div style={{ fontSize: 12, opacity: 0.7 }}>שכר נוכחי</div>
+                      <div style={{ fontSize: 18, fontWeight: 600, marginTop: 4, direction: "ltr", textAlign: "right" }}>{memberDetail(member, "currentSalary") ? fmtCurrency(memberDetail(member, "currentSalary")) : "—"}</div>
+                    </div>
+                    <div style={{ gridColumn: "span 2" }}>
+                      <div style={{ fontSize: 12, opacity: 0.7 }}>מקום עבודה אחרון מעודכן</div>
+                      <div style={{ fontSize: 16, fontWeight: 600, marginTop: 4, opacity: 0.8 }}>{memberDetail(member, "lastWorkplace") || "לא צוין"}</div>
+                    </div>
+                  </div>
                 </div>
-              ) : null}
-              <div style={{ color: "rgba(255,255,255,.78)", fontSize: 12, whiteSpace: "nowrap" }}>תאריך עדכון: {family.lastUpdated || "—"}</div>
-            </div>
-          </div>
-
-          <h1 className="print-cover-title">דוח פנסיוני משפחתי מאוחד</h1>
-          <div className="print-cover-subtitle">
-            אנו מבקשים להציג לך את הנכסים שנצברו במבט משפחתי מרוכז לעיונכם, כולל תמונת מצב של חסכונות, הפקדות, גופים מנהלים, אפיקי השקעה ונתונים מרכזיים נוספים.
+              </div>
+            );
+          })}
+        </div>
+        <div className="rp-avoid" style={{ marginTop: 28, background: TAN, borderRadius: 16, padding: "24px 28px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <div style={{ fontSize: 15, color: DARKTAN, lineHeight: 1.6, maxWidth: 600 }}>סך השכר המצרפי המדווח למשפחה מהווה בסיס לחישובי ההפקדות והקצבאות המוצגים בהמשך הדוח.</div>
+          <div style={{ textAlign: "left" }}>
+            <div style={{ fontSize: 13, color: DARKTAN, opacity: 0.75 }}>שכר מצרפי</div>
+            <div style={{ fontSize: 28, fontWeight: 800, color: NAVY, direction: "ltr" }}>{combinedSalary ? fmtCurrency(combinedSalary) : "—"}</div>
           </div>
         </div>
+      </section>
 
-        <div className="print-cover-body">
+      {/* ============ PAGE 2 — סיכום פנסיוני ============ */}
+      <section className="rp-section" style={pageStyle}>
+        <SectionHeader title="סיכום פנסיוני" subtitle="ריכוז צבירה, הפקדות ותחזית לגיל פרישה" />
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 18, marginBottom: 32 }}>
+          <Kpi tone="navy" label="סך נכסים" value={fmtCurrency(family.totalAssets)} />
+          <Kpi tone="outline" label="הפקדה חודשית כוללת" value={fmtCurrency(family.monthlyDeposits)} />
+          <Kpi tone="outline" label="צבירה צפויה לפרישה" value={fmtCurrency(family.projectedLumpSumWithDeposits)} />
+          <Kpi tone="pink" label="קצבה חודשית צפויה" value={fmtCurrency(family.monthlyPensionWithDeposits)} />
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24 }}>
+          <CompareBars label="השוואת צבירה צפויה" withValue={family.projectedLumpSumWithDeposits} withoutValue={family.projectedLumpSumWithoutDeposits} />
+          <CompareBars label="השוואת קצבה חודשית צפויה" withValue={family.monthlyPensionWithDeposits} withoutValue={family.monthlyPensionWithoutDeposits} />
+        </div>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24, marginTop: 24 }}>
+          <Gauge dark label="חשיפה מנייתית משוקללת" sublabel="שיעור החשיפה למניות בתיק" value={data.weightedEquityExposure} />
+          <Gauge label="חשיפה לחו״ל" sublabel="שיעור האחזקה בחו״ל" value={data.weightedForeignExposure} />
+        </div>
+      </section>
+
+      {/* ============ PAGE 3 — התפלגות נכסים ============ */}
+      <section className="rp-section" style={pageStyle}>
+        <SectionHeader title="התפלגות נכסים" subtitle={`סך ${fmtCurrency(family.totalAssets)} · מחושב מסך הצבירה בפועל`} />
+        <Donut title="products" centerLabel="מוצרים" items={products} />
+        <Donut title="managers" centerLabel="גופים מנהלים" items={managers} />
+        <Donut title="channels" centerLabel="אפיקים ראשיים" items={mainGroups} note='ראו פירוט מלא בעמוד "פירוק נכסים".' />
+      </section>
+
+      {/* ============ PAGES 4+ — נכסים ברמת מוצר ============ */}
+      {(() => {
+        const sorted = [...products].map((p) => ({ name: p.name || "ללא שם", value: Number(p.value || 0) })).sort((a, b) => b.value - a.value);
+        const chunks = [];
+        for (let i = 0; i < sorted.length; i += 8) chunks.push(sorted.slice(i, i + 8));
+        if (!chunks.length) chunks.push([]);
+        return chunks.map((chunk, pageIndex) => (
+          <section className="rp-section" style={pageStyle} key={`products-page-${pageIndex}`}>
+            <SectionHeader title="נכסים ברמת מוצר" subtitle={pageIndex === 0 ? "פירוט אחזקות לפי מוצר" : "המשך"} />
+            <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+              {chunk.length ? chunk.map((prod, i) => {
+                const share = productTotal > 0 ? (prod.value / productTotal) * 100 : 0;
+                return (
+                  <div className="rp-avoid" key={`${prod.name}-${i}`} style={{ background: OFFWHITE, border: `1px solid ${TAN}`, borderLeft: `3px solid ${NAVY}`, borderRadius: 14, padding: "20px 22px" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+                      <div style={{ fontSize: 16, fontWeight: 700, color: NAVY }}>{prod.name}</div>
+                      <div style={{ fontSize: 18, fontWeight: 800, direction: "ltr" }}>{fmtCurrency(prod.value)}</div>
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                      <div style={{ flex: 1, background: DESK, borderRadius: 8, height: 12, overflow: "hidden" }}>
+                        <div style={{ width: `${Math.max(share, prod.value ? 3 : 0)}%`, height: "100%", background: NAVY, borderRadius: 8 }} />
+                      </div>
+                      <div style={{ fontSize: 13, color: MUTED, width: 64, textAlign: "left", direction: "ltr" }}>{share.toFixed(1)}% מהתיק</div>
+                    </div>
+                  </div>
+                );
+              }) : <EmptyPanel title="לא התקבלו נתוני מוצרים להצגה" subtitle="ככל שיועברו נתוני מוצרים, יוצגו כאן אחזקות לפי מוצר." />}
+            </div>
+            {pageIndex === chunks.length - 1 && chunk.length ? (
+              <div style={{ marginTop: 24, fontSize: 12, color: MUTED, lineHeight: 1.6 }}>נתוני תשואה ומדדי סיכון (12/36/60 חודשים, סטיית תקן, שארפ) יוצגו כאשר יתקבלו נתוני תשואה ברמת המסלול.</div>
+            ) : null}
+          </section>
+        ));
+      })()}
+
+      {/* ============ PAGE — סכומים למקרה פטירה ============ */}
+      <section className="rp-section" style={pageStyle}>
+        <SectionHeader title="סכומים למקרה פטירה" subtitle="ביטוח חיים, הון למוטבים וכיסויים" />
+        <div className="rp-avoid" style={{ background: NAVY, color: OFFWHITE, borderRadius: 20, padding: 32, display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 28 }}>
           <div>
-            <h3 className="print-section-heading">נתונים מרכזיים</h3>
-            <div className="print-cover-kpis">
-              <Kpi label="סך נכסים" value={fmtCurrency(family.totalAssets)} />
-              <Kpi label="הפקדה חודשית" value={fmtCurrency(family.monthlyDeposits)} />
-              <Kpi label="קצבה חודשית צפויה" value={fmtCurrency(family.monthlyPensionWithDeposits)} />
-              <Kpi label="צבירה צפויה בפרישה" value={fmtCurrency(family.projectedLumpSumWithDeposits)} />
-            </div>
+            <div style={{ fontSize: 15, opacity: 0.75 }}>ביטוח חיים / הון למוטבים</div>
+            <div style={{ fontSize: 38, fontWeight: 800, marginTop: 8, direction: "ltr", textAlign: "right" }}>{fmtCurrency(totalLifeCoverage)}</div>
           </div>
-
-          <div className="print-cover-bars">
-            <CompareBlock title="צבירה צפויה בגיל פרישה" withValue={family.projectedLumpSumWithDeposits} withoutValue={family.projectedLumpSumWithoutDeposits} />
-            <CompareBlock title="קצבה חודשית בגיל פרישה" withValue={family.monthlyPensionWithDeposits} withoutValue={family.monthlyPensionWithoutDeposits} />
-          </div>
-
-          <div className="print-cover-pies">
-            <PieBreakdown title="חלוקה לפי מוצרים" items={products} />
-            <PieBreakdown title="חלוקה לפי גופים מנהלים" items={managers} />
+          <div aria-hidden="true" style={{ width: 60, height: 68, flexShrink: 0, background: PINK, clipPath: "polygon(50% 0%,100% 15%,100% 55%,50% 100%,0% 55%,0% 15%)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <div style={{ width: 26, height: 26, background: OFFWHITE, clipPath: "polygon(50% 0%,100% 15%,100% 55%,50% 100%,0% 55%,0% 15%)" }} />
           </div>
         </div>
-
-        <div className="print-footer"><span>Zviran · Total Rewards Experts</span><span>עמוד 1</span></div>
+        <div style={{ fontSize: 17, fontWeight: 700, color: NAVY, marginBottom: 12 }}>כיסויים לפי בן משפחה</div>
+        {members.length ? (
+          <table style={{ fontSize: 13 }}>
+            <thead>
+              <tr style={{ background: NAVY, color: OFFWHITE }}>
+                <th style={th}>בן משפחה</th>
+                <th style={th}>הון למוטבים / פטירה</th>
+                <th style={th}>אובדן כושר עבודה</th>
+              </tr>
+            </thead>
+            <tbody>
+              {members.map((member, i) => (
+                <tr key={member.id || member.name || i} style={{ background: i % 2 === 0 ? OFFWHITE : DESK }}>
+                  <td style={td}>{member.name || "—"}</td>
+                  <td style={{ ...td, direction: "ltr", textAlign: "right" }}>{fmtCurrency(member.deathCoverage)}</td>
+                  <td style={{ ...td, direction: "ltr", textAlign: "right" }}>{`${fmtCurrency(member.disabilityValue)} (${Math.round(Number(member.disabilityPercent || 0))}%)`}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        ) : <EmptyPanel title="לא התקבלו נתוני כיסויים להצגה" />}
+        <div style={{ marginTop: 28, fontSize: 17, fontWeight: 700, color: NAVY, marginBottom: 12 }}>סכום פיצוי חודשי מקרן הפנסיה</div>
+        <EmptyPanel title="לא התקבל פירוט פיצוי חודשי לאלמנה/יתומים" subtitle="ככל שיתקבלו נתוני פיצוי חודשי מקרן הפנסיה, יוצג כאן פירוט לכל מוטב." />
       </section>
 
-      <section className="print-a4-page">
-        <PrintHeader title="אפיקים ראשיים וחשיפות" page={2} />
-
-        <div className="print-page-2-main">
-          <PieBreakdown title="חלוקה עבור אפיקים ראשיים" items={mainGroups} large />
+      {/* ============ PAGE — הלוואות ============ */}
+      <section className="rp-section" style={pageStyle}>
+        <SectionHeader title="הלוואות" subtitle="פירוט הלוואות על חשבון מוצרים פנסיוניים" />
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24, marginBottom: 36 }}>
+          <Kpi tone="outline" label='סה"כ הלוואות' value={fmtCurrency(totalLoansAmount)} />
+          <Kpi tone="outline" label="יתרת הלוואות" value={fmtCurrency(totalLoansBalance)} />
         </div>
-
-        <div className="print-page-2-exposures">
-          <PieBreakdown title={'פירוט חו"ל / ישראל'} items={foreignExposureAllocation} compactClassName="print-pie-card" />
-
-          <div className="print-exposure-stack">
-            <ExposureCard label="אחוז מניות" value={data.weightedEquityExposure} />
-            <ExposureCard label={'אחוז אחזקה בחו"ל'} value={data.weightedForeignExposure} />
-          </div>
-        </div>
+        {loanDetails.length ? (
+          <table style={{ fontSize: 13 }}>
+            <thead>
+              <tr style={{ background: NAVY, color: OFFWHITE }}>
+                <th style={th}>שם</th><th style={th}>סכום</th><th style={th}>יתרה</th><th style={th}>תדירות</th><th style={th}>סיום</th>
+              </tr>
+            </thead>
+            <tbody>
+              {loanDetails.slice(0, 14).map((loan, i) => (
+                <tr key={loan.id || i} style={{ background: i % 2 === 0 ? OFFWHITE : DESK }}>
+                  <td style={td}>{[loan.firstName, loan.familyName].filter(Boolean).join(" ") || "—"}</td>
+                  <td style={{ ...td, direction: "ltr", textAlign: "right" }}>{fmtCurrency(loan.amount)}</td>
+                  <td style={{ ...td, direction: "ltr", textAlign: "right" }}>{fmtCurrency(loan.balance)}</td>
+                  <td style={td}>{loan.repaymentFrequency || "—"}</td>
+                  <td style={{ ...td, direction: "ltr", textAlign: "right" }}>{fmtDate(loan.endDate)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        ) : (
+          <EmptyPanel title="לא התקבל מידע על הלוואות להצגה" subtitle="ככל שיועברו נתוני הלוואות, יוצגו כאן פירוט יתרות, ריביות ולוחות סילוקין." />
+        )}
       </section>
 
-      {hasCapitalClassification ? <PrintCapitalClassificationPage /> : null}
-
-      {shouldShowPensionAppendixPage ? (
-        <section className="print-a4-page print-appendix-page">
-          <PrintHeader title="סעיף 28 וקצבה מוכרת לפי בן/בת זוג" page={appendixPageNumber} />
-          <div className="print-appendix-grid">
-            <div className="print-appendix-card print-appendix-block">
-              <h3 className="print-section-heading">קיטום על פי סעיף 28 לפי בן/בת זוג</h3>
-              <Section28PrintSummary />
-            </div>
-            <div className="print-appendix-card print-appendix-block">
-              <h3 className="print-section-heading">צבירה מוכרת / קצבה מוכרת לפי בן/בת זוג</h3>
-              <RecognizedPensionPrintSummary />
-            </div>
+      {/* ============ PAGE — פירוק נכסים ============ */}
+      {hasCapitalClassification ? (
+        <section className="rp-section" style={pageStyle}>
+          <SectionHeader title="פירוק נכסים" subtitle="סיווג הוני / קצבתי לפי מוצר" />
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 16, marginBottom: 28 }}>
+            <Kpi tone="navy" label='סה"כ קופה' value={fmtCurrency(capTotalBalance)} />
+            <Kpi tone="outline" label='סה"כ תגמולים' value={fmtCurrency(capTotalRewards)} />
+            <Kpi tone="outline" label='סה"כ פיצויים' value={fmtCurrency(capTotalSeverance)} />
+            <Kpi tone="pink" label='סה"כ הון' value={fmtCurrency(capTotalCapital)} />
           </div>
+          <Donut title="capital-split" centerLabel="הוני/קצבתי" items={[
+            { name: "הון (נזיל / כספים הוניים)", value: capTotalCapital },
+            { name: "קצבה (מיועד לקצבה חודשית)", value: capTotalPension },
+            { name: "קרנות השתלמות (צבירה בלבד)", value: capStudyBalance },
+          ]} />
+          {allCapitalPension.length ? (
+            <table style={{ fontSize: 11.5, marginTop: 6 }}>
+              <thead>
+                <tr style={{ background: NAVY, color: OFFWHITE }}>
+                  {capitalColumns.map((c) => <th key={c.key} style={{ padding: "8px 10px", textAlign: "right" }}>{c.label}</th>)}
+                </tr>
+              </thead>
+              <tbody>
+                {allCapitalPension.slice(0, 10).map((row, i) => (
+                  <tr key={row.id || i} style={{ background: i % 2 === 0 ? OFFWHITE : DESK }}>
+                    {capitalColumns.map((c) => (
+                      <td key={c.key} style={{ padding: "7px 10px", borderBottom: `1px solid ${TAN}`, textAlign: "right", direction: c.num ? "ltr" : "rtl" }}>
+                        {getCapitalDisplayValue(row, c.key)}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+                <tr style={{ background: NAVY, color: OFFWHITE, fontWeight: 700 }}>
+                  {capitalColumns.map((c, i) => (
+                    <td key={c.key} style={{ padding: "9px 10px", textAlign: "right", direction: c.num ? "ltr" : "rtl" }}>
+                      {i === 0 ? 'סה"כ' : c.num ? getCapitalRowValue({ value: summarizeCapitalDerivedRows(allCapitalPension, c.key) }, "value") : ""}
+                    </td>
+                  ))}
+                </tr>
+              </tbody>
+            </table>
+          ) : null}
+          {capStudyBalance > 0 ? (
+            <div className="rp-avoid" style={{ marginTop: 24, display: "flex", justifyContent: "space-between", alignItems: "center", background: TAN, borderRadius: 14, padding: "18px 24px" }}>
+              <div style={{ fontSize: 14, color: DARKTAN }}>קרנות השתלמות — צבירה בלבד</div>
+              <div style={{ fontSize: 20, fontWeight: 800, color: NAVY, direction: "ltr" }}>{fmtCurrency(capStudyBalance)}</div>
+            </div>
+          ) : null}
+          <div style={{ fontSize: 11, color: MUTED, marginTop: 10 }}>כספים הוניים כוללים רכיבי הון, תגמולים הוניים ותגמולים קצבתיים עד שנת 2000. קרנות השתלמות מוצגות כצבירה בלבד.</div>
         </section>
       ) : null}
 
-      {memberPages.map((pageMembers, pageIndex) => (
-        <section className="print-a4-page" key={`members-page-${pageIndex}`}>
-          <PrintHeader title="פירוט לפי בני משפחה" page={firstMemberPageNumber + pageIndex} />
-          <div className="print-grid-2">
-            {pageMembers.map((member, index) => (
-              <div className="print-card" key={member.id || member.name || index}>
-                <h3 className="print-section-heading">{member.name || "ללא שם"}</h3>
-                <div className="print-grid-2">
-                  <Kpi label="סך צבירה" value={fmtCurrency(member.assets)} />
-                  <Kpi label="הפקדה חודשית" value={fmtCurrency(member.monthlyDeposits)} />
-                </div>
-                <div style={{ height: 12 }} />
-                <CompareBlock title="קצבה חודשית צפויה" withValue={member.monthlyPensionWithDeposits} withoutValue={member.monthlyPensionWithoutDeposits} />
-                <div style={{ height: 12 }} />
-                <CompareBlock title="סכום חד הוני לפרישה" withValue={member.lumpSumWithDeposits} withoutValue={member.lumpSumWithoutDeposits} />
-                <div style={{ height: 12 }} />
-                <div className="print-grid-2">
-                  <Kpi label="הון למוטבים / פטירה" value={fmtCurrency(member.deathCoverage)} />
-                  <Kpi label="אובדן כושר עבודה" value={`${fmtCurrency(member.disabilityValue)} (${Math.round(Number(member.disabilityPercent || 0))}%)`} />
-                </div>
+      {/* ============ PAGE — קיטום סעיף 28 ============ */}
+      {hasSection28Capping ? section28CappingEntries.map((entry, entryIndex) => {
+        const groups = Array.isArray(entry?.groups) ? entry.groups : [];
+        const allRows = groups.flatMap((g) => section28Meaningful(g?.rows));
+        const monthlyRow = allRows.find((r) => isSection28MonthlySavingRow(r.label));
+        const costGroup = getSection28Group(groups, "employer-cost", "עלויות") || groups[0];
+        const costRows = section28Meaningful(costGroup?.rows);
+        const comparisonRows = section28Meaningful(entry?.comparisonRows);
+        return (
+          <section className="rp-section" style={pageStyle} key={`s28-${entryIndex}`}>
+            <SectionHeader title="קיטום סעיף 28" subtitle={`${entry.ownerLabel || "בן/בת זוג"} · פירוט עלויות ותרחיש לאחר קיטום`} />
+            <div className="rp-avoid" style={{ background: OFFWHITE, border: `1px solid ${TAN}`, borderRadius: 16, padding: 26, marginBottom: 24 }}>
+              <div style={{ fontSize: 16, fontWeight: 700, color: NAVY, marginBottom: 16 }}>פירוט עלויות</div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 10, fontSize: 13.5 }}>
+                {(costRows.length ? costRows : allRows).slice(0, 10).map((row, i) => {
+                  const highlight = isSection28ImportantRow(row.label);
+                  return (
+                    <div key={`${row.label}-${i}`} style={{ display: "flex", justifyContent: "space-between", borderTop: highlight ? `1px solid ${TAN}` : "none", paddingTop: highlight ? 10 : 0 }}>
+                      <span>{row.label}</span>
+                      <strong style={{ direction: "ltr", color: highlight ? PINK : NAVY }}>{formatSection28DisplayValue(row.value)}</strong>
+                    </div>
+                  );
+                })}
+                {!costRows.length && !allRows.length ? <div style={{ color: MUTED }}>לא נמצאו נתונים להצגה.</div> : null}
               </div>
+            </div>
+            {monthlyRow ? (
+              <div className="rp-avoid" style={{ background: NAVY, color: OFFWHITE, borderRadius: 16, padding: 26, display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 32 }}>
+                <div style={{ fontSize: 15, opacity: 0.8 }}>{monthlyRow.label}</div>
+                <div style={{ fontSize: 30, fontWeight: 800, direction: "ltr" }}>{formatSection28DisplayValue(monthlyRow.value)}</div>
+              </div>
+            ) : null}
+            {comparisonRows.length ? (
+              <>
+                <div style={{ fontSize: 17, fontWeight: 700, color: NAVY, marginBottom: 14 }}>השוואה בין תרחישים</div>
+                <div className="rp-avoid" style={{ background: OFFWHITE, border: `1px solid ${TAN}`, borderRadius: 16, padding: 24, display: "flex", flexDirection: "column", gap: 10, fontSize: 13.5 }}>
+                  {comparisonRows.slice(0, 8).map((row, i) => (
+                    <div key={`${row.label}-${i}`} style={{ display: "flex", justifyContent: "space-between" }}>
+                      <span>{row.label}</span><strong style={{ direction: "ltr" }}>{formatSection28DisplayValue(row.value)}</strong>
+                    </div>
+                  ))}
+                </div>
+              </>
+            ) : null}
+          </section>
+        );
+      }) : null}
+
+      {/* ============ PAGE — סימולציה לחיסכון ============ */}
+      {hasSavingSimulation ? (
+        <section className="rp-section" style={pageStyle}>
+          <SectionHeader title="סימולציית חיסכון וגיל פרישה" subtitle="קופת גמל להשקעה · חיסכון אישי" />
+          <div style={{ display: "grid", gridTemplateColumns: savingRows.length >= 3 ? "repeat(3, 1fr)" : "repeat(2, 1fr)", gap: 18 }}>
+            {savingRows.slice(0, 6).map((row, i) => (
+              <Kpi key={`${row.label}-${i}`} tone={i === savingRows.length - 1 ? "pink" : "outline"} label={row.label} value={formatSection28DisplayValue(row.value)} />
             ))}
           </div>
         </section>
-      ))}
-
-      <section className="print-a4-page">
-        <PrintHeader title="הלוואות וסיכום מהיר" page={loansPageNumber} />
-        <div className="print-grid-2" style={{ marginBottom: "5mm" }}>
-          <div className="print-card">
-            <h3 className="print-section-heading">הלוואות על חשבון מוצרים פנסיוניים</h3>
-            <div className="print-grid-2" style={{ marginBottom: 12 }}>
-              <Kpi label="סה״כ סכום הלוואות" value={fmtCurrency(totalLoansAmount)} />
-              <Kpi label="יתרת הלוואות" value={fmtCurrency(totalLoansBalance)} />
-            </div>
-            {loanDetails.length ? <table className="print-table"><thead><tr><th>שם</th><th>סכום</th><th>יתרה</th><th>תדירות</th><th>סיום</th></tr></thead><tbody>{loanDetails.slice(0, 10).map((loan, index) => <tr key={loan.id || index}><td>{[loan.firstName, loan.familyName].filter(Boolean).join(" ") || "—"}</td><td>{fmtCurrency(loan.amount)}</td><td>{fmtCurrency(loan.balance)}</td><td>{loan.repaymentFrequency || "—"}</td><td>{fmtDate(loan.endDate)}</td></tr>)}</tbody></table> : <div className="print-muted">לא התקבל פירוט הלוואות להצגה.</div>}
-          </div>
-          <div className="print-card">
-            <h3 className="print-section-heading">סיכום מהיר</h3>
-            <div className="print-grid-2" style={{ marginBottom: 12 }}>
-              <Kpi label="מוצרים" value={products.length} />
-              <Kpi label="גופים מנהלים" value={managers.length} />
-              <Kpi label="בני משפחה" value={members.length} />
-              <Kpi label="יחס הלוואות לנכסים" value={`${loanRatioToAssets.toFixed(1)}%`} />
-            </div>
-            <Kpi label="קצבה חודשית צפויה" value={fmtCurrency(family.monthlyPensionWithDeposits)} />
-            <div style={{ height: 12 }} />
-            <Kpi label="צבירה צפויה בגיל פרישה" value={fmtCurrency(family.projectedLumpSumWithDeposits)} />
-          </div>
-        </div>
-      </section>
-
-      {(printConversationSummary || printActionRecommendations) ? (
-        <PrintSummaryActionsPage page={loansPageNumber + 1} />
       ) : null}
+
+      {/* ============ PAGE — קצבה מוכרת ============ */}
+      {hasRecognizedPension ? recognizedPensionEntries.map((entry, entryIndex) => {
+        const vestedRows = Array.isArray(entry?.vestedBalanceTable?.rows) ? entry.vestedBalanceTable.rows : [];
+        const manualRows = getManualRecognizedPensionRows(entry?.recognizedPensionAdjustments);
+        const pdfTotal = getPdfExemptPaymentsTotal(vestedRows);
+        const manualTotal = manualRows.reduce((sum, row) => sum + Number(row.amount || 0), 0);
+        return (
+          <section className="rp-section" style={pageStyle} key={`recognized-${entryIndex}`}>
+            <SectionHeader title="קצבה מוכרת" subtitle={`${entry.ownerLabel || "בן/בת זוג"} · חישוב מתוך מסמכי המקור`} />
+            {vestedRows.length ? (
+              <>
+                <div className="rp-avoid" style={{ background: NAVY, color: OFFWHITE, borderRadius: 16, padding: "24px 28px", marginBottom: 24, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <div style={{ fontSize: 14, opacity: 0.75 }}>סה"כ תשלומים פטורים (טבלת חישוב מהמסמך)</div>
+                  <div style={{ fontSize: 26, fontWeight: 800, direction: "ltr" }}>{formatReportNumber(pdfTotal)}</div>
+                </div>
+                <table style={{ fontSize: 12, marginBottom: 28 }}>
+                  <thead>
+                    <tr style={{ background: NAVY, color: OFFWHITE }}>
+                      <th style={th}>שם הקופה</th><th style={th}>תשלומים פטורים</th><th style={th}>קצבה מוכרת</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {vestedRows.slice(0, 10).map((row, i) => (
+                      <tr key={row.id || i} style={{ background: i % 2 === 0 ? OFFWHITE : DESK }}>
+                        <td style={td}>{row.fundName || "—"}</td>
+                        <td style={{ ...td, direction: "ltr", textAlign: "right" }}>{row.exemptPayments || "—"}</td>
+                        <td style={{ ...td, direction: "ltr", textAlign: "right" }}>{row.pension || "—"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </>
+            ) : null}
+            {manualRows.length ? (
+              <>
+                <div style={{ fontSize: 17, fontWeight: 700, color: NAVY, marginBottom: 14 }}>קצבה מוכרת שהוזנה ידנית</div>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24, alignItems: "stretch" }}>
+                  <table style={{ fontSize: 13 }}>
+                    <thead>
+                      <tr style={{ background: PINK, color: OFFWHITE }}>
+                        <th style={th}>חברת ביטוח</th><th style={th}>קצבה מוכרת שהוזנה</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {manualRows.slice(0, 8).map((row, i) => (
+                        <tr key={row.id || i} style={{ background: i % 2 === 0 ? OFFWHITE : DESK }}>
+                          <td style={td}>{row.companyName || "—"}</td>
+                          <td style={{ ...td, direction: "ltr", textAlign: "right" }}>{formatReportNumber(row.amount)}</td>
+                        </tr>
+                      ))}
+                      <tr style={{ background: DESK }}>
+                        <td style={{ ...td, fontWeight: 700 }}>סה"כ</td>
+                        <td style={{ ...td, fontWeight: 700, direction: "ltr", textAlign: "right" }}>{formatReportNumber(manualTotal)}</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                  {pdfTotal > 0 && manualTotal > 0 ? (
+                    <div className="rp-avoid" style={{ background: TAN, borderRadius: 16, padding: 22, display: "flex", flexDirection: "column", justifyContent: "center" }}>
+                      <div style={{ fontSize: 13, color: DARKTAN }}>פער הצבירה לחיסכון במס</div>
+                      <div style={{ fontSize: 12, color: DARKTAN, opacity: 0.75, marginTop: 2 }}>לפי טבלת ה-PDF, בניכוי הקצבה שהוזנה ידנית</div>
+                      <div style={{ fontSize: 28, fontWeight: 800, color: NAVY, marginTop: 10, direction: "ltr" }}>{formatReportNumber(pdfTotal - manualTotal)}</div>
+                    </div>
+                  ) : null}
+                </div>
+              </>
+            ) : null}
+            {!vestedRows.length && !manualRows.length ? <EmptyPanel title="לא קיימים נתוני קצבה מוכרת בדוח." /> : null}
+          </section>
+        );
+      }) : null}
+
+      {/* ============ PAGE — סיכום שיחה ============ */}
+      <section className="rp-section" style={{ ...pageStyle, display: "flex", flexDirection: "column" }}>
+        <SectionHeader title="סיכום שיחה" subtitle="אזור להצגת סיכום הפגישה ותובנות ללקוח" />
+        {summaryParagraphs.length ? (
+          <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 14 }}>
+            {summaryParagraphs.map((block, i) => {
+              const lines = block.split(/\n+/).map((l) => l.trim()).filter(Boolean);
+              const isTopic = lines.length > 1;
+              return (
+                <div className="rp-avoid" key={`summary-${i}`} style={{ background: OFFWHITE, border: `1px solid ${TAN}`, borderRadius: 16, padding: "20px 24px", whiteSpace: "pre-wrap", fontSize: 14, lineHeight: 1.75 }}>
+                  {isTopic ? (
+                    <>
+                      <div style={{ color: NAVY, fontSize: 16, fontWeight: 800, marginBottom: 8 }}>{lines[0]}</div>
+                      <div>{lines.slice(1).join("\n")}</div>
+                    </>
+                  ) : block}
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="rp-avoid" style={{ flex: 1, background: OFFWHITE, border: `2px dashed ${TAN}`, borderRadius: 20, padding: 48, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 14, textAlign: "center" }}>
+            <div style={{ width: 56, height: 56, borderRadius: "50%", background: NAVY }} />
+            <div style={{ fontSize: 17, fontWeight: 700, color: NAVY }}>כאן יוצג סיכום השיחה עם הלקוח</div>
+            <div style={{ fontSize: 14, color: MUTED, maxWidth: 480, lineHeight: 1.6 }}>עבור משפחה מאוחדת. בשלב זה זהו אזור הכנה, וניתן לחבר אליו בהמשך שדה טקסט ידני או ממנגנון שמירת הדוח.</div>
+          </div>
+        )}
+        <PageFooter />
+      </section>
     </div>
   );
 }

@@ -5910,7 +5910,7 @@ export function PrintReportA4({ reportData, conversationSummary = "", actionReco
     const { segments, gradient } = donutData(items);
     return (
       <div className="rp-avoid" style={{ display: "grid", gridTemplateColumns: "300px 1fr", gap: 32, alignItems: "center", background: OFFWHITE, border: `1px solid ${TAN}`, borderRadius: 18, padding: 28, marginBottom: 22 }}>
-        <div style={{ display: "flex", justifyContent: "center" }}>
+        <div style={{ display: "flex", justifyContent: "flex-start" }}>
           <div style={{ width: 220, height: 220, borderRadius: "50%", background: `conic-gradient(${gradient})`, display: "flex", alignItems: "center", justifyContent: "center" }}>
             <div style={{ width: 130, height: 130, borderRadius: "50%", background: OFFWHITE, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
               <div style={{ fontSize: 11, color: MUTED }}>חלוקה לפי</div>
@@ -6307,7 +6307,7 @@ export function PrintReportA4({ reportData, conversationSummary = "", actionReco
             const stops = segs.map((s) => { const start = cur; cur += (s.value / tot) * 360; return `${s.color} ${start}deg ${cur}deg`; }).join(", ");
             return (
               <div className="rp-avoid" style={{ display: "grid", gridTemplateColumns: "300px 1fr", gap: 36, alignItems: "center", background: OFFWHITE, border: `1px solid ${TAN}`, borderRadius: 20, padding: 32, marginBottom: 28 }}>
-                <div style={{ display: "flex", justifyContent: "center" }}>
+                <div style={{ display: "flex", justifyContent: "flex-start" }}>
                   <div style={{ width: 220, height: 220, borderRadius: "50%", background: `conic-gradient(${stops})`, display: "flex", alignItems: "center", justifyContent: "center" }}>
                     <div style={{ width: 130, height: 130, borderRadius: "50%", background: OFFWHITE, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" }}>
                       <div style={{ fontSize: 11, color: MUTED }}>סיווג</div>

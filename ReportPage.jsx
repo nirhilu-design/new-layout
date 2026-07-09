@@ -5798,7 +5798,7 @@ function GiftIcon() {
   );
 }
 
-function PrintReportA4({ reportData, conversationSummary = "", actionRecommendations = "" }) {
+export function PrintReportA4({ reportData, conversationSummary = "", actionRecommendations = "" }) {
   const data = reportData || {};
   const family = data.family || {};
   const printConversationSummary =

@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from "react";
+import { PrintReportA4 } from "./ReportPage";
 
 const theme = {
   pageBg: "#F9F7F3",
@@ -880,8 +881,30 @@ export default function ClientDashboardPage({
     else onChangeView("member", nextScopeId);
   };
 
+  // Export the full report in the new print design. While the browser print
+  // dialog is open, body.rp-pdf-export hides the interactive dashboard so only
+  // the PrintReportA4 layout is sent to the PDF.
+  const handleExportReportPdf = () => {
+    const cleanup = () => {
+      document.body.classList.remove("rp-pdf-export");
+      window.removeEventListener("afterprint", cleanup);
+    };
+    document.body.classList.add("rp-pdf-export");
+    window.addEventListener("afterprint", cleanup);
+    window.print();
+    setTimeout(cleanup, 1500);
+  };
+
   return (
-    <div className="client-web-shell">
+    <>
+      <div className="client-pdf-export-root">
+        <PrintReportA4
+          reportData={reportData}
+          conversationSummary={reportData?.conversationSummary || reportData?.clientConversationSummary || ""}
+          actionRecommendations={reportData?.actionRecommendations || reportData?.recommendationsText || ""}
+        />
+      </div>
+      <div className="client-web-shell">
       <style>{clientDashboardCss}</style>
 
       <aside className="client-sidebar">
@@ -917,6 +940,11 @@ export default function ClientDashboardPage({
               <span><strong>נתונים קודמים</strong><small>הכנה לגרסאות דוח קודמות</small></span>
             </button>
 
+            <button type="button" className="client-export-button" onClick={handleExportReportPdf} title="ייצוא הדוח המלא ל־PDF">
+              <span className="client-export-icon">⤓</span>
+              <span><strong>ייצוא ל־PDF</strong><small>הדוח המלא בעיצוב החדש</small></span>
+            </button>
+
             <div className="client-updated-box"><span>עודכן לאחרונה:</span><strong>{clientModel.lastUpdated || "—"}</strong></div>
 
             <label className="client-scope-select-wrap">
@@ -946,6 +974,7 @@ export default function ClientDashboardPage({
 
       <PieSegmentDrawer selected={selectedPieSegment} onClose={handleClosePieDrawer} />
     </div>
+    </>
   );
 }
 
@@ -2842,6 +2871,17 @@ const clientDashboardCss = `
   .client-history-button { min-width: 188px; padding: 8px 12px; display: grid; grid-template-columns: 34px minmax(0, 1fr); gap: 10px; align-items: center; text-align: right; cursor: pointer; }
   .client-history-button strong { display: block; color: #fff; font-size: 13px; line-height: 1.2; } .client-history-button small { display: block; color: rgba(255,255,255,0.72); margin-top: 3px; font-size: 10px; line-height: 1.2; }
   .client-history-icon { width: 34px; height: 34px; border-radius: 12px; background: rgba(255,255,255,0.14); display: flex; align-items: center; justify-content: center; color: ${theme.accent}; font-size: 20px; font-weight: 900; }
+  .client-export-button { min-height: 54px; min-width: 188px; padding: 8px 12px; border-radius: 16px; background: ${theme.accent}; border: 1px solid ${theme.accent}; color: #fff; font-family: Calibri, Arial, sans-serif; display: grid; grid-template-columns: 34px minmax(0, 1fr); gap: 10px; align-items: center; text-align: right; cursor: pointer; transition: .18s ease; }
+  .client-export-button:hover { transform: translateY(-1px); box-shadow: 0 10px 22px rgba(255,39,86,.22); }
+  .client-export-button strong { display: block; color: #fff; font-size: 13px; line-height: 1.2; } .client-export-button small { display: block; color: rgba(255,255,255,0.82); margin-top: 3px; font-size: 10px; line-height: 1.2; }
+  .client-export-icon { width: 34px; height: 34px; border-radius: 12px; background: rgba(255,255,255,0.18); display: flex; align-items: center; justify-content: center; color: #fff; font-size: 20px; font-weight: 900; }
+  @media (max-width: 720px) { .client-export-button { grid-template-columns: 1fr; width: 100%; } }
+  .client-pdf-export-root { display: none; }
+  @media print {
+    .client-pdf-export-root { display: none; }
+    body.rp-pdf-export .client-pdf-export-root { display: block; }
+    body.rp-pdf-export .client-web-shell { display: none !important; }
+  }
   .client-updated-box { padding: 8px 12px; display: flex; flex-direction: column; justify-content: center; gap: 3px; color: rgba(255,255,255,0.72); font-size: 11px; } .client-updated-box strong { color: #fff; font-size: 13px; }
   .client-scope-select-wrap { padding: 7px 12px; display: grid; grid-template-columns: auto minmax(150px, 1fr); gap: 10px; align-items: center; color: rgba(255,255,255,0.72); font-size: 12px; font-weight: 800; }
   .client-scope-select { min-height: 32px; border: 0; outline: 0; color: #fff; font-family: Calibri, Arial, sans-serif; font-size: 14px; font-weight: 900; background: transparent; cursor: pointer; } .client-scope-select option { color: ${theme.text}; background: #fff; }

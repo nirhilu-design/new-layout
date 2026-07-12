@@ -5966,10 +5966,10 @@ export function PrintReportA4({ reportData, conversationSummary = "", actionReco
         <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 4, color: dark ? OFFWHITE : DARKTAN }}>{label}</div>
         <div style={{ fontSize: 13, opacity: 0.75, marginBottom: 18, color: dark ? OFFWHITE : DARKTAN }}>{sublabel}</div>
         <div style={{ fontSize: 36, fontWeight: 800, color: dark ? OFFWHITE : NAVY, marginBottom: 10, direction: "ltr", textAlign: "right" }}>{fmtPercentInt(v)}</div>
-        <div style={{ background: track, borderRadius: 8, height: 14, overflow: "hidden" }}>
-          <div style={{ width: `${v}%`, height: "100%", background: fill, borderRadius: 8 }} />
+        <div style={{ background: track, borderRadius: 8, height: 14, overflow: "hidden", display: "flex", direction: "rtl" }}>
+          <div style={{ width: `${v}%`, height: "100%", background: fill, borderRadius: 8, flexShrink: 0 }} />
         </div>
-        <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, opacity: 0.65, marginTop: 6, direction: "ltr", color: dark ? OFFWHITE : DARKTAN }}>
+        <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, opacity: 0.65, marginTop: 6, direction: "rtl", color: dark ? OFFWHITE : DARKTAN }}>
           <span>0%</span><span>25%</span><span>50%</span><span>75%</span><span>100%</span>
         </div>
       </div>
@@ -6053,7 +6053,7 @@ export function PrintReportA4({ reportData, conversationSummary = "", actionReco
       <style>{css}</style>
 
       {/* ============ PAGE 0 — COVER ============ */}
-      <section className="rp-section" style={{ ...pageStyle, padding: "64px 56px", color: NAVY, display: "flex", flexDirection: "column", borderTop: `10px solid ${NAVY}` }}>
+      <section className="rp-section" style={{ ...pageStyle, padding: "64px 56px 34px", color: NAVY, display: "flex", flexDirection: "column", borderTop: `10px solid ${NAVY}` }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 26 }}>
           <div style={{ width: 8, height: 8, borderRadius: "50%", background: PINK }} />
           <div style={{ fontSize: 14, letterSpacing: "0.3px", color: MUTED }}>מבט משפחתי · דוח פנסיוני</div>
@@ -6093,9 +6093,7 @@ export function PrintReportA4({ reportData, conversationSummary = "", actionReco
           <div style={{ gridColumn: "1 / -1", fontSize: 11, color: "#B0A99E", marginTop: 12, textAlign: "left", fontStyle: "italic" }}>* התרשימים להמחשה בלבד ואינם משקפים נתוני לקוח.</div>
         </div>
 
-        <div style={{ flex: 1 }} />
-
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", borderTop: `1px solid ${TAN}`, paddingTop: 22 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", borderTop: `1px solid ${TAN}`, paddingTop: 22, marginTop: "auto" }}>
           <div style={{ display: "flex", gap: 40 }}>
             <div>
               <div style={{ fontSize: 12, color: MUTED }}>תאריך הפקה</div>
@@ -6185,7 +6183,13 @@ export function PrintReportA4({ reportData, conversationSummary = "", actionReco
       {/* ============ PAGE 3 — התפלגות נכסים ============ */}
       {show("allocation") && (
       <section className="rp-section" style={pageStyle}>
-        <SectionHeader title="התפלגות נכסים" subtitle={`סך ${fmtCurrency(family.totalAssets)} · מחושב מסך הצבירה בפועל`} />
+        <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", borderBottom: `3px solid ${NAVY}`, paddingBottom: 14, marginBottom: 22 }}>
+          <div style={{ fontSize: 34, fontWeight: 800, color: NAVY }}>התפלגות נכסים</div>
+          <div style={{ textAlign: "left" }}>
+            <div style={{ fontSize: 13, color: MUTED, fontWeight: 700 }}>סך צבירה מנוהלת</div>
+            <div style={{ fontSize: 30, fontWeight: 800, color: NAVY, direction: "ltr", marginTop: 2 }}>{fmtCurrency(family.totalAssets)}</div>
+          </div>
+        </div>
         <Donut title="products" centerLabel="מוצרים" items={products} />
         <Donut title="managers" centerLabel="גופים מנהלים" items={managers} />
         <Donut title="channels" centerLabel="אפיקים ראשיים" items={mainGroups} note='ראו פירוט מלא בעמוד "פירוק נכסים".' />
@@ -6227,11 +6231,14 @@ export function PrintReportA4({ reportData, conversationSummary = "", actionReco
             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
               {chunk.map((f, i) => (
                 <div className="rp-avoid" key={`${f.name}-${f.policyNo}-${i}`} style={{ background: OFFWHITE, border: `1px solid ${TAN}`, borderLeft: `3px solid ${NAVY}`, borderRadius: 12, padding: "14px 18px" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
                     <div style={{ fontSize: 14, fontWeight: 700, color: NAVY }}>
                       {f.name}{f.policyNo ? <span style={{ fontSize: 11, color: MUTED, fontWeight: 400 }}>{` · מס' ${f.policyNo}`}</span> : null}
                     </div>
-                    <div style={{ fontSize: 16, fontWeight: 800, direction: "ltr" }}>{fmtCurrency(f.value)}</div>
+                    <div style={{ textAlign: "left" }}>
+                      <div style={{ fontSize: 10, color: MUTED, fontWeight: 700 }}>סך צבירה</div>
+                      <div style={{ fontSize: 16, fontWeight: 800, direction: "ltr", color: INK }}>{fmtCurrency(f.value)}</div>
+                    </div>
                   </div>
                   <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 8 }}>
                     <Metric label="תשואה 12ח'" value={f.return12} />
@@ -6418,16 +6425,21 @@ export function PrintReportA4({ reportData, conversationSummary = "", actionReco
           <div className="rp-avoid" style={{ background: OFFWHITE, border: `1px solid ${TAN}`, borderRadius: 16, padding: 26 }}>
             <div style={{ fontSize: 16, fontWeight: 700, color: NAVY, marginBottom: 16 }}>{title}</div>
             <div style={{ display: "flex", flexDirection: "column", gap: 10, fontSize: 13.5 }}>
-              {rows.map((r, i) => (
-                <div key={`r-${i}`} style={{ display: "flex", justifyContent: "space-between" }}>
-                  <span>{r.label}</span><strong style={{ direction: "ltr" }}>{formatSection28DisplayValue(r.value)}</strong>
-                </div>
-              ))}
-              {summary.map((r, i) => {
-                const isBrut = normalizeSection28Text(r.label).includes("ברוטו");
+              {rows.map((r, i) => {
+                const parts = String(r.label).split(/\s*—\s*/);
                 return (
-                  <div key={`s-${i}`} style={{ display: "flex", justifyContent: "space-between", borderTop: i === 0 ? `1px solid ${TAN}` : "none", paddingTop: i === 0 ? 10 : 0 }}>
-                    <span>{r.label}</span><strong style={{ direction: "ltr", color: isBrut ? PINK : NAVY }}>{formatSection28DisplayValue(r.value)}</strong>
+                  <div key={`r-${i}`} style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10 }}>
+                    <span style={{ minWidth: 0 }}>{parts[0]}{parts.length > 1 ? <><br /><span style={{ color: MUTED, fontSize: 12 }}>{parts.slice(1).join(" — ")}</span></> : null}</span>
+                    <strong style={{ direction: "ltr", flexShrink: 0, whiteSpace: "nowrap" }}>{formatSection28DisplayValue(r.value)}</strong>
+                  </div>
+                );
+              })}
+              {summary.map((r, i) => {
+                const parts = String(r.label).split(/\s*—\s*/);
+                return (
+                  <div key={`s-${i}`} style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 10, borderTop: i === 0 ? `1px solid ${TAN}` : "none", paddingTop: i === 0 ? 10 : 0 }}>
+                    <span style={{ minWidth: 0 }}>{parts[0]}{parts.length > 1 ? <><br /><span style={{ color: MUTED, fontSize: 12 }}>{parts.slice(1).join(" — ")}</span></> : null}</span>
+                    <strong style={{ direction: "ltr", color: NAVY, flexShrink: 0, whiteSpace: "nowrap" }}>{formatSection28DisplayValue(r.value)}</strong>
                   </div>
                 );
               })}

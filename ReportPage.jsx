@@ -6449,7 +6449,10 @@ export function PrintReportA4({ reportData, conversationSummary = "", actionReco
         );
         return (
           <section className="rp-section" style={pageStyle} key={`s28-${entryIndex}`}>
-            <SectionHeader title="קיטום סעיף 28" subtitle={`${entry.ownerLabel || "מבוטח/ת ראשית"} · פירוט עלויות ותרחיש לאחר קיטום`} />
+            <SectionHeader title="קיטום סעיף 28" subtitle={entry.ownerLabel || "מבוטח/ת ראשית"} />
+            <div className="rp-avoid" style={{ background: OFFWHITE, border: `1px solid ${TAN}`, borderRadius: 12, padding: "14px 18px", marginBottom: 24, fontSize: 13, color: DARKTAN, lineHeight: 1.7 }}>
+              קיטום לפי סעיף 28 משמעותו הפחתה יחסית של כלל רכיבי השכר, כך שסכומם הכולל לא יעלה על התקרה הקבועה בחוק – עד פי שמונה משכר המינימום. הקיטום אינו מבטל רכיב שכר מסוים, אלא מפחית באופן יחסי את כלל הרכיבים, ובכך עשוי להגדיל את השכר נטו המשולם בתלוש.
+            </div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24, marginBottom: 28 }}>
               <CostCard title="חלק מעסיק" rows={employerRows} summary={employerSummary} />
               <CostCard title="חלק עובד" rows={employeeRows} summary={employeeSummary} />
@@ -6523,7 +6526,10 @@ export function PrintReportA4({ reportData, conversationSummary = "", actionReco
         const manualTotal = manualRows.reduce((sum, row) => sum + Number(row.amount || 0), 0);
         return (
           <section className="rp-section" style={pageStyle} key={`recognized-${entryIndex}`}>
-            <SectionHeader title="קצבה מוכרת" subtitle={`${entry.ownerLabel || "בן/בת זוג"} · חישוב מתוך מסמכי המקור`} />
+            <SectionHeader title="קצבה מוכרת" subtitle={entry.ownerLabel || "בן/בת זוג"} />
+            <div className="rp-avoid" style={{ background: OFFWHITE, border: `1px solid ${TAN}`, borderRadius: 12, padding: "14px 18px", marginBottom: 24, fontSize: 13, color: DARKTAN, lineHeight: 1.7 }}>
+              קצבה מוכרת היא החלק בקצבה שנובע מהפקדות שכבר שולם עליהן מס, או מהפקדות שלא ניתנה בגינן הטבת מס. לכן, בעת קבלת הקצבה בגיל פרישה, חלק זה עשוי להיות פטור ממס, בכפוף להוראות החוק ולהכרה של רשות המסים.
+            </div>
             {vestedRows.length ? (
               <>
                 <div className="rp-avoid" style={{ background: NAVY, color: OFFWHITE, borderRadius: 16, padding: "24px 28px", marginBottom: 24, display: "flex", justifyContent: "space-between", alignItems: "center" }}>

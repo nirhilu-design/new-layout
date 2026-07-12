@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { COVER_HERO_IMAGE } from "./coverHero";
 
 const STORAGE_CLIENT_MODEL_KEY = "familyPensionClientModel";
 const STORAGE_REPORT_DATA_KEY = "familyPensionReportData";
@@ -6052,16 +6053,49 @@ export function PrintReportA4({ reportData, conversationSummary = "", actionReco
       <style>{css}</style>
 
       {/* ============ PAGE 0 — COVER ============ */}
-      <section className="rp-section" style={{ ...pageStyle, padding: "96px 72px", color: NAVY, display: "flex", flexDirection: "column", justifyContent: "space-between", borderTop: `10px solid ${NAVY}` }}>
-        <div>
-          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 64 }}>
-            <div style={{ width: 8, height: 8, borderRadius: "50%", background: PINK }} />
-            <div style={{ fontSize: 14, letterSpacing: "0.3px", color: MUTED }}>מבט משפחתי · דוח פנסיוני</div>
-          </div>
-          <div style={{ fontSize: 48, fontWeight: 700, lineHeight: 1.25, maxWidth: 640, color: NAVY }}>דוח ידע פנסיוני מלא ומאוחד</div>
-          <div style={{ marginTop: 20, fontSize: 16, color: "#5C5650", maxWidth: 520, lineHeight: 1.7 }}>ריכוז נכסים, תזרים עתידי, כיסויים ביטוחיים והשלכות מס — לכל בני המשפחה במקום אחד.</div>
+      <section className="rp-section" style={{ ...pageStyle, padding: "64px 56px", color: NAVY, display: "flex", flexDirection: "column", borderTop: `10px solid ${NAVY}` }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 26 }}>
+          <div style={{ width: 8, height: 8, borderRadius: "50%", background: PINK }} />
+          <div style={{ fontSize: 14, letterSpacing: "0.3px", color: MUTED }}>מבט משפחתי · דוח פנסיוני</div>
         </div>
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", borderTop: `1px solid ${TAN}`, paddingTop: 24 }}>
+        <div style={{ fontSize: 44, fontWeight: 800, lineHeight: 1.15, maxWidth: 640, color: NAVY }}>דוח פנסיוני משפחתי מאוחד</div>
+        <div style={{ marginTop: 16, fontSize: 16, color: "#5C5650", maxWidth: 560, lineHeight: 1.7 }}>תמונה מלאה של העתיד שלכם — פנסיה, ביטוח, השקעות ותכנון עתידי במקום אחד.</div>
+
+        <div style={{ position: "relative", width: "100%", height: 330, borderRadius: 20, overflow: "hidden", margin: "28px 0 24px", boxShadow: "0 14px 44px rgba(0,33,93,0.16)", backgroundImage: `url(${COVER_HERO_IMAGE})`, backgroundRepeat: "no-repeat", backgroundSize: "230%", backgroundPosition: "50% 55%" }}>
+          <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(249,247,243,0.55) 0%, rgba(249,247,243,0) 20%, rgba(249,247,243,0) 82%, rgba(249,247,243,0.30) 100%)" }} />
+        </div>
+
+        <div className="rp-avoid" style={{ display: "grid", gridTemplateColumns: "300px 1fr", gap: 24, alignItems: "center", background: "#FFFFFF", border: `1px solid ${TAN}`, borderRadius: 20, padding: "24px 28px", boxShadow: "0 6px 22px rgba(0,33,93,0.06)" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 18 }}>
+            <div style={{ width: 132, height: 132, borderRadius: "50%", flexShrink: 0, background: `conic-gradient(${NAVY} 0deg 122deg, ${PINK} 122deg 212deg, ${TAN} 212deg 286deg, #C9BBA8 286deg 330deg, #9CA3AF 330deg 360deg)`, display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <div style={{ width: 74, height: 74, borderRadius: "50%", background: "#fff" }} />
+            </div>
+            <div>
+              {[["פנסיה", NAVY], ["ביטוחים", PINK], ["נכסים פיננסיים", TAN], ["נדל״ן", "#C9BBA8"], ["אחר", "#9CA3AF"]].map(([lbl, c]) => (
+                <div key={lbl} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12.5, color: "#243B53", marginBottom: 7 }}>
+                  <span style={{ width: 11, height: 11, borderRadius: 3, flexShrink: 0, background: c }} />{lbl}
+                </div>
+              ))}
+            </div>
+          </div>
+          <div>
+            <div style={{ fontSize: 12, color: MUTED, marginBottom: 8 }}>צמיחה לאורך זמן</div>
+            <svg viewBox="0 0 420 130" width="100%" height="120" preserveAspectRatio="none">
+              <defs><linearGradient id="rpGrow" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor={NAVY} stopOpacity="0.18" /><stop offset="1" stopColor={NAVY} stopOpacity="0" /></linearGradient></defs>
+              <g fill={TAN}>
+                <rect x="24" y="112" width="16" height="16" rx="3" /><rect x="84" y="104" width="16" height="24" rx="3" /><rect x="144" y="96" width="16" height="32" rx="3" /><rect x="204" y="84" width="16" height="44" rx="3" /><rect x="264" y="70" width="16" height="58" rx="3" /><rect x="324" y="54" width="16" height="74" rx="3" /><rect x="384" y="34" width="16" height="94" rx="3" />
+              </g>
+              <polygon points="0,110 60,96 120,102 180,72 240,80 300,48 360,40 420,14 420,130 0,130" fill="url(#rpGrow)" />
+              <polyline points="0,110 60,96 120,102 180,72 240,80 300,48 360,40 420,14" fill="none" stroke={NAVY} strokeWidth="3" strokeLinejoin="round" strokeLinecap="round" />
+              <circle cx="420" cy="14" r="5" fill={PINK} />
+            </svg>
+          </div>
+          <div style={{ gridColumn: "1 / -1", fontSize: 11, color: "#B0A99E", marginTop: 12, textAlign: "left", fontStyle: "italic" }}>* התרשימים להמחשה בלבד ואינם משקפים נתוני לקוח.</div>
+        </div>
+
+        <div style={{ flex: 1 }} />
+
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", borderTop: `1px solid ${TAN}`, paddingTop: 22 }}>
           <div style={{ display: "flex", gap: 40 }}>
             <div>
               <div style={{ fontSize: 12, color: MUTED }}>תאריך הפקה</div>

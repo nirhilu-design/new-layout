@@ -6308,6 +6308,7 @@ export function PrintReportA4({ reportData, conversationSummary = "", actionReco
                 <tr style={{ background: PINK, color: OFFWHITE }}>
                   <th style={th}>בן משפחה</th>
                   <th style={th}>שם מוצר</th>
+                  <th style={th}>סטטוס</th>
                   <th style={th}>סכום לאלמנה</th>
                   <th style={th}>סכום ליתום</th>
                   <th style={th}>סך קצבה</th>
@@ -6318,6 +6319,7 @@ export function PrintReportA4({ reportData, conversationSummary = "", actionReco
                   <tr key={row.id || i} style={{ background: i % 2 === 0 ? OFFWHITE : DESK }}>
                     <td style={td}>{row.memberName || "—"}</td>
                     <td style={td}>{row.planName || "—"}</td>
+                    <td style={{ ...td, fontWeight: 600, color: row.active ? NAVY : MUTED }}>{row.active ? "פעילה" : "לא פעילה"}</td>
                     <td style={{ ...td, direction: "ltr", textAlign: "right" }}>{fmtCurrency(row.widowPension)}</td>
                     <td style={{ ...td, direction: "ltr", textAlign: "right" }}>{fmtCurrency(row.orphanPension)}</td>
                     <td style={{ ...td, direction: "ltr", textAlign: "right", fontWeight: 700 }}>{fmtCurrency(row.totalPension)}</td>

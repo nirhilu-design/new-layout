@@ -596,20 +596,25 @@ function buildDeathCoverageRows(products) {
 
 function buildPensionDeathBenefitRows(products) {
   return safeArray(products)
-    .filter((product) => isPensionFundProduct(product) && product.hasActiveDeposits)
+    .filter((product) => isPensionFundProduct(product))
     .map((product, index) => {
       const widowPension = Number(product.widowPension || 0);
       const orphanPension = Number(product.orphanPension || 0);
       return {
         id: product.id || `${product.planName}-pension-${index}`,
         planName: product.planName || "מוצר ללא שם",
+        active: Boolean(product.hasActiveDeposits),
         widowPension,
         orphanPension,
         totalPension: widowPension + orphanPension,
       };
     })
     .filter((row) => row.totalPension > 0)
-    .sort((a, b) => Number(b.totalPension || 0) - Number(a.totalPension || 0));
+    .sort(
+      (a, b) =>
+        Number(b.active) - Number(a.active) ||
+        Number(b.totalPension || 0) - Number(a.totalPension || 0)
+    );
 }
 
 
@@ -1604,16 +1609,19 @@ function PensionDeathBenefitTable({ rows, isFamily }) {
     );
   }
 
+  const statusColumn = { key: "status", label: "סטטוס", className: "text-col", render: (row) => (row.active ? "פעילה" : "לא פעילה") };
   const columns = isFamily
     ? [
         { key: "memberName", label: "בן משפחה", className: "text-col", render: (row) => row.memberName || "—" },
         { key: "planName", label: "שם מוצר", className: "wide-col", render: (row) => row.planName || "—" },
+        statusColumn,
         { key: "widowPension", label: "סכום לאלמנה", className: "money-col", render: (row) => formatCurrency(row.widowPension) },
         { key: "orphanPension", label: "סכום ליתום", className: "money-col", render: (row) => formatCurrency(row.orphanPension) },
         { key: "totalPension", label: "סך קצבה", className: "money-col", render: (row) => formatCurrency(row.totalPension) },
       ]
     : [
         { key: "planName", label: "שם מוצר", className: "wide-col", render: (row) => row.planName || "—" },
+        statusColumn,
         { key: "widowPension", label: "סכום לאלמנה", className: "money-col", render: (row) => formatCurrency(row.widowPension) },
         { key: "orphanPension", label: "סכום ליתום", className: "money-col", render: (row) => formatCurrency(row.orphanPension) },
         { key: "totalPension", label: "סך קצבה", className: "money-col", render: (row) => formatCurrency(row.totalPension) },

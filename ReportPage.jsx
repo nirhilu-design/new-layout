@@ -5798,7 +5798,7 @@ function GiftIcon() {
   );
 }
 
-export function PrintReportA4({ reportData, conversationSummary = "", actionRecommendations = "", sections = null, productFunds = [] }) {
+export function PrintReportA4({ reportData, conversationSummary = "", actionRecommendations = "", sections = null, productFunds = [], deathBenefit = {} }) {
   const data = reportData || {};
   const family = data.family || {};
   const printConversationSummary =
@@ -6090,7 +6090,6 @@ export function PrintReportA4({ reportData, conversationSummary = "", actionReco
               <circle cx="420" cy="14" r="5" fill={PINK} />
             </svg>
           </div>
-          <div style={{ gridColumn: "1 / -1", fontSize: 11, color: "#B0A99E", marginTop: 12, textAlign: "left", fontStyle: "italic" }}>* התרשימים להמחשה בלבד ואינם משקפים נתוני לקוח.</div>
         </div>
 
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", borderTop: `1px solid ${TAN}`, paddingTop: 22, marginTop: "auto" }}>
@@ -6106,7 +6105,10 @@ export function PrintReportA4({ reportData, conversationSummary = "", actionReco
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
             {data?.clientLogo ? <img src={data.clientLogo} alt="לוגו" style={{ maxHeight: 40, maxWidth: 120, objectFit: "contain" }} /> : null}
-            <div style={{ fontSize: 12, color: MUTED }}>מקור: נתוני פנסיה</div>
+            <div>
+              <div style={{ fontSize: 12, color: MUTED }}>תאריך נכונות הנתונים</div>
+              <div style={{ fontSize: 15, fontWeight: 600, color: NAVY, marginTop: 2, direction: "ltr", textAlign: "left" }}>{family.dataValidityDate || "—"}</div>
+            </div>
           </div>
         </div>
       </section>
@@ -6123,12 +6125,13 @@ export function PrintReportA4({ reportData, conversationSummary = "", actionReco
             const avatarBg = cardNavy ? PINK : NAVY;
             const roleLabel = i === 0 ? "מבוטח/ת ראשי/ת" : "בן/בת זוג";
             const name = member.name || "—";
+            const memberRetireAge = memberDetail(member, "retireAge");
             return (
               <div className="rp-avoid" key={member.id || member.name || i} style={{ background: bg, color: OFFWHITE, borderRadius: 20, padding: 32, position: "relative", overflow: "hidden" }}>
                 <div style={{ position: "absolute", left: -60, top: -60, width: 180, height: 180, borderRadius: "50%", background: bubble }} />
                 <div style={{ position: "relative", zIndex: 1 }}>
                   <div style={{ width: 56, height: 56, borderRadius: "50%", background: avatarBg, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, fontWeight: 700, marginBottom: 20 }}>{String(name).trim().slice(0, 1) || "?"}</div>
-                  <div style={{ fontSize: 26, fontWeight: 700 }}>{name}</div>
+                  <div style={{ fontSize: 26, fontWeight: 700 }}>{name}{memberRetireAge ? <span style={{ fontSize: 15, fontWeight: 600, opacity: 0.8 }}>{` (פרישה בגיל ${memberRetireAge})`}</span> : null}</div>
                   <div style={{ fontSize: 13, opacity: 0.8, marginTop: 2 }}>{roleLabel}</div>
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20, marginTop: 28 }}>
                     <div>
@@ -6200,7 +6203,7 @@ export function PrintReportA4({ reportData, conversationSummary = "", actionReco
       {show("allocation") && (() => {
         const funds = (Array.isArray(productFunds) ? productFunds : [])
           .map((f) => ({
-            name: f.name || "מוצר", policyNo: f.policyNo || "", value: Number(f.value || 0),
+            name: f.name || "מוצר", policyNo: f.policyNo || "", productType: f.productType || "אחר", value: Number(f.value || 0),
             return12: Number(f.return12 || 0), return36: Number(f.return36 || 0), return60: Number(f.return60 || 0),
             st36: Number(f.st36 || 0), sharp36: Number(f.sharp36 || 0),
           }))
@@ -6214,9 +6217,6 @@ export function PrintReportA4({ reportData, conversationSummary = "", actionReco
             </section>
           );
         }
-        const per = 9;
-        const chunks = [];
-        for (let i = 0; i < funds.length; i += per) chunks.push(funds.slice(i, i + per));
         const Metric = ({ label, value, decimal, signed }) => (
           <div>
             <div style={{ color: MUTED, fontSize: 10 }}>{label}</div>
@@ -6225,47 +6225,59 @@ export function PrintReportA4({ reportData, conversationSummary = "", actionReco
             </div>
           </div>
         );
-        return chunks.map((chunk, pageIndex) => (
-          <section className="rp-section" style={pageStyle} key={`products-page-${pageIndex}`}>
-            <SectionHeader title="נכסים ברמת מוצר" subtitle={pageIndex === 0 ? "תשואות ומדדי סיכון לפי מסלול" : "המשך"} />
-            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-              {chunk.map((f, i) => (
-                <div className="rp-avoid" key={`${f.name}-${f.policyNo}-${i}`} style={{ background: OFFWHITE, border: `1px solid ${TAN}`, borderLeft: `3px solid ${NAVY}`, borderRadius: 12, padding: "14px 18px" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
-                    <div style={{ fontSize: 14, fontWeight: 700, color: NAVY }}>
-                      {f.name}{f.policyNo ? <span style={{ fontSize: 11, color: MUTED, fontWeight: 400 }}>{` · מס' ${f.policyNo}`}</span> : null}
-                    </div>
-                    <div style={{ textAlign: "left" }}>
-                      <div style={{ fontSize: 10, color: MUTED, fontWeight: 700 }}>סך צבירה</div>
-                      <div style={{ fontSize: 16, fontWeight: 800, direction: "ltr", color: INK }}>{fmtCurrency(f.value)}</div>
-                    </div>
-                  </div>
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 8 }}>
-                    <Metric label="תשואה 12ח'" value={f.return12} />
-                    <Metric label="תשואה 36ח'" value={f.return36} />
-                    <Metric label="תשואה 60ח'" value={f.return60} />
-                    <Metric label="סטיית תקן 36ח'" value={f.st36} />
-                    <Metric label="שארפ 36ח'" value={f.sharp36} decimal signed />
-                  </div>
+        const order = ["פנסיה מקיפה", "פנסיה חדשה מקיפה", "פנסיה כללית", "ביטוח מנהלים", "קרן השתלמות", "קופת גמל", "גמל להשקעה"];
+        const byType = new Map();
+        funds.forEach((f) => { if (!byType.has(f.productType)) byType.set(f.productType, []); byType.get(f.productType).push(f); });
+        const groups = Array.from(byType.entries())
+          .map(([type, list]) => ({ type, list: list.sort((a, b) => b.value - a.value), total: list.reduce((s, x) => s + x.value, 0) }))
+          .sort((a, b) => {
+            const ai = order.findIndex((o) => a.type.includes(o));
+            const bi = order.findIndex((o) => b.type.includes(o));
+            return (ai < 0 ? 99 : ai) - (bi < 0 ? 99 : bi) || b.total - a.total;
+          });
+        return (
+          <section className="rp-section" style={pageStyle}>
+            <SectionHeader title="נכסים ברמת מוצר" subtitle="תשואות ומדדי סיכון · מקובץ לפי סוג מוצר" />
+            {groups.map((g) => (
+              <div key={g.type} style={{ marginBottom: 20 }}>
+                <div style={{ breakAfter: "avoid", pageBreakAfter: "avoid", display: "flex", justifyContent: "space-between", alignItems: "center", background: NAVY, color: OFFWHITE, borderRadius: 10, padding: "10px 16px", marginBottom: 10 }}>
+                  <div style={{ fontSize: 15, fontWeight: 800 }}>{g.type}</div>
+                  <div style={{ fontSize: 14, fontWeight: 800, direction: "ltr" }}>{fmtCurrency(g.total)}</div>
                 </div>
-              ))}
-            </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                  {g.list.map((f, i) => (
+                    <div className="rp-avoid" key={`${f.name}-${f.policyNo}-${i}`} style={{ background: OFFWHITE, border: `1px solid ${TAN}`, borderLeft: `3px solid ${NAVY}`, borderRadius: 12, padding: "14px 18px" }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
+                        <div style={{ fontSize: 14, fontWeight: 700, color: NAVY }}>
+                          {f.name}{f.policyNo ? <span style={{ fontSize: 11, color: MUTED, fontWeight: 400 }}>{` · מס' ${f.policyNo}`}</span> : null}
+                        </div>
+                        <div style={{ textAlign: "left" }}>
+                          <div style={{ fontSize: 10, color: MUTED, fontWeight: 700 }}>סך צבירה</div>
+                          <div style={{ fontSize: 16, fontWeight: 800, direction: "ltr", color: INK }}>{fmtCurrency(f.value)}</div>
+                        </div>
+                      </div>
+                      <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 8 }}>
+                        <Metric label="תשואה 12ח'" value={f.return12} />
+                        <Metric label="תשואה 36ח'" value={f.return36} />
+                        <Metric label="תשואה 60ח'" value={f.return60} />
+                        <Metric label="סטיית תקן 36ח'" value={f.st36} />
+                        <Metric label="שארפ 36ח'" value={f.sharp36} decimal signed />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
           </section>
-        ));
+        );
       })()}
 
       {/* ============ PAGE — סכומים למקרה פטירה ============ */}
       {show("insurance") && (
       <section className="rp-section" style={pageStyle}>
-        <SectionHeader title="סכומים למקרה פטירה" subtitle="ביטוח חיים, הון למוטבים וכיסויים" />
-        <div className="rp-avoid" style={{ background: NAVY, color: OFFWHITE, borderRadius: 20, padding: 32, display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 28 }}>
-          <div>
-            <div style={{ fontSize: 15, opacity: 0.75 }}>ביטוח חיים / הון למוטבים</div>
-            <div style={{ fontSize: 38, fontWeight: 800, marginTop: 8, direction: "ltr", textAlign: "right" }}>{fmtCurrency(totalLifeCoverage)}</div>
-          </div>
-          <div aria-hidden="true" style={{ width: 60, height: 68, flexShrink: 0, background: PINK, clipPath: "polygon(50% 0%,100% 15%,100% 55%,50% 100%,0% 55%,0% 15%)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <div style={{ width: 26, height: 26, background: OFFWHITE, clipPath: "polygon(50% 0%,100% 15%,100% 55%,50% 100%,0% 55%,0% 15%)" }} />
-          </div>
+        <SectionHeader title="סכומים למקרה פטירה" subtitle="ביטוח חיים, הון למוטבים וקצבת שאירים" />
+        <div className="rp-avoid" style={{ background: OFFWHITE, border: `1px solid ${TAN}`, borderRadius: 12, padding: "14px 18px", marginBottom: 24, fontSize: 13, color: DARKTAN, lineHeight: 1.7 }}>
+          הנתונים מציינים את הסכום למקרה פטירה המתקבל בתצורה הונית (סכום חד-פעמי למוטבים), וכן קצבה חודשית לשאירים בכל מקרה שקיימת קרן פנסיה.
         </div>
         <div style={{ fontSize: 17, fontWeight: 700, color: NAVY, marginBottom: 12 }}>כיסויים לפי בן משפחה</div>
         {members.length ? (
@@ -6289,7 +6301,33 @@ export function PrintReportA4({ reportData, conversationSummary = "", actionReco
           </table>
         ) : <EmptyPanel title="לא התקבלו נתוני כיסויים להצגה" />}
         <div style={{ marginTop: 28, fontSize: 17, fontWeight: 700, color: NAVY, marginBottom: 12 }}>סכום פיצוי חודשי מקרן הפנסיה</div>
-        <EmptyPanel title="לא התקבל פירוט פיצוי חודשי לאלמנה/יתומים" subtitle="ככל שיתקבלו נתוני פיצוי חודשי מקרן הפנסיה, יוצג כאן פירוט לכל מוטב." />
+        {Array.isArray(deathBenefit?.pensionRows) && deathBenefit.pensionRows.length ? (
+          <>
+            <table style={{ fontSize: 13 }}>
+              <thead>
+                <tr style={{ background: PINK, color: OFFWHITE }}>
+                  <th style={th}>בן משפחה</th>
+                  <th style={th}>שם מוצר</th>
+                  <th style={th}>סכום לאלמנה</th>
+                  <th style={th}>סכום ליתום</th>
+                  <th style={th}>סך קצבה</th>
+                </tr>
+              </thead>
+              <tbody>
+                {deathBenefit.pensionRows.map((row, i) => (
+                  <tr key={row.id || i} style={{ background: i % 2 === 0 ? OFFWHITE : DESK }}>
+                    <td style={td}>{row.memberName || "—"}</td>
+                    <td style={td}>{row.planName || "—"}</td>
+                    <td style={{ ...td, direction: "ltr", textAlign: "right" }}>{fmtCurrency(row.widowPension)}</td>
+                    <td style={{ ...td, direction: "ltr", textAlign: "right" }}>{fmtCurrency(row.orphanPension)}</td>
+                    <td style={{ ...td, direction: "ltr", textAlign: "right", fontWeight: 700 }}>{fmtCurrency(row.totalPension)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <div style={{ fontSize: 12, color: MUTED, marginTop: 10, lineHeight: 1.6 }}>סך הקצבה החודשית לאלמנה וליתומים אינה יכולה לעלות על השכר המבוטח; הפיצוי לכל יתום משולם עד גיל 21.</div>
+          </>
+        ) : <EmptyPanel title="אין נתוני פיצוי חודשי מקרן פנסיה להצגה" />}
       </section>
       )}
 

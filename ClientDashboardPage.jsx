@@ -1140,12 +1140,16 @@ function PdfExportModal({ navItems, onClose, scope, detailedMembers, specialSect
       return {
         name: p.planName || p.productType || "מוצר",
         policyNo: p.policyNo || "",
+        productType: p.productType || "אחר",
         value: Number(p.currentValue || 0),
         return12: avg("return12"), return36: avg("return36"), return60: avg("return60"),
         st36: avg("st36"), sharp36: avg("sharp36"),
       };
     })
     .filter((f) => f.value > 0);
+
+  // Monthly pension death-benefit rows (widow/orphan) — same source as the WEB table.
+  const deathBenefit = { pensionRows: safeArray(scope?.pensionDeathBenefitProducts) };
 
   return (
     <>
@@ -1193,6 +1197,7 @@ function PdfExportModal({ navItems, onClose, scope, detailedMembers, specialSect
             reportData={reportData}
             sections={selected}
             productFunds={productFunds}
+            deathBenefit={deathBenefit}
             conversationSummary={reportData?.conversationSummary || reportData?.clientConversationSummary || ""}
             actionRecommendations={reportData?.actionRecommendations || reportData?.recommendationsText || ""}
           />
@@ -1384,7 +1389,14 @@ function PersonalDetailsCard({ member, index }) {
       <div className="client-personal-card-header">
         <div className="client-personal-avatar"><GenderIcon gender={gender} /></div>
         <div>
-          <h3>{details.name || member?.name || "ללא שם"}</h3>
+          <h3>
+            {details.name || member?.name || "ללא שם"}
+            {(details.retireAge || member?.retireAge) ? (
+              <span style={{ fontSize: 13, fontWeight: 600, color: "#627D98", marginRight: 8 }}>
+                {` (פרישה בגיל ${details.retireAge || member?.retireAge})`}
+              </span>
+            ) : null}
+          </h3>
         </div>
       </div>
 

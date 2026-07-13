@@ -913,6 +913,17 @@ export function buildLegacyReportData(parsedFiles) {
       file.member.companyName
     );
 
+    const memberRetireAges = memberPolicies
+      .map((p) => Number(p.details?.retireAge))
+      .filter((v) => Number.isFinite(v) && v > 0);
+    const retireAge = memberRetireAges.length
+      ? memberRetireAges.sort(
+          (a, b) =>
+            memberRetireAges.filter((x) => x === b).length -
+            memberRetireAges.filter((x) => x === a).length
+        )[0]
+      : null;
+
     return {
       id: file.member.id || file.member.fullName || "",
       name: file.member.fullName || "ללא שם",
@@ -924,6 +935,7 @@ export function buildLegacyReportData(parsedFiles) {
       income: file.member.income || 0,
       lastWorkplace,
       employerName: lastWorkplace,
+      retireAge,
       personalDetails: {
         name: file.member.fullName || "ללא שם",
         birthDate: file.member.birthDate || "",
@@ -931,6 +943,7 @@ export function buildLegacyReportData(parsedFiles) {
         lastWorkplace,
         employerName: lastWorkplace,
         gender: file.member.gender || "male",
+        retireAge,
       },
       shareOfFamilyAssets:
         totalAssets > 0 ? Math.round((assets / totalAssets) * 100) : 0,
@@ -1026,9 +1039,25 @@ export function buildLegacyReportData(parsedFiles) {
 
   const uniqueLoanDetails = Array.from(uniqueLoanMap.values());
 
+  const validityDates = flatPolicies
+    .map((p) => p.dateOfRights)
+    .filter(Boolean);
+  const rawValidity = validityDates.length
+    ? validityDates.sort(
+        (a, b) =>
+          validityDates.filter((x) => x === b).length -
+          validityDates.filter((x) => x === a).length
+      )[0]
+    : null;
+  const dataValidityDate =
+    rawValidity && /^\d{2}\/\d{2}\/\d{4}$/.test(rawValidity)
+      ? rawValidity.slice(3) // DD/MM/YYYY -> MM/YYYY
+      : rawValidity;
+
   return {
     family: {
       lastUpdated: formatDateForReport(new Date()),
+      dataValidityDate,
       totalAssets,
       monthlyDeposits,
       monthlyPensionWithDeposits,

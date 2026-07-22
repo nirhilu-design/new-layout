@@ -631,7 +631,7 @@ function ExplodedDonutChart({ segments, size = 150 }) {
     >
       <defs>
         <filter id={filterId} x="-30%" y="-30%" width="160%" height="160%">
-          <feDropShadow dx="0" dy="4" stdDeviation="4" floodColor="#00215D" floodOpacity="0.16" />
+          <feDropShadow dx="0" dy="4" stdDeviation="4" flood-color="#00215D" flood-opacity="0.16" />
         </filter>
       </defs>
 
@@ -651,7 +651,7 @@ function ExplodedDonutChart({ segments, size = 150 }) {
           transform={`translate(${seg.offsetX} ${seg.offsetY})`}
           filter={`url(#${filterId})`}
         >
-          <path d={seg.path} fill={seg.color} stroke="rgba(255,255,255,0.88)" strokeWidth="1.2" />
+          <path d={seg.path} fill={seg.color} stroke="rgba(255,255,255,0.88)" stroke-width="1.2" />
           <path d={seg.path} fill="rgba(255,255,255,0.12)" />
         </g>
       ))}
@@ -790,10 +790,10 @@ function getForeignExposureLabel(value) {
 function AssetsIcon() {
   return (
     <svg width="30" height="30" viewBox="0 0 24 24" fill="none">
-      <path d="M4 18V9" stroke="#00215D" strokeWidth="2.2" strokeLinecap="round" />
-      <path d="M10 18V5" stroke="#00215D" strokeWidth="2.2" strokeLinecap="round" />
-      <path d="M16 18V12" stroke="#00215D" strokeWidth="2.2" strokeLinecap="round" />
-      <path d="M3 19H21" stroke="#FF2756" strokeWidth="2.2" strokeLinecap="round" />
+      <path d="M4 18V9" stroke="#00215D" stroke-width="2.2" stroke-linecap="round" />
+      <path d="M10 18V5" stroke="#00215D" stroke-width="2.2" stroke-linecap="round" />
+      <path d="M16 18V12" stroke="#00215D" stroke-width="2.2" stroke-linecap="round" />
+      <path d="M3 19H21" stroke="#FF2756" stroke-width="2.2" stroke-linecap="round" />
     </svg>
   );
 }
@@ -801,13 +801,13 @@ function AssetsIcon() {
 function DepositIcon() {
   return (
     <svg width="30" height="30" viewBox="0 0 24 24" fill="none">
-      <path d="M12 3V14" stroke="#FF2756" strokeWidth="2.2" strokeLinecap="round" />
+      <path d="M12 3V14" stroke="#FF2756" stroke-width="2.2" stroke-linecap="round" />
       <path
         d="M8.5 6.5L12 3L15.5 6.5"
         stroke="#FF2756"
-        strokeWidth="2.2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
+        stroke-width="2.2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
       />
       <rect
         x="4"
@@ -816,7 +816,7 @@ function DepositIcon() {
         height="6"
         rx="2"
         stroke="#00215D"
-        strokeWidth="2.2"
+        stroke-width="2.2"
       />
     </svg>
   );
@@ -828,14 +828,14 @@ function SavingsIcon() {
       <path
         d="M5 12C5 8.7 8.1 6 12 6C15.9 6 19 8.7 19 12C19 15.3 15.9 18 12 18C8.1 18 5 15.3 5 12Z"
         stroke="#00215D"
-        strokeWidth="2.2"
+        stroke-width="2.2"
       />
-      <path d="M12 8.5V15.5" stroke="#FF2756" strokeWidth="2.2" strokeLinecap="round" />
+      <path d="M12 8.5V15.5" stroke="#FF2756" stroke-width="2.2" stroke-linecap="round" />
       <path
         d="M9.7 10.5H13.2C14.1 10.5 14.7 11 14.7 11.8C14.7 12.6 14.1 13.1 13.2 13.1H10.8"
         stroke="#FF2756"
-        strokeWidth="2.2"
-        strokeLinecap="round"
+        stroke-width="2.2"
+        stroke-linecap="round"
       />
     </svg>
   );
@@ -847,16 +847,16 @@ function PensionIcon() {
       <path
         d="M6 20V8L12 4L18 8V20"
         stroke="#00215D"
-        strokeWidth="2.2"
-        strokeLinejoin="round"
+        stroke-width="2.2"
+        stroke-linejoin="round"
       />
       <path
         d="M9 20V13H15V20"
         stroke="#FF2756"
-        strokeWidth="2.2"
-        strokeLinejoin="round"
+        stroke-width="2.2"
+        stroke-linejoin="round"
       />
-      <path d="M4 20H20" stroke="#00215D" strokeWidth="2.2" strokeLinecap="round" />
+      <path d="M4 20H20" stroke="#00215D" stroke-width="2.2" stroke-linecap="round" />
     </svg>
   );
 }

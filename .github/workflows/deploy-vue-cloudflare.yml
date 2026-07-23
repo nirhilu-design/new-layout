@@ -1,0 +1,45 @@
+# Optional: build the Vue app (vue-app/) and deploy it to Cloudflare Pages.
+#
+# SAFETY:
+#  - Runs ONLY when you trigger it manually (workflow_dispatch) — it never fires
+#    on push, so it can never deploy by surprise.
+#  - Targets a SEPARATE Pages project ("new-layout-vue"), NOT your existing
+#    "new-layout" project, so your current site is never overwritten.
+#
+# ONE-TIME SETUP (all in your own accounts — I can't do these):
+#  1. Cloudflare → create a NEW Pages project named "new-layout-vue"
+#     (Direct Upload / or just let this action create it on first run).
+#  2. Cloudflare → My Profile → API Tokens → create a token with the
+#     "Cloudflare Pages: Edit" permission.
+#  3. GitHub repo → Settings → Secrets and variables → Actions → add:
+#       CLOUDFLARE_API_TOKEN   = <the token>
+#       CLOUDFLARE_ACCOUNT_ID  = 5de4ada115ea73e6f5199cb11941fced
+#  4. Run it: GitHub → Actions → "Deploy Vue app to Cloudflare Pages" → Run workflow.
+
+name: Deploy Vue app to Cloudflare Pages
+
+on:
+  workflow_dispatch: {}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install & build (vue-app)
+        working-directory: vue-app
+        run: |
+          npm ci
+          npm run build
+
+      - name: Deploy to Cloudflare Pages
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy vue-app/dist --project-name=new-layout-vue

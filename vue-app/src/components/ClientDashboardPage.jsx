@@ -3551,22 +3551,21 @@ function DisabilityIcon() {
   </svg>;
 }
 function SavingsGrowthIcon() {
-  return <svg width="30" height="30" viewBox="0 0 30 30" fill="none">
-    <ellipse cx="7.5" cy="23" rx="3.5" ry="5" fill="#C8EDD8" stroke="#00215D" stroke-width="1.3"/>
-    <ellipse cx="15" cy="21" rx="4.5" ry="7" fill="#4DB87A" stroke="#00215D" stroke-width="1.3"/>
-    <ellipse cx="22.5" cy="22" rx="3.5" ry="6" fill="#C8EDD8" stroke="#00215D" stroke-width="1.3"/>
-    <path d="M5 15L10 10L16 13L23 5" stroke="#00215D" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
-    <path d="M20 5H24V9" stroke="#00215D" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+  // 4B · ascending bars (projected accumulation) — project colors (navy + pink)
+  return <svg width="30" height="30" viewBox="0 0 24 24" fill="none">
+    <path d="M4 20H20" stroke="#00215D" stroke-width="2" stroke-linecap="round"/>
+    <rect x="5" y="13" width="3.3" height="6" rx="1" stroke="#00215D" stroke-width="2"/>
+    <rect x="10.3" y="9" width="3.3" height="10" rx="1" stroke="#00215D" stroke-width="2"/>
+    <rect x="15.6" y="5" width="3.3" height="14" rx="1" fill="#FF2756"/>
   </svg>;
 }
 function CoinsStackIcon() {
-  return <svg width="30" height="30" viewBox="0 0 30 30" fill="none">
-    <ellipse cx="11" cy="8" rx="7" ry="2.8" fill="#C8EDD8" stroke="#00215D" stroke-width="1.3"/>
-    <path d="M4 8v4c0 1.55 3.13 2.8 7 2.8s7-1.25 7-2.8V8" stroke="#00215D" stroke-width="1.3" fill="none"/>
-    <path d="M4 12v4c0 1.55 3.13 2.8 7 2.8s7-1.25 7-2.8v-4" stroke="#00215D" stroke-width="1.3" fill="none"/>
-    <ellipse cx="20" cy="19" rx="7" ry="2.8" fill="#4DB87A" stroke="#00215D" stroke-width="1.3"/>
-    <path d="M13 19v4c0 1.55 3.13 2.8 7 2.8s7-1.25 7-2.8v-4" stroke="#00215D" stroke-width="1.3" fill="none"/>
-    <path d="M18.4 19.2l1.2 1.2 2.2-2.4" stroke="#00215D" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+  // 2B · wallet (total assets) — project colors (navy + pink)
+  return <svg width="30" height="30" viewBox="0 0 24 24" fill="none">
+    <path d="M4 7C4 6 4.8 5 6 5H17C18 5 19 6 19 7V8" stroke="#00215D" stroke-width="2" stroke-linecap="round"/>
+    <rect x="3" y="7" width="17" height="12" rx="2.5" stroke="#00215D" stroke-width="2"/>
+    <path d="M20 11H16.5C15.4 11 14.7 11.9 14.7 13C14.7 14.1 15.4 15 16.5 15H20" stroke="#FF2756" stroke-width="2"/>
+    <circle cx="16.6" cy="13" r="1" fill="#FF2756"/>
   </svg>;
 }
 function VaultSavingsIcon() {
@@ -3585,29 +3584,19 @@ function VaultSavingsIcon() {
   </svg>;
 }
 function CalendarDepositIcon() {
-  return <svg width="30" height="30" viewBox="0 0 30 30" fill="none">
-    <rect x="2" y="6" width="19" height="17" rx="2.5" fill="#C8EDD8" stroke="#00215D" stroke-width="1.4"/>
-    <line x1="2" y1="12" x2="21" y2="12" stroke="#00215D" stroke-width="1.4"/>
-    <line x1="7" y1="3" x2="7" y2="8" stroke="#00215D" stroke-width="1.5" stroke-linecap="round"/>
-    <line x1="14" y1="3" x2="14" y2="8" stroke="#00215D" stroke-width="1.5" stroke-linecap="round"/>
-    <rect x="5" y="15" width="3" height="3" rx="0.8" fill="#4DB87A"/>
-    <rect x="10" y="15" width="3" height="3" rx="0.8" fill="#4DB87A"/>
-    <rect x="5" y="20" width="3" height="3" rx="0.8" fill="#4DB87A"/>
-    <path d="M22 18H27" stroke="#4DB87A" stroke-width="1.6" stroke-linecap="round"/>
-    <path d="M24.5 15.5L27 18L24.5 20.5" stroke="#4DB87A" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+  // 1B · deposit arrow (monthly deposit) — project colors (navy + pink)
+  return <svg width="30" height="30" viewBox="0 0 24 24" fill="none">
+    <path d="M12 3V12" stroke="#FF2756" stroke-width="2.2" stroke-linecap="round"/>
+    <path d="M8.5 8.5L12 12L15.5 8.5" stroke="#FF2756" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M4 13V19A2 2 0 0 0 6 21H18A2 2 0 0 0 20 19V13" stroke="#00215D" stroke-width="2" stroke-linecap="round"/>
   </svg>;
 }
 function SafePensionIcon() {
-  return <svg width="30" height="30" viewBox="0 0 30 30" fill="none">
-    <rect x="3" y="8" width="15" height="15" rx="2.5" fill="#C8EDD8" stroke="#00215D" stroke-width="1.4"/>
-    <circle cx="10.5" cy="15.5" r="4" fill="none" stroke="#00215D" stroke-width="1.3"/>
-    <circle cx="10.5" cy="15.5" r="1.8" fill="#4DB87A"/>
-    <line x1="18" y1="11" x2="22" y2="9" stroke="#00215D" stroke-width="1.3" stroke-linecap="round"/>
-    <line x1="18" y1="15.5" x2="24" y2="15.5" stroke="#00215D" stroke-width="1.3" stroke-linecap="round"/>
-    <line x1="18" y1="20" x2="22" y2="22" stroke="#00215D" stroke-width="1.3" stroke-linecap="round"/>
-    <circle cx="24" cy="9" r="2" fill="#4DB87A" stroke="#00215D" stroke-width="1"/>
-    <circle cx="26" cy="15.5" r="2" fill="#4DB87A" stroke="#00215D" stroke-width="1"/>
-    <circle cx="24" cy="22" r="2" fill="#4DB87A" stroke="#00215D" stroke-width="1"/>
+  // 3A · recurring pension payment (₪ inside refresh arrow) — project colors
+  return <svg width="30" height="30" viewBox="0 0 24 24" fill="none">
+    <path d="M20 12A8 8 0 1 1 17.5 6.3" stroke="#00215D" stroke-width="2" stroke-linecap="round"/>
+    <path d="M17 3.5V6.5H14" stroke="#00215D" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M12 8.4V15.6M9.8 9.7H13C13.7 9.7 14.2 10.2 14.2 11C14.2 11.8 13.7 12.3 13 12.3H10.4" stroke="#FF2756" stroke-width="1.7" stroke-linecap="round"/>
   </svg>;
 }
 function PercentArrowIcon() {

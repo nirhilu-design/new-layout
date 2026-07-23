@@ -5818,6 +5818,47 @@ function GiftIcon() {
   );
 }
 
+// KPI icons for the PDF summary boxes — single-tone (currentColor) so they read
+// on navy / pink / outline backgrounds. Same shapes as the WEB KPI icons.
+function KpiDepositIcon() {
+  return (
+    <svg width="26" height="26" viewBox="0 0 24 24" fill="none">
+      <path d="M12 3V12" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+      <path d="M8.5 8.5L12 12L15.5 8.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+      <path d="M4 13V19A2 2 0 0 0 6 21H18A2 2 0 0 0 20 19V13" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+    </svg>
+  );
+}
+function KpiWalletIcon() {
+  return (
+    <svg width="26" height="26" viewBox="0 0 24 24" fill="none">
+      <path d="M4 7C4 6 4.8 5 6 5H17C18 5 19 6 19 7V8" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+      <rect x="3" y="7" width="17" height="12" rx="2.5" stroke="currentColor" stroke-width="2" />
+      <path d="M20 11H16.5C15.4 11 14.7 11.9 14.7 13C14.7 14.1 15.4 15 16.5 15H20" stroke="currentColor" stroke-width="2" />
+      <circle cx="16.6" cy="13" r="1" fill="currentColor" />
+    </svg>
+  );
+}
+function KpiBarsIcon() {
+  return (
+    <svg width="26" height="26" viewBox="0 0 24 24" fill="none">
+      <path d="M4 20H20" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+      <rect x="5" y="13" width="3.3" height="6" rx="1" stroke="currentColor" stroke-width="2" />
+      <rect x="10.3" y="9" width="3.3" height="10" rx="1" stroke="currentColor" stroke-width="2" />
+      <rect x="15.6" y="5" width="3.3" height="14" rx="1" fill="currentColor" />
+    </svg>
+  );
+}
+function KpiRecurringIcon() {
+  return (
+    <svg width="26" height="26" viewBox="0 0 24 24" fill="none">
+      <path d="M20 12A8 8 0 1 1 17.5 6.3" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+      <path d="M17 3.5V6.5H14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+      <path d="M12 8.4V15.6M9.8 9.7H13C13.7 9.7 14.2 10.2 14.2 11C14.2 11.8 13.7 12.3 13 12.3H10.4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" />
+    </svg>
+  );
+}
+
 export function PrintReportA4({ reportData, conversationSummary = "", actionRecommendations = "", sections = null, productFunds = [], deathBenefit = {} }) {
   const data = reportData || {};
   const family = data.family || {};
@@ -5996,7 +6037,7 @@ export function PrintReportA4({ reportData, conversationSummary = "", actionReco
     );
   };
 
-  const Kpi = ({ label, value, tone }) => {
+  const Kpi = ({ label, value, tone, icon }) => {
     const styles = {
       navy: { bg: NAVY, color: OFFWHITE, labelColor: "rgba(249,247,243,0.7)", border: "none" },
       pink: { bg: PINK, color: OFFWHITE, labelColor: "rgba(249,247,243,0.85)", border: "none" },
@@ -6005,6 +6046,7 @@ export function PrintReportA4({ reportData, conversationSummary = "", actionReco
     }[tone || "outline"];
     return (
       <div class="rp-avoid" style={px({ background: styles.bg, color: styles.color, border: styles.border, borderRadius: 16, padding: 22 })}>
+        {icon ? <div style={px({ marginBottom: 10, color: styles.color, lineHeight: 0 })}>{icon}</div> : null}
         <div style={px({ fontSize: 13, color: styles.labelColor })}>{label}</div>
         <div style={px({ fontSize: 26, fontWeight: 800, marginTop: 8, direction: "ltr", textAlign: "right" })}>{value}</div>
       </div>
@@ -6187,10 +6229,10 @@ export function PrintReportA4({ reportData, conversationSummary = "", actionReco
       <section class="rp-section" style={px(pageStyle)}>
         <SectionHeader title="סיכום פנסיוני" subtitle="ריכוז צבירה, הפקדות ותחזית לגיל פרישה" />
         <div style={px({ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 18, marginBottom: 32 })}>
-          <Kpi tone="navy" label="סך נכסים" value={fmtCurrency(family.totalAssets)} />
-          <Kpi tone="outline" label="הפקדה חודשית כוללת" value={fmtCurrency(family.monthlyDeposits)} />
-          <Kpi tone="outline" label="צבירה צפויה לפרישה" value={fmtCurrency(family.projectedLumpSumWithDeposits)} />
-          <Kpi tone="pink" label="קצבה חודשית צפויה" value={fmtCurrency(family.monthlyPensionWithDeposits)} />
+          <Kpi tone="navy" label="סך נכסים" value={fmtCurrency(family.totalAssets)} icon={<KpiWalletIcon />} />
+          <Kpi tone="outline" label="הפקדה חודשית כוללת" value={fmtCurrency(family.monthlyDeposits)} icon={<KpiDepositIcon />} />
+          <Kpi tone="outline" label="צבירה צפויה לפרישה" value={fmtCurrency(family.projectedLumpSumWithDeposits)} icon={<KpiBarsIcon />} />
+          <Kpi tone="pink" label="קצבה חודשית צפויה" value={fmtCurrency(family.monthlyPensionWithDeposits)} icon={<KpiRecurringIcon />} />
         </div>
         <div style={px({ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24 })}>
           <CompareBars label="השוואת צבירה צפויה" withValue={family.projectedLumpSumWithDeposits} withoutValue={family.projectedLumpSumWithoutDeposits} />

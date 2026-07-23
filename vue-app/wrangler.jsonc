@@ -1,0 +1,11 @@
+{
+  // Deploy the built Vue SPA as static assets on Cloudflare Workers.
+  // With this file present, `wrangler deploy` serves ./dist directly and does
+  // NOT try to auto-configure Vite (which would require Vite >= 6).
+  "name": "new-layout-vue",
+  "compatibility_date": "2025-06-01",
+  "assets": {
+    "directory": "./dist",
+    "not_found_handling": "single-page-application"
+  }
+}

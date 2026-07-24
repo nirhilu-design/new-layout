@@ -543,6 +543,8 @@ function buildMemberProductsFromRawFile(rawFile) {
       monthlyDeposit: Number(policy?.monthlyDeposits?.sumCost || 0),
       projectedMonthlyPension: Number(policy?.savings?.projectedMonthlyPension || policy?.savings?.pensionRetire || 0),
       managementFeeFromBalance: Number(policy?.details?.managementFeeFromBalance || 0),
+      managementFeeFromDeposit: Number(policy?.details?.managementFeeFromDeposit || 0),
+      expectedReturn: Number(policy?.details?.expectedReturn || 0),
       equityExposure: getPlanWeightedExposure(policy, "equity"),
       foreignExposure: getPlanWeightedExposure(policy, "foreign"),
       investmentRoutes: safeArray(policy?.investPlans).map((plan, planIndex) => ({
@@ -924,6 +926,7 @@ const BASE_NAV_ITEMS = [
   { id: "personal", label: "פרטים אישיים", icon: "☷" },
   { id: "pension", label: "סיכום פנסיוני", icon: "▥" },
   { id: "allocation", label: "התפלגות נכסים", icon: "◔" },
+  { id: "managementFees", label: "דמי ניהול", icon: "%" },
   { id: "insurance", label: "סכומים למקרה פטירה", icon: "🛡" },
   { id: "loans", label: "הלוואות", icon: "🏦" },
   { id: "summary", label: "סיכום שיחה", icon: "✎" },
@@ -1098,6 +1101,7 @@ const ClientDashboardPage = defineComponent({
           {activeSection === "pension" ? <PensionSection scope={scope} /> : null}
           {activeSection === "personal" ? <PersonalDetailsSection members={detailedMembers} /> : null}
           {activeSection === "allocation" ? <AllocationSection scope={scope} onSegmentClick={handleOpenPieDrawer} /> : null}
+          {activeSection === "managementFees" ? <ManagementFeesSection scope={scope} detailedMembers={detailedMembers} /> : null}
           {activeSection === "insurance" ? <InsuranceSection scope={scope} /> : null}
           {activeSection === "loans" ? <LoansSection scope={scope} /> : null}
           {activeSection === "capitalClassification" ? <CapitalClassificationSection sections={specialSections.capitalClassification} /> : null}
@@ -1825,6 +1829,127 @@ function InsuranceProductsTable({ rows, isFamily }) {
           ))}
         </tbody>
       </table>
+    </div>
+  );
+}
+
+// Old participating / guaranteed-yield policies carry a real-return spread
+// ("מרווח ריאלי", ~15%) instead of ordinary management fees. We flag them by a
+// positive guaranteed yield, or by classic-policy keywords in the product name.
+function isOldGuaranteedPolicy(product) {
+  const guaranteedYield = Number(product?.expectedReturn || 0);
+  const text = `${product?.productType || ""} ${product?.planName || ""}`;
+  return guaranteedYield > 0 || /משתתפת|עדיף|מבטח|קלאסי|ותיק|ישן/.test(text);
+}
+
+function computeWeightedFees(products) {
+  const list = safeArray(products);
+  const totalBalance = list.reduce((sum, p) => sum + Number(p.currentValue || 0), 0);
+  const totalDeposit = list.reduce((sum, p) => sum + Number(p.monthlyDeposit || 0), 0);
+  const feeFromBalance =
+    totalBalance > 0
+      ? list.reduce((sum, p) => sum + Number(p.managementFeeFromBalance || 0) * Number(p.currentValue || 0), 0) / totalBalance
+      : 0;
+  const feeFromDeposit =
+    totalDeposit > 0
+      ? list.reduce((sum, p) => sum + Number(p.managementFeeFromDeposit || 0) * Number(p.monthlyDeposit || 0), 0) / totalDeposit
+      : 0;
+  return { feeFromBalance, feeFromDeposit, totalBalance };
+}
+
+const formatFeePct = (value) => `${Number(value || 0).toFixed(2)}%`;
+
+function ManagementFeesSection({ scope, detailedMembers }) {
+  const members = safeArray(detailedMembers);
+  const allProducts = members.flatMap((m) => safeArray(m.products));
+
+  const weightedRows = [
+    ...members.map((m) => ({ name: m.name, ...computeWeightedFees(m.products) })),
+    { name: "תא משפחתי", isTotal: true, ...computeWeightedFees(allProducts) },
+  ];
+
+  const tableProducts = safeArray(scope?.products).filter(
+    (p) => Number(p.currentValue || 0) > 0 || Number(p.managementFeeFromBalance || 0) > 0
+  );
+
+  return (
+    <div>
+      <SectionTitle
+        title="דמי ניהול"
+        subtitle="דמי ניהול משוקללים לפי צבירה לכל בן זוג ולתא המשפחתי, ופירוט דמי הניהול והמרווחים לכל מוצר."
+      />
+
+      <div class="client-panel">
+        <h3>דמי ניהול משוקללים לפי צבירה</h3>
+        <p class="client-panel-subtitle">ממוצע משוקלל לפי הצבירה בכל מוצר — לכל בן זוג ולתא המשפחתי.</p>
+        <div class="client-table-wrap">
+          <table class="client-table">
+            <thead>
+              <tr>
+                <th>שיוך</th>
+                <th>סך צבירה</th>
+                <th>דמי ניהול מצבירה (משוקלל)</th>
+                <th>דמי ניהול מהפקדה (משוקלל)</th>
+              </tr>
+            </thead>
+            <tbody>
+              {weightedRows.map((row, index) => (
+                <tr key={index} class={row.isTotal ? "total-row" : ""}>
+                  <td>{row.name}</td>
+                  <td>{formatCurrency(row.totalBalance)}</td>
+                  <td>{formatFeePct(row.feeFromBalance)}</td>
+                  <td>{formatFeePct(row.feeFromDeposit)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="client-panel client-margin-top">
+        <h3>דמי ניהול לפי מוצר</h3>
+        <p class="client-panel-subtitle">
+          פירוט לכל פוליסה: דמי ניהול מצבירה ומהפקדה, מרווח ריאלי (לפוליסות ישנות — 15%) ומבטיחת תשואה.
+        </p>
+        {tableProducts.length ? (
+          <div class="client-table-wrap">
+            <table class="client-table">
+              <thead>
+                <tr>
+                  <th>מוצר</th>
+                  <th>גוף מנהל</th>
+                  <th>מספר פוליסה</th>
+                  <th>צבירה</th>
+                  <th>דמי ניהול מצבירה</th>
+                  <th>דמי ניהול מהפקדה</th>
+                  <th>מרווח ריאלי</th>
+                  <th>מבטיחת תשואה</th>
+                </tr>
+              </thead>
+              <tbody>
+                {tableProducts.map((product, index) => {
+                  const guaranteedYield = Number(product.expectedReturn || 0);
+                  const isOld = isOldGuaranteedPolicy(product);
+                  return (
+                    <tr key={product.id || index}>
+                      <td>{product.planName || "—"}</td>
+                      <td>{product.managerName || "—"}</td>
+                      <td>{product.policyNo || "—"}</td>
+                      <td>{formatCurrency(product.currentValue)}</td>
+                      <td>{formatFeePct(product.managementFeeFromBalance)}</td>
+                      <td>{formatFeePct(product.managementFeeFromDeposit)}</td>
+                      <td>{isOld ? "15%" : "—"}</td>
+                      <td>{guaranteedYield > 0 ? formatFeePct(guaranteedYield) : isOld ? "כן" : "—"}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div class="client-empty-state">לא נמצאו מוצרים עם נתוני דמי ניהול.</div>
+        )}
+      </div>
     </div>
   );
 }

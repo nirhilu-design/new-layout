@@ -6341,21 +6341,26 @@ export function PrintReportA4({ reportData, conversationSummary = "", actionReco
         const feeProducts = Array.isArray(mf.products) ? mf.products : [];
         const fmtPct = (v) => `${Number(v || 0).toFixed(2)}%`;
         if (!feeCards.length && !feeProducts.length) return null;
+        // Compact cell styles so the whole table fits under the boxes on one A4 page.
+        const feeTh = { padding: "7px 6px", textAlign: "right", fontSize: 10.5, lineHeight: 1.25, wordBreak: "break-word" };
+        const feeTd = { padding: "6px 6px", borderBottom: `1px solid ${TAN}`, textAlign: "right", fontSize: 10.5, lineHeight: 1.3, wordBreak: "break-word" };
+        // overflow:visible + relaxed minHeight lets long tables paginate row-by-row
+        // instead of the whole table being pushed onto the next page.
         return (
-          <section class="rp-section" style={px(pageStyle)}>
+          <section class="rp-section" style={px({ ...pageStyle, minHeight: 0, overflow: "visible" })}>
             <SectionHeader title="דמי ניהול" subtitle="דמי ניהול משוקללים לפי צבירה, ופירוט דמי הניהול והמרווחים לכל מוצר" />
 
             {feeCards.length ? (
-              <div style={px({ display: "grid", gridTemplateColumns: `repeat(${feeCards.length}, 1fr)`, gap: 12, marginBottom: 22 })}>
+              <div style={px({ display: "grid", gridTemplateColumns: `repeat(${feeCards.length}, 1fr)`, gap: 12, marginBottom: 16 })}>
                 {feeCards.map((c, i) => (
-                  <div class="rp-avoid" key={i} style={px({ background: c.isTotal ? NAVY : OFFWHITE, color: c.isTotal ? OFFWHITE : INK, border: c.isTotal ? "none" : `1px solid ${TAN}`, borderRadius: 12, padding: 16 })}>
-                    <div style={px({ fontSize: 14, fontWeight: 800, color: c.isTotal ? OFFWHITE : NAVY })}>{c.name}</div>
-                    <div style={px({ fontSize: 11, marginTop: 2, marginBottom: 12, color: c.isTotal ? "rgba(255,255,255,0.8)" : MUTED })}>סך צבירה {fmtCurrency(c.totalBalance)}</div>
-                    <div style={px({ fontSize: 11, color: c.isTotal ? "rgba(255,255,255,0.8)" : MUTED })}>דמי ניהול מצבירה (משוקלל)</div>
-                    <div style={px({ fontSize: 26, fontWeight: 800, direction: "ltr", textAlign: "right", color: c.isTotal ? OFFWHITE : NAVY })}>{fmtPct(c.feeFromBalance)}</div>
-                    <div style={px({ display: "flex", justifyContent: "space-between", alignItems: "center", borderTop: `1px solid ${c.isTotal ? "rgba(255,255,255,0.2)" : TAN}`, marginTop: 8, paddingTop: 8 })}>
-                      <span style={px({ fontSize: 11, color: c.isTotal ? "rgba(255,255,255,0.8)" : MUTED })}>דמי ניהול מהפקדה</span>
-                      <strong style={px({ fontSize: 13, direction: "ltr", color: c.isTotal ? OFFWHITE : PINK })}>{fmtPct(c.feeFromDeposit)}</strong>
+                  <div class="rp-avoid" key={i} style={px({ background: c.isTotal ? NAVY : OFFWHITE, color: c.isTotal ? OFFWHITE : INK, border: c.isTotal ? "none" : `1px solid ${TAN}`, borderRadius: 12, padding: "12px 14px" })}>
+                    <div style={px({ fontSize: 13, fontWeight: 800, color: c.isTotal ? OFFWHITE : NAVY })}>{c.name}</div>
+                    <div style={px({ fontSize: 10.5, marginTop: 2, marginBottom: 8, color: c.isTotal ? "rgba(255,255,255,0.8)" : MUTED })}>סך צבירה {fmtCurrency(c.totalBalance)}</div>
+                    <div style={px({ fontSize: 10.5, color: c.isTotal ? "rgba(255,255,255,0.8)" : MUTED })}>דמי ניהול מצבירה (משוקלל)</div>
+                    <div style={px({ fontSize: 22, fontWeight: 800, direction: "ltr", textAlign: "right", color: c.isTotal ? OFFWHITE : NAVY })}>{fmtPct(c.feeFromBalance)}</div>
+                    <div style={px({ display: "flex", justifyContent: "space-between", alignItems: "center", borderTop: `1px solid ${c.isTotal ? "rgba(255,255,255,0.2)" : TAN}`, marginTop: 6, paddingTop: 6 })}>
+                      <span style={px({ fontSize: 10.5, color: c.isTotal ? "rgba(255,255,255,0.8)" : MUTED })}>דמי ניהול מהפקדה</span>
+                      <strong style={px({ fontSize: 12, direction: "ltr", color: c.isTotal ? OFFWHITE : PINK })}>{fmtPct(c.feeFromDeposit)}</strong>
                     </div>
                   </div>
                 ))}
@@ -6363,30 +6368,40 @@ export function PrintReportA4({ reportData, conversationSummary = "", actionReco
             ) : null}
 
             {feeProducts.length ? (
-              <table style={px({ width: "100%", borderCollapse: "collapse", fontSize: 12, tableLayout: "fixed" })}>
+              <table style={px({ width: "100%", borderCollapse: "collapse", tableLayout: "fixed" })}>
+                <colgroup>
+                  <col style={px({ width: "20%" })} />
+                  <col style={px({ width: "11%" })} />
+                  <col style={px({ width: "10%" })} />
+                  <col style={px({ width: "13%" })} />
+                  <col style={px({ width: "11.5%" })} />
+                  <col style={px({ width: "11.5%" })} />
+                  <col style={px({ width: "11.5%" })} />
+                  <col style={px({ width: "11.5%" })} />
+                </colgroup>
                 <thead>
                   <tr style={px({ background: NAVY, color: OFFWHITE })}>
-                    <th style={px(th)}>מוצר</th>
-                    <th style={px(th)}>ייחוס</th>
-                    <th style={px(th)}>מס' פוליסה</th>
-                    <th style={px(th)}>צבירה</th>
-                    <th style={px(th)}>ד"נ מצבירה</th>
-                    <th style={px(th)}>ד"נ מהפקדה</th>
-                    <th style={px(th)}>מרווח ריאלי</th>
-                    <th style={px(th)}>מבטיחת תשואה</th>
+                    <th style={px(feeTh)}>מוצר</th>
+                    <th style={px(feeTh)}>ייחוס</th>
+                    <th style={px(feeTh)}>מס' פוליסה</th>
+                    <th style={px(feeTh)}>צבירה</th>
+                    <th style={px(feeTh)}>ד"נ מצבירה</th>
+                    <th style={px(feeTh)}>ד"נ מהפקדה</th>
+                    <th style={px(feeTh)}>מרווח ריאלי</th>
+                    <th style={px(feeTh)}>מבטיחת תשואה</th>
                   </tr>
                 </thead>
                 <tbody>
                   {feeProducts.map((p, i) => (
                     <tr class="rp-avoid" key={i}>
-                      <td style={px(td)}>{p.planName || "—"}</td>
-                      <td style={px(td)}>{p.attribution || "—"}</td>
-                      <td style={px(td)}>{p.policyNo || "—"}</td>
-                      <td style={px({ ...td, direction: "ltr", textAlign: "right" })}>{fmtCurrency(p.currentValue)}</td>
-                      <td style={px(td)}>{p.guaranteed ? "—" : fmtPct(p.feeFromBalance)}</td>
-                      <td style={px(td)}>{p.feeFromDeposit > 0 ? fmtPct(p.feeFromDeposit) : "—"}</td>
-                      <td style={px(td)}>{p.realSpread ? `${p.realSpread}%` : "—"}</td>
-                      <td style={px(td)}>{p.guaranteed ? (p.guaranteedYield > 0 ? fmtPct(p.guaranteedYield) : "כן") : "—"}</td>
+                      <td style={px(feeTd)}>{p.planName || "—"}</td>
+                      <td style={px(feeTd)}>{p.attribution || "—"}</td>
+                      <td style={px(feeTd)}>{p.policyNo || "—"}</td>
+                      <td style={px({ ...feeTd, direction: "ltr", textAlign: "right" })}>{fmtCurrency(p.currentValue)}</td>
+                      <td style={px(feeTd)}>{p.guaranteed ? "—" : fmtPct(p.feeFromBalance)}</td>
+                      <td style={px(feeTd)}>{p.feeFromDeposit > 0 ? fmtPct(p.feeFromDeposit) : "—"}</td>
+                      <td style={px(feeTd)}>{p.realSpread ? `${p.realSpread}%` : "—"}</td>
+                      <td style={px(feeTd)}>{p.guaranteed ? (p.guaranteedYield > 0 ? fmtPct(p.guaranteedYield) : "כן") : "—"}</td>
                     </tr>
                   ))}
                 </tbody>

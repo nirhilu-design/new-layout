@@ -1842,7 +1842,7 @@ function parsePolicyYear(joinDate) {
 
 function isManagerInsurance(product) {
   const text = `${product?.productType || ""} ${product?.planName || ""}`;
-  return /מנהלים|משתתפת|עדיף|קלאסי/.test(text);
+  return /מנהלים|משתתפת|עדיף|קלאסי|מעורב|מניב/.test(text);
 }
 
 // Fees per policy by establishment date (business rules for manager insurance):
@@ -1860,7 +1860,7 @@ function productFeeInfo(product) {
     return { feeFromBalance: 0, feeFromDeposit: 0, realSpread: null, guaranteed: true, guaranteedYield };
   }
   if (manager && year !== null && year >= 1991 && year <= 2004) {
-    return { feeFromBalance: 0.6, feeFromDeposit: dataFeeDeposit, realSpread: 15, guaranteed: false, guaranteedYield };
+    return { feeFromBalance: dataFeeBalance > 0 ? dataFeeBalance : 0.6, feeFromDeposit: dataFeeDeposit, realSpread: 15, guaranteed: false, guaranteedYield };
   }
   return { feeFromBalance: dataFeeBalance, feeFromDeposit: dataFeeDeposit, realSpread: null, guaranteed: false, guaranteedYield };
 }

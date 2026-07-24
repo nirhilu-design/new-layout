@@ -1885,11 +1885,18 @@ const formatFeePct = (value) => `${Number(value || 0).toFixed(2)}%`;
 function ManagementFeesSection({ scope, detailedMembers }) {
   const members = safeArray(detailedMembers);
   const allProducts = members.flatMap((m) => safeArray(m.products));
+  const primaryName = members[0]?.name || "";
 
-  const weightedRows = [
+  const feeCards = [
     ...members.map((m) => ({ name: m.name, ...computeWeightedFees(m.products) })),
     { name: "תא משפחתי", isTotal: true, ...computeWeightedFees(allProducts) },
   ];
+
+  const attributionLabel = (product) => {
+    const owner = product?.memberName || (scope?.isFamily ? "" : scope?.name) || "";
+    if (!owner || !primaryName) return "—";
+    return owner === primaryName ? "מבוטח ראשי" : "מבוטח משני";
+  };
 
   const tableProducts = safeArray(scope?.products).filter(
     (p) => Number(p.currentValue || 0) > 0 || Number(p.managementFeeFromBalance || 0) > 0
@@ -1902,31 +1909,42 @@ function ManagementFeesSection({ scope, detailedMembers }) {
         subtitle="דמי ניהול משוקללים לפי צבירה לכל בן זוג ולתא המשפחתי, ופירוט דמי הניהול והמרווחים לכל מוצר."
       />
 
-      <div class="client-panel">
-        <h3>דמי ניהול משוקללים לפי צבירה</h3>
-        <p class="client-panel-subtitle">ממוצע משוקלל לפי הצבירה בכל מוצר — לכל בן זוג ולתא המשפחתי.</p>
-        <div class="client-table-wrap">
-          <table class="client-table">
-            <thead>
-              <tr>
-                <th>שיוך</th>
-                <th>סך צבירה</th>
-                <th>דמי ניהול מצבירה (משוקלל)</th>
-                <th>דמי ניהול מהפקדה (משוקלל)</th>
-              </tr>
-            </thead>
-            <tbody>
-              {weightedRows.map((row, index) => (
-                <tr key={index} class={row.isTotal ? "total-row" : ""}>
-                  <td>{row.name}</td>
-                  <td>{formatCurrency(row.totalBalance)}</td>
-                  <td>{formatFeePct(row.feeFromBalance)}</td>
-                  <td>{formatFeePct(row.feeFromDeposit)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+      <div class="client-section-title-row compact">
+        <div>
+          <h2>דמי ניהול משוקללים לפי צבירה</h2>
+          <p>ממוצע משוקלל לפי הצבירה בכל מוצר — לכל בן זוג ולתא המשפחתי.</p>
         </div>
+      </div>
+
+      <div style={px({ display: "grid", gridTemplateColumns: `repeat(${feeCards.length}, minmax(0, 1fr))`, gap: 16 })}>
+        {feeCards.map((card, index) => (
+          <div
+            key={index}
+            style={px({
+              background: card.isTotal ? "linear-gradient(135deg, #00215D, #001845)" : "#fff",
+              color: card.isTotal ? "#fff" : "#102A43",
+              border: card.isTotal ? "none" : "1px solid #E2D1BF",
+              borderRadius: 18,
+              padding: 20,
+              boxShadow: "0 2px 10px rgba(16,42,67,0.05)",
+            })}
+          >
+            <div style={px({ fontSize: 16, fontWeight: 900, color: card.isTotal ? "#fff" : "#00215D" })}>{card.name}</div>
+            <div style={px({ fontSize: 12, marginTop: 4, marginBottom: 16, color: card.isTotal ? "rgba(255,255,255,0.82)" : "#627D98" })}>
+              סך צבירה {formatCurrency(card.totalBalance)}
+            </div>
+
+            <div style={px({ fontSize: 12, color: card.isTotal ? "rgba(255,255,255,0.82)" : "#627D98" })}>דמי ניהול מצבירה (משוקלל)</div>
+            <div style={px({ fontSize: 32, fontWeight: 900, lineHeight: 1.1, marginTop: 2, marginBottom: 14, color: card.isTotal ? "#fff" : "#00215D" })}>
+              {formatFeePct(card.feeFromBalance)}
+            </div>
+
+            <div style={px({ display: "flex", justifyContent: "space-between", alignItems: "center", borderTop: `1px solid ${card.isTotal ? "rgba(255,255,255,0.22)" : "#EEE4D8"}`, paddingTop: 12 })}>
+              <span style={px({ fontSize: 12, color: card.isTotal ? "rgba(255,255,255,0.82)" : "#627D98" })}>דמי ניהול מהפקדה</span>
+              <strong style={px({ fontSize: 16, fontWeight: 800, color: card.isTotal ? "#fff" : "#FF2756" })}>{formatFeePct(card.feeFromDeposit)}</strong>
+            </div>
+          </div>
+        ))}
       </div>
 
       <div class="client-panel client-margin-top">
@@ -1936,11 +1954,11 @@ function ManagementFeesSection({ scope, detailedMembers }) {
         </p>
         {tableProducts.length ? (
           <div class="client-table-wrap">
-            <table class="client-table">
+            <table class="client-table client-fees-table">
               <thead>
                 <tr>
                   <th>מוצר</th>
-                  <th>גוף מנהל</th>
+                  <th>ייחוס</th>
                   <th>מספר פוליסה</th>
                   <th>צבירה</th>
                   <th>דמי ניהול מצבירה</th>
@@ -1955,7 +1973,7 @@ function ManagementFeesSection({ scope, detailedMembers }) {
                   return (
                     <tr key={product.id || index}>
                       <td>{product.planName || "—"}</td>
-                      <td>{product.managerName || "—"}</td>
+                      <td>{attributionLabel(product)}</td>
                       <td>{product.policyNo || "—"}</td>
                       <td>{formatCurrency(product.currentValue)}</td>
                       <td>{fee.guaranteed ? "—" : formatFeePct(fee.feeFromBalance)}</td>
@@ -3858,6 +3876,8 @@ const clientDashboardCss = `
   .client-table { width: 100%; min-width: 760px; border-collapse: collapse; table-layout: auto; }
   .client-table th { background: ${theme.navy}; color: #fff; padding: 12px 10px; font-size: 12px; text-align: right; white-space: nowrap; }
   .client-table td { padding: 12px 10px; border-bottom: 1px solid ${theme.divider}; color: ${theme.text}; font-size: 12px; white-space: nowrap; }
+  .client-fees-table { min-width: 0 !important; table-layout: fixed; }
+  .client-fees-table th, .client-fees-table td { white-space: normal; word-break: break-word; padding: 10px 8px; }
   .client-insurance-table { table-layout: fixed; min-width: 0; width: 100%; }
   .client-insurance-table th { padding: 9px 7px; font-size: 11px; }
   .client-insurance-table td { padding: 8px 7px; font-size: 12px; }

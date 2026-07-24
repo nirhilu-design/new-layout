@@ -1237,6 +1237,35 @@ const PdfExportModal = defineComponent({
   // Monthly pension death-benefit rows (widow/orphan) — same source as the WEB table.
   const deathBenefit = { pensionRows: safeArray(scope?.pensionDeathBenefitProducts) };
 
+  // Management fees — same computation as the WEB "דמי ניהול" tab.
+  const feeMembers = safeArray(detailedMembers);
+  const feeAllProducts = feeMembers.flatMap((m) => safeArray(m.products));
+  const feePrimaryName = feeMembers[0]?.name || "";
+  const managementFees = {
+    cards: [
+      ...feeMembers.map((m) => ({ name: m.name, ...computeWeightedFees(m.products) })),
+      { name: "תא משפחתי", isTotal: true, ...computeWeightedFees(feeAllProducts) },
+    ],
+    products: safeArray(scope?.products)
+      .filter((p) => Number(p.currentValue || 0) > 0 || Number(p.managementFeeFromBalance || 0) > 0)
+      .map((p) => {
+        const fee = productFeeInfo(p);
+        const owner = p.memberName || (scope?.isFamily ? "" : scope?.name) || "";
+        const attribution = owner && feePrimaryName ? (owner === feePrimaryName ? "מבוטח ראשי" : "מבוטח משני") : "—";
+        return {
+          planName: p.planName,
+          policyNo: p.policyNo,
+          currentValue: p.currentValue,
+          attribution,
+          feeFromBalance: fee.feeFromBalance,
+          feeFromDeposit: fee.feeFromDeposit,
+          realSpread: fee.realSpread,
+          guaranteed: fee.guaranteed,
+          guaranteedYield: fee.guaranteedYield,
+        };
+      }),
+  };
+
   return (
     <>
       <div class="pdf-modal-overlay" onClick={onClose} />
@@ -1284,6 +1313,7 @@ const PdfExportModal = defineComponent({
             sections={selected}
             productFunds={productFunds}
             deathBenefit={deathBenefit}
+            managementFees={managementFees}
             conversationSummary={reportData?.conversationSummary || reportData?.clientConversationSummary || ""}
             actionRecommendations={reportData?.actionRecommendations || reportData?.recommendationsText || ""}
           />

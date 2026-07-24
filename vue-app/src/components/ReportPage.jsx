@@ -5859,7 +5859,7 @@ function KpiRecurringIcon() {
   );
 }
 
-export function PrintReportA4({ reportData, conversationSummary = "", actionRecommendations = "", sections = null, productFunds = [], deathBenefit = {} }) {
+export function PrintReportA4({ reportData, conversationSummary = "", actionRecommendations = "", sections = null, productFunds = [], deathBenefit = {}, managementFees = {} }) {
   const data = reportData || {};
   const family = data.family || {};
   const printConversationSummary =
@@ -6330,6 +6330,68 @@ export function PrintReportA4({ reportData, conversationSummary = "", actionReco
                 </div>
               </div>
             ))}
+          </section>
+        );
+      })()}
+
+      {/* ============ PAGE — דמי ניהול ============ */}
+      {show("managementFees") && (() => {
+        const mf = managementFees || {};
+        const feeCards = Array.isArray(mf.cards) ? mf.cards : [];
+        const feeProducts = Array.isArray(mf.products) ? mf.products : [];
+        const fmtPct = (v) => `${Number(v || 0).toFixed(2)}%`;
+        if (!feeCards.length && !feeProducts.length) return null;
+        return (
+          <section class="rp-section" style={px(pageStyle)}>
+            <SectionHeader title="דמי ניהול" subtitle="דמי ניהול משוקללים לפי צבירה, ופירוט דמי הניהול והמרווחים לכל מוצר" />
+
+            {feeCards.length ? (
+              <div style={px({ display: "grid", gridTemplateColumns: `repeat(${feeCards.length}, 1fr)`, gap: 12, marginBottom: 22 })}>
+                {feeCards.map((c, i) => (
+                  <div class="rp-avoid" key={i} style={px({ background: c.isTotal ? NAVY : OFFWHITE, color: c.isTotal ? OFFWHITE : INK, border: c.isTotal ? "none" : `1px solid ${TAN}`, borderRadius: 12, padding: 16 })}>
+                    <div style={px({ fontSize: 14, fontWeight: 800, color: c.isTotal ? OFFWHITE : NAVY })}>{c.name}</div>
+                    <div style={px({ fontSize: 11, marginTop: 2, marginBottom: 12, color: c.isTotal ? "rgba(255,255,255,0.8)" : MUTED })}>סך צבירה {fmtCurrency(c.totalBalance)}</div>
+                    <div style={px({ fontSize: 11, color: c.isTotal ? "rgba(255,255,255,0.8)" : MUTED })}>דמי ניהול מצבירה (משוקלל)</div>
+                    <div style={px({ fontSize: 26, fontWeight: 800, direction: "ltr", textAlign: "right", color: c.isTotal ? OFFWHITE : NAVY })}>{fmtPct(c.feeFromBalance)}</div>
+                    <div style={px({ display: "flex", justifyContent: "space-between", alignItems: "center", borderTop: `1px solid ${c.isTotal ? "rgba(255,255,255,0.2)" : TAN}`, marginTop: 8, paddingTop: 8 })}>
+                      <span style={px({ fontSize: 11, color: c.isTotal ? "rgba(255,255,255,0.8)" : MUTED })}>דמי ניהול מהפקדה</span>
+                      <strong style={px({ fontSize: 13, direction: "ltr", color: c.isTotal ? OFFWHITE : PINK })}>{fmtPct(c.feeFromDeposit)}</strong>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : null}
+
+            {feeProducts.length ? (
+              <table style={px({ width: "100%", borderCollapse: "collapse", fontSize: 12, tableLayout: "fixed" })}>
+                <thead>
+                  <tr style={px({ background: NAVY, color: OFFWHITE })}>
+                    <th style={px(th)}>מוצר</th>
+                    <th style={px(th)}>ייחוס</th>
+                    <th style={px(th)}>מס' פוליסה</th>
+                    <th style={px(th)}>צבירה</th>
+                    <th style={px(th)}>ד"נ מצבירה</th>
+                    <th style={px(th)}>ד"נ מהפקדה</th>
+                    <th style={px(th)}>מרווח ריאלי</th>
+                    <th style={px(th)}>מבטיחת תשואה</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {feeProducts.map((p, i) => (
+                    <tr class="rp-avoid" key={i}>
+                      <td style={px(td)}>{p.planName || "—"}</td>
+                      <td style={px(td)}>{p.attribution || "—"}</td>
+                      <td style={px(td)}>{p.policyNo || "—"}</td>
+                      <td style={px({ ...td, direction: "ltr", textAlign: "right" })}>{fmtCurrency(p.currentValue)}</td>
+                      <td style={px(td)}>{p.guaranteed ? "—" : fmtPct(p.feeFromBalance)}</td>
+                      <td style={px(td)}>{p.feeFromDeposit > 0 ? fmtPct(p.feeFromDeposit) : "—"}</td>
+                      <td style={px(td)}>{p.realSpread ? `${p.realSpread}%` : "—"}</td>
+                      <td style={px(td)}>{p.guaranteed ? (p.guaranteedYield > 0 ? fmtPct(p.guaranteedYield) : "כן") : "—"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            ) : null}
           </section>
         );
       })()}

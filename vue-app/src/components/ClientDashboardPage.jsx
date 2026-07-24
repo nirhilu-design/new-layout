@@ -545,6 +545,7 @@ function buildMemberProductsFromRawFile(rawFile) {
       managementFeeFromBalance: Number(policy?.details?.managementFeeFromBalance || 0),
       managementFeeFromDeposit: Number(policy?.details?.managementFeeFromDeposit || 0),
       expectedReturn: Number(policy?.details?.expectedReturn || 0),
+      joinDate: policy?.joinDate || null,
       equityExposure: getPlanWeightedExposure(policy, "equity"),
       foreignExposure: getPlanWeightedExposure(policy, "foreign"),
       investmentRoutes: safeArray(policy?.investPlans).map((plan, planIndex) => ({
@@ -1833,13 +1834,35 @@ function InsuranceProductsTable({ rows, isFamily }) {
   );
 }
 
-// Old participating / guaranteed-yield policies carry a real-return spread
-// ("מרווח ריאלי", ~15%) instead of ordinary management fees. We flag them by a
-// positive guaranteed yield, or by classic-policy keywords in the product name.
-function isOldGuaranteedPolicy(product) {
-  const guaranteedYield = Number(product?.expectedReturn || 0);
+// Establishment year from a policy join date (handles various date formats).
+function parsePolicyYear(joinDate) {
+  const match = String(joinDate || "").match(/(19|20)\d{2}/);
+  return match ? Number(match[0]) : null;
+}
+
+function isManagerInsurance(product) {
   const text = `${product?.productType || ""} ${product?.planName || ""}`;
-  return guaranteedYield > 0 || /משתתפת|עדיף|מבטח|קלאסי|ותיק|ישן/.test(text);
+  return /מנהלים|משתתפת|עדיף|קלאסי/.test(text);
+}
+
+// Fees per policy by establishment date (business rules for manager insurance):
+//  - 1991–2004: 0.6% from balance + 15% real spread.
+//  - before 1991: no management fee — a guaranteed-return ("מבטיחת תשואה") policy.
+//  - otherwise: the fees exactly as parsed from the file.
+function productFeeInfo(product) {
+  const year = parsePolicyYear(product?.joinDate);
+  const manager = isManagerInsurance(product);
+  const dataFeeBalance = Number(product?.managementFeeFromBalance || 0);
+  const dataFeeDeposit = Number(product?.managementFeeFromDeposit || 0);
+  const guaranteedYield = Number(product?.expectedReturn || 0);
+
+  if (manager && year !== null && year < 1991) {
+    return { feeFromBalance: 0, feeFromDeposit: 0, realSpread: null, guaranteed: true, guaranteedYield };
+  }
+  if (manager && year !== null && year >= 1991 && year <= 2004) {
+    return { feeFromBalance: 0.6, feeFromDeposit: dataFeeDeposit, realSpread: 15, guaranteed: false, guaranteedYield };
+  }
+  return { feeFromBalance: dataFeeBalance, feeFromDeposit: dataFeeDeposit, realSpread: null, guaranteed: false, guaranteedYield };
 }
 
 function computeWeightedFees(products) {
@@ -1848,11 +1871,11 @@ function computeWeightedFees(products) {
   const totalDeposit = list.reduce((sum, p) => sum + Number(p.monthlyDeposit || 0), 0);
   const feeFromBalance =
     totalBalance > 0
-      ? list.reduce((sum, p) => sum + Number(p.managementFeeFromBalance || 0) * Number(p.currentValue || 0), 0) / totalBalance
+      ? list.reduce((sum, p) => sum + productFeeInfo(p).feeFromBalance * Number(p.currentValue || 0), 0) / totalBalance
       : 0;
   const feeFromDeposit =
     totalDeposit > 0
-      ? list.reduce((sum, p) => sum + Number(p.managementFeeFromDeposit || 0) * Number(p.monthlyDeposit || 0), 0) / totalDeposit
+      ? list.reduce((sum, p) => sum + productFeeInfo(p).feeFromDeposit * Number(p.monthlyDeposit || 0), 0) / totalDeposit
       : 0;
   return { feeFromBalance, feeFromDeposit, totalBalance };
 }
@@ -1909,7 +1932,7 @@ function ManagementFeesSection({ scope, detailedMembers }) {
       <div class="client-panel client-margin-top">
         <h3>דמי ניהול לפי מוצר</h3>
         <p class="client-panel-subtitle">
-          פירוט לכל פוליסה: דמי ניהול מצבירה ומהפקדה, מרווח ריאלי (לפוליסות ישנות — 15%) ומבטיחת תשואה.
+          פוליסות מנהלים לפי תאריך הקמה: 1991–2004 → 0.6% מצבירה + 15% ריאלי; לפני 1991 → ללא דמי ניהול (מבטיחת תשואה).
         </p>
         {tableProducts.length ? (
           <div class="client-table-wrap">
@@ -1928,18 +1951,17 @@ function ManagementFeesSection({ scope, detailedMembers }) {
               </thead>
               <tbody>
                 {tableProducts.map((product, index) => {
-                  const guaranteedYield = Number(product.expectedReturn || 0);
-                  const isOld = isOldGuaranteedPolicy(product);
+                  const fee = productFeeInfo(product);
                   return (
                     <tr key={product.id || index}>
                       <td>{product.planName || "—"}</td>
                       <td>{product.managerName || "—"}</td>
                       <td>{product.policyNo || "—"}</td>
                       <td>{formatCurrency(product.currentValue)}</td>
-                      <td>{formatFeePct(product.managementFeeFromBalance)}</td>
-                      <td>{formatFeePct(product.managementFeeFromDeposit)}</td>
-                      <td>{isOld ? "15%" : "—"}</td>
-                      <td>{guaranteedYield > 0 ? formatFeePct(guaranteedYield) : isOld ? "כן" : "—"}</td>
+                      <td>{fee.guaranteed ? "—" : formatFeePct(fee.feeFromBalance)}</td>
+                      <td>{fee.feeFromDeposit > 0 ? formatFeePct(fee.feeFromDeposit) : "—"}</td>
+                      <td>{fee.realSpread ? `${fee.realSpread}%` : "—"}</td>
+                      <td>{fee.guaranteed ? (fee.guaranteedYield > 0 ? formatFeePct(fee.guaranteedYield) : "כן") : "—"}</td>
                     </tr>
                   );
                 })}

@@ -5950,8 +5950,8 @@ export function PrintReportA4({ reportData, conversationSummary = "", actionReco
 
   // Short lead paragraph shown directly under a section header to explain the
   // section to the client in plain language.
-  const SectionIntro = ({ children }) => (
-    <div style={px({ fontSize: 14.5, color: DARKTAN, lineHeight: 1.75, maxWidth: 840, margin: "0 0 24px" })}>{children}</div>
+  const SectionIntro = ({ text }) => (
+    <div style={px({ fontSize: 14.5, color: DARKTAN, lineHeight: 1.75, maxWidth: 840, margin: "0 0 24px" })}>{text}</div>
   );
 
   // Build conic-gradient donut segments from {name, value} items.
@@ -6185,7 +6185,7 @@ export function PrintReportA4({ reportData, conversationSummary = "", actionReco
       {show("personal") && (
       <section class="rp-section" style={px(pageStyle)}>
         <SectionHeader title="פרטים אישיים" subtitle="בני המשפחה המבוטחים בדוח" />
-        <SectionIntro>כדי לתת לכם תמונה מלאה ופשוטה של העתיד הפיננסי המשפחתי, ריכזנו את כל הנכסים והחיסכונות שלכם במקום אחד. כאן תוכלו לראות את סך הצבירה המעודכנת שנצברה עד כה, לצד חלוקת הכספים בין האפיקים והגופים השונים.</SectionIntro>
+        <SectionIntro text="כדי לתת לכם תמונה מלאה ופשוטה של העתיד הפיננסי המשפחתי, ריכזנו את כל הנכסים והחיסכונות שלכם במקום אחד. כאן תוכלו לראות את סך הצבירה המעודכנת שנצברה עד כה, לצד חלוקת הכספים בין האפיקים והגופים השונים." />
         <div style={px({ display: "grid", gridTemplateColumns: members.length > 1 ? "1fr 1fr" : "1fr", gap: 28 })}>
           {(members.length ? members : [{ name: "—" }]).slice(0, 4).map((member, i) => {
             const cardNavy = i % 2 === 0;
@@ -6241,7 +6241,7 @@ export function PrintReportA4({ reportData, conversationSummary = "", actionReco
           <Kpi tone="outline" label="צבירה צפויה לפרישה" value={fmtCurrency(family.projectedLumpSumWithDeposits)} icon={<KpiBarsIcon />} />
           <Kpi tone="pink" label="קצבה חודשית צפויה" value={fmtCurrency(family.monthlyPensionWithDeposits)} icon={<KpiRecurringIcon />} />
         </div>
-        <SectionIntro>הנה הצצה לאיך שהעתיד שלכם עשוי להיראות ביום הפרישה. החישוב מציג את הצבירה והקצבה החודשית הצפויה לכם, תוך השוואה בין המשך הפקדות שוטפות לבין מצב שבו נעצרות ההפקדות.</SectionIntro>
+        <SectionIntro text="הנה הצצה לאיך שהעתיד שלכם עשוי להיראות ביום הפרישה. החישוב מציג את הצבירה והקצבה החודשית הצפויה לכם, תוך השוואה בין המשך הפקדות שוטפות לבין מצב שבו נעצרות ההפקדות." />
         <div style={px({ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24 })}>
           <CompareBars label="השוואת צבירה צפויה" withValue={family.projectedLumpSumWithDeposits} withoutValue={family.projectedLumpSumWithoutDeposits} />
           <CompareBars label="השוואת קצבה חודשית צפויה" withValue={family.monthlyPensionWithDeposits} withoutValue={family.monthlyPensionWithoutDeposits} />
@@ -6263,7 +6263,7 @@ export function PrintReportA4({ reportData, conversationSummary = "", actionReco
             <div style={px({ fontSize: 30, fontWeight: 800, color: NAVY, direction: "ltr", marginTop: 2 })}>{fmtCurrency(family.totalAssets)}</div>
           </div>
         </div>
-        <SectionIntro>הכספים שלכם מושקעים במסלולים שונים כדי לייצר תשואה ולשמור על ערך הכסף לאורך זמן. בחלק זה תוכלו לראות בדיוק איפה הכסף מושקע – כמה ממנו נחשף למניות, כמה מושקע בחו״ל ואיך הוא מתפזר בין האפיקים השונים.</SectionIntro>
+        <SectionIntro text="הכספים שלכם מושקעים במסלולים שונים כדי לייצר תשואה ולשמור על ערך הכסף לאורך זמן. בחלק זה תוכלו לראות בדיוק איפה הכסף מושקע – כמה ממנו נחשף למניות, כמה מושקע בחו״ל ואיך הוא מתפזר בין האפיקים השונים." />
         <Donut title="products" centerLabel="מוצרים" items={products} />
         <Donut title="managers" centerLabel="גופים מנהלים" items={managers} />
         <Donut title="channels" centerLabel="אפיקים ראשיים" items={mainGroups} note='ראו פירוט מלא בעמוד "פירוק נכסים".' />
@@ -6309,7 +6309,7 @@ export function PrintReportA4({ reportData, conversationSummary = "", actionReco
         return (
           <section class="rp-section" style={px(pageStyle)}>
             <SectionHeader title="נכסים ברמת מוצר" subtitle="תשואות ומדדי סיכון · מקובץ לפי סוג מוצר" />
-            <SectionIntro>כאן מופיע פירוט של כל המוצרים הפנסיוניים והפיננסיים שלכם, לצד הביצועים והמדדים שלהם בשנים האחרונות. מעקב אחר התשואות עוזר לנו לוודא שהחיסכון שלכם מנוהל עבורכם בצורה המיטבית בהתאם למדדי איכות ושוק.</SectionIntro>
+            <SectionIntro text="כאן מופיע פירוט של כל המוצרים הפנסיוניים והפיננסיים שלכם, לצד הביצועים והמדדים שלהם בשנים האחרונות. מעקב אחר התשואות עוזר לנו לוודא שהחיסכון שלכם מנוהל עבורכם בצורה המיטבית בהתאם למדדי איכות ושוק." />
             {groups.map((g) => (
               <div key={g.type} style={px({ marginBottom: 20 })}>
                 <div style={px({ breakAfter: "avoid", pageBreakAfter: "avoid", display: "flex", justifyContent: "space-between", alignItems: "center", background: NAVY, color: OFFWHITE, borderRadius: 10, padding: "10px 16px", marginBottom: 10 })}>
@@ -6359,7 +6359,7 @@ export function PrintReportA4({ reportData, conversationSummary = "", actionReco
         return (
           <section class="rp-section" style={px({ ...pageStyle, minHeight: 0, overflow: "visible" })}>
             <SectionHeader title="דמי ניהול" subtitle="דמי ניהול משוקללים לפי צבירה, ופירוט דמי הניהול והמרווחים לכל מוצר" />
-            <SectionIntro>כדי לשמור על שקיפות מלאה, ריכזנו עבורכם את סך העלויות הנלוות לניהול התיק. כאן תוכלו לראות כמה אתם משלמים עבור הכיסויים הביטוחיים וכמה דמי ניהול נגבים מההפקדות השוטפות והצבירה המצטברת.</SectionIntro>
+            <SectionIntro text="כדי לשמור על שקיפות מלאה, ריכזנו עבורכם את סך העלויות הנלוות לניהול התיק. כאן תוכלו לראות כמה אתם משלמים עבור הכיסויים הביטוחיים וכמה דמי ניהול נגבים מההפקדות השוטפות והצבירה המצטברת." />
 
             {feeCards.length ? (
               <div style={px({ display: "grid", gridTemplateColumns: `repeat(${feeCards.length}, 1fr)`, gap: 12, marginBottom: 16 })}>
@@ -6429,7 +6429,7 @@ export function PrintReportA4({ reportData, conversationSummary = "", actionReco
         <div class="rp-avoid" style={px({ background: OFFWHITE, border: `1px solid ${TAN}`, borderRadius: 12, padding: "14px 18px", marginBottom: 24, fontSize: 13, color: DARKTAN, lineHeight: 1.7 })}>
           הנתונים מציינים את הסכום למקרה פטירה המתקבל בתצורה הונית (סכום חד-פעמי למוטבים), וכן קצבה חודשית לשאירים בכל מקרה שקיימת קרן פנסיה.
         </div>
-        <SectionIntro>לצד החיסכון לעתיד, חשוב לוודא שהמשפחה מוגנת גם במקרים בלתי צפויים. חלק זה מפרט את ההגנה הכלכלית שקיימת לכם כיום במקרה של אובדן כושר עבודה או פטירה חלילה, כדי להבטיח את רשת הביטחון המשפחתית.</SectionIntro>
+        <SectionIntro text="לצד החיסכון לעתיד, חשוב לוודא שהמשפחה מוגנת גם במקרים בלתי צפויים. חלק זה מפרט את ההגנה הכלכלית שקיימת לכם כיום במקרה של אובדן כושר עבודה או פטירה חלילה, כדי להבטיח את רשת הביטחון המשפחתית." />
         <div style={px({ fontSize: 17, fontWeight: 700, color: NAVY, marginBottom: 12 })}>כיסויים לפי בן משפחה</div>
         {members.length ? (
           <table style={px({ fontSize: 13 })}>

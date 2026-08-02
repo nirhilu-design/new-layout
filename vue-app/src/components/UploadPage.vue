@@ -1888,6 +1888,8 @@ const handleAnalyzeFiles = async () => {
       capitalClassificationData.spouseB_pension_funds;
     reportData.spouseB_study_funds = capitalClassificationData.spouseB_study_funds;
 
+    reportData.sourceXmlFiles = selectedFiles.value;
+
     props.setReportData(reportData);
   } catch (err) {
     console.error(err);

@@ -543,9 +543,6 @@ function buildMemberProductsFromRawFile(rawFile) {
       monthlyDeposit: Number(policy?.monthlyDeposits?.sumCost || 0),
       projectedMonthlyPension: Number(policy?.savings?.projectedMonthlyPension || policy?.savings?.pensionRetire || 0),
       managementFeeFromBalance: Number(policy?.details?.managementFeeFromBalance || 0),
-      managementFeeFromDeposit: Number(policy?.details?.managementFeeFromDeposit || 0),
-      expectedReturn: Number(policy?.details?.expectedReturn || 0),
-      joinDate: policy?.joinDate || null,
       equityExposure: getPlanWeightedExposure(policy, "equity"),
       foreignExposure: getPlanWeightedExposure(policy, "foreign"),
       investmentRoutes: safeArray(policy?.investPlans).map((plan, planIndex) => ({
@@ -927,7 +924,6 @@ const BASE_NAV_ITEMS = [
   { id: "personal", label: "פרטים אישיים", icon: "☷" },
   { id: "pension", label: "סיכום פנסיוני", icon: "▥" },
   { id: "allocation", label: "התפלגות נכסים", icon: "◔" },
-  { id: "managementFees", label: "דמי ניהול", icon: "%" },
   { id: "insurance", label: "סכומים למקרה פטירה", icon: "🛡" },
   { id: "loans", label: "הלוואות", icon: "🏦" },
   { id: "summary", label: "סיכום שיחה", icon: "✎" },
@@ -967,6 +963,8 @@ const ClientDashboardPage = defineComponent({
     const activeSectionRef = ref("personal");
     const selectedPieSegmentRef = ref(null);
     const showPdfModalRef = ref(false);
+    const legacyPdfLoadingRef = ref(false);
+    const legacyPdfErrorRef = ref("");
     const localScopeIdRef = ref(
       props.viewMode === "member" && props.selectedMemberId
         ? props.selectedMemberId
@@ -980,6 +978,48 @@ const ClientDashboardPage = defineComponent({
     const specialSectionsC = computed(() => buildSpecialSectionsModel(props.reportData));
     const navItemsC = computed(() => buildNavItems(specialSectionsC.value));
 
+    const singleSourceXmlFileC = computed(() => {
+      const files = props.reportData?.sourceXmlFiles;
+      return Array.isArray(files) && files.length === 1 ? files[0] : null;
+    });
+
+    const handleGenerateLegacyPdf = async () => {
+      const file = singleSourceXmlFileC.value;
+      if (!file || legacyPdfLoadingRef.value) return;
+
+      legacyPdfErrorRef.value = "";
+      legacyPdfLoadingRef.value = true;
+
+      try {
+        const formData = new FormData();
+        formData.append(file.name, file);
+        formData.append("phone", "");
+        formData.append("email", "");
+        formData.append("summery", "");
+        formData.append("signature", "");
+        formData.append("gglogo", "false");
+
+        const response = await fetch("PensionService.ashx?action=load-xml", {
+          method: "POST",
+          body: formData,
+        });
+
+        const json = await response.json();
+
+        if (json.result !== 1) {
+          throw new Error(json.msg || "שגיאה ביצירת ה-PDF");
+        }
+
+        const guid = json.payload.guid;
+        window.open(`PensionService.ashx?action=download-pdf&guid=${guid}`, "_self");
+      } catch (err) {
+        console.error(err);
+        legacyPdfErrorRef.value = err?.message || "שגיאה ביצירת ה-PDF";
+      } finally {
+        legacyPdfLoadingRef.value = false;
+      }
+    };
+
     return () => {
       const reportData = props.reportData;
       const onBack = props.onBack;
@@ -992,6 +1032,9 @@ const ClientDashboardPage = defineComponent({
       const selectedPieSegment = selectedPieSegmentRef.value;
       const showPdfModal = showPdfModalRef.value;
       const localScopeId = localScopeIdRef.value;
+      const legacyPdfLoading = legacyPdfLoadingRef.value;
+      const legacyPdfError = legacyPdfErrorRef.value;
+      const singleSourceXmlFile = singleSourceXmlFileC.value;
       const setActiveSection = (v) => {
         activeSectionRef.value = typeof v === "function" ? v(activeSectionRef.value) : v;
       };
@@ -1081,6 +1124,18 @@ const ClientDashboardPage = defineComponent({
               <PdfIcon />
             </button>
 
+            {singleSourceXmlFile ? (
+              <button
+                type="button"
+                class="client-pdf-button"
+                onClick={handleGenerateLegacyPdf}
+                disabled={legacyPdfLoading}
+                title={legacyPdfError ? `שגיאה: ${legacyPdfError}` : "ייצוא לדוח PDF (גרסה ישנה)"}
+              >
+                <LegacyPdfIcon />
+              </button>
+            ) : null}
+
             {!isSharedMode ? (
               <button type="button" onClick={onBack} class="client-back-button client-back-icon-btn" title="חזרה למסך העלאה">
                 <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
@@ -1102,7 +1157,6 @@ const ClientDashboardPage = defineComponent({
           {activeSection === "pension" ? <PensionSection scope={scope} /> : null}
           {activeSection === "personal" ? <PersonalDetailsSection members={detailedMembers} /> : null}
           {activeSection === "allocation" ? <AllocationSection scope={scope} onSegmentClick={handleOpenPieDrawer} /> : null}
-          {activeSection === "managementFees" ? <ManagementFeesSection scope={scope} detailedMembers={detailedMembers} /> : null}
           {activeSection === "insurance" ? <InsuranceSection scope={scope} /> : null}
           {activeSection === "loans" ? <LoansSection scope={scope} /> : null}
           {activeSection === "capitalClassification" ? <CapitalClassificationSection sections={specialSections.capitalClassification} /> : null}
@@ -1148,6 +1202,19 @@ function PdfIcon() {
       <polyline points="14,2 14,8 20,8" stroke="currentColor" stroke-width="2" stroke-linejoin="round" />
       <line x1="8" y1="13" x2="16" y2="13" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
       <line x1="8" y1="17" x2="13" y2="17" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+    </svg>
+  );
+}
+
+function LegacyPdfIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" style={px({ flexShrink: 0 })}>
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" stroke="currentColor" stroke-width="2" stroke-linejoin="round" />
+      <polyline points="14,2 14,8 20,8" stroke="currentColor" stroke-width="2" stroke-linejoin="round" />
+      <line x1="8" y1="13" x2="16" y2="13" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+      <line x1="8" y1="17" x2="13" y2="17" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+      <circle cx="18" cy="18" r="6.5" fill="currentColor" stroke="#fff" stroke-width="1" />
+      <path d="M18 15.2V18l1.8 1.2" stroke="#fff" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round" />
     </svg>
   );
 }
@@ -1237,35 +1304,6 @@ const PdfExportModal = defineComponent({
   // Monthly pension death-benefit rows (widow/orphan) — same source as the WEB table.
   const deathBenefit = { pensionRows: safeArray(scope?.pensionDeathBenefitProducts) };
 
-  // Management fees — same computation as the WEB "דמי ניהול" tab.
-  const feeMembers = safeArray(detailedMembers);
-  const feeAllProducts = feeMembers.flatMap((m) => safeArray(m.products));
-  const feePrimaryName = feeMembers[0]?.name || "";
-  const managementFees = {
-    cards: [
-      ...feeMembers.map((m) => ({ name: m.name, ...computeWeightedFees(m.products) })),
-      { name: "תא משפחתי", isTotal: true, ...computeWeightedFees(feeAllProducts) },
-    ],
-    products: safeArray(scope?.products)
-      .filter((p) => Number(p.currentValue || 0) > 0 || Number(p.managementFeeFromBalance || 0) > 0)
-      .map((p) => {
-        const fee = productFeeInfo(p);
-        const owner = p.memberName || (scope?.isFamily ? "" : scope?.name) || "";
-        const attribution = owner && feePrimaryName ? (owner === feePrimaryName ? "מבוטח ראשי" : "מבוטח משני") : "—";
-        return {
-          planName: p.planName,
-          policyNo: p.policyNo,
-          currentValue: p.currentValue,
-          attribution,
-          feeFromBalance: fee.feeFromBalance,
-          feeFromDeposit: fee.feeFromDeposit,
-          realSpread: fee.realSpread,
-          guaranteed: fee.guaranteed,
-          guaranteedYield: fee.guaranteedYield,
-        };
-      }),
-  };
-
   return (
     <>
       <div class="pdf-modal-overlay" onClick={onClose} />
@@ -1313,7 +1351,6 @@ const PdfExportModal = defineComponent({
             sections={selected}
             productFunds={productFunds}
             deathBenefit={deathBenefit}
-            managementFees={managementFees}
             conversationSummary={reportData?.conversationSummary || reportData?.clientConversationSummary || ""}
             actionRecommendations={reportData?.actionRecommendations || reportData?.recommendationsText || ""}
           />
@@ -1860,166 +1897,6 @@ function InsuranceProductsTable({ rows, isFamily }) {
           ))}
         </tbody>
       </table>
-    </div>
-  );
-}
-
-// Establishment year from a policy join date (handles various date formats).
-function parsePolicyYear(joinDate) {
-  const match = String(joinDate || "").match(/(19|20)\d{2}/);
-  return match ? Number(match[0]) : null;
-}
-
-function isManagerInsurance(product) {
-  const text = `${product?.productType || ""} ${product?.planName || ""}`;
-  return /מנהלים|משתתפת|עדיף|קלאסי|מעורב|מניב/.test(text);
-}
-
-// Fees per policy by establishment date (business rules for manager insurance):
-//  - 1991–2004: 0.6% from balance + 15% real spread.
-//  - before 1991: no management fee — a guaranteed-return ("מבטיחת תשואה") policy.
-//  - otherwise: the fees exactly as parsed from the file.
-function productFeeInfo(product) {
-  const year = parsePolicyYear(product?.joinDate);
-  const manager = isManagerInsurance(product);
-  const dataFeeBalance = Number(product?.managementFeeFromBalance || 0);
-  const dataFeeDeposit = Number(product?.managementFeeFromDeposit || 0);
-  const guaranteedYield = Number(product?.expectedReturn || 0);
-
-  if (manager && year !== null && year < 1991) {
-    return { feeFromBalance: 0, feeFromDeposit: 0, realSpread: null, guaranteed: true, guaranteedYield };
-  }
-  if (manager && year !== null && year >= 1991 && year <= 2004) {
-    return { feeFromBalance: dataFeeBalance > 0 ? dataFeeBalance : 0.6, feeFromDeposit: dataFeeDeposit, realSpread: 15, guaranteed: false, guaranteedYield };
-  }
-  return { feeFromBalance: dataFeeBalance, feeFromDeposit: dataFeeDeposit, realSpread: null, guaranteed: false, guaranteedYield };
-}
-
-function computeWeightedFees(products) {
-  const list = safeArray(products);
-  const totalBalance = list.reduce((sum, p) => sum + Number(p.currentValue || 0), 0);
-  const totalDeposit = list.reduce((sum, p) => sum + Number(p.monthlyDeposit || 0), 0);
-  const feeFromBalance =
-    totalBalance > 0
-      ? list.reduce((sum, p) => sum + productFeeInfo(p).feeFromBalance * Number(p.currentValue || 0), 0) / totalBalance
-      : 0;
-  const feeFromDeposit =
-    totalDeposit > 0
-      ? list.reduce((sum, p) => sum + productFeeInfo(p).feeFromDeposit * Number(p.monthlyDeposit || 0), 0) / totalDeposit
-      : 0;
-  return { feeFromBalance, feeFromDeposit, totalBalance };
-}
-
-const formatFeePct = (value) => `${Number(value || 0).toFixed(2)}%`;
-
-function ManagementFeesSection({ scope, detailedMembers }) {
-  const members = safeArray(detailedMembers);
-  const allProducts = members.flatMap((m) => safeArray(m.products));
-  const primaryName = members[0]?.name || "";
-
-  const feeCards = [
-    ...members.map((m) => ({ name: m.name, ...computeWeightedFees(m.products) })),
-    { name: "תא משפחתי", isTotal: true, ...computeWeightedFees(allProducts) },
-  ];
-
-  const attributionLabel = (product) => {
-    const owner = product?.memberName || (scope?.isFamily ? "" : scope?.name) || "";
-    if (!owner || !primaryName) return "—";
-    return owner === primaryName ? "מבוטח ראשי" : "מבוטח משני";
-  };
-
-  const tableProducts = safeArray(scope?.products).filter(
-    (p) => Number(p.currentValue || 0) > 0 || Number(p.managementFeeFromBalance || 0) > 0
-  );
-
-  return (
-    <div>
-      <SectionTitle
-        title="דמי ניהול"
-        subtitle="דמי ניהול משוקללים לפי צבירה לכל בן זוג ולתא המשפחתי, ופירוט דמי הניהול והמרווחים לכל מוצר."
-      />
-
-      <div class="client-section-title-row compact">
-        <div>
-          <h2>דמי ניהול משוקללים לפי צבירה</h2>
-          <p>ממוצע משוקלל לפי הצבירה בכל מוצר — לכל בן זוג ולתא המשפחתי.</p>
-        </div>
-      </div>
-
-      <div style={px({ display: "grid", gridTemplateColumns: `repeat(${feeCards.length}, minmax(0, 1fr))`, gap: 16 })}>
-        {feeCards.map((card, index) => (
-          <div
-            key={index}
-            style={px({
-              background: card.isTotal ? "linear-gradient(135deg, #00215D, #001845)" : "#fff",
-              color: card.isTotal ? "#fff" : "#102A43",
-              border: card.isTotal ? "none" : "1px solid #E2D1BF",
-              borderRadius: 18,
-              padding: 20,
-              boxShadow: "0 2px 10px rgba(16,42,67,0.05)",
-            })}
-          >
-            <div style={px({ fontSize: 16, fontWeight: 900, color: card.isTotal ? "#fff" : "#00215D" })}>{card.name}</div>
-            <div style={px({ fontSize: 12, marginTop: 4, marginBottom: 16, color: card.isTotal ? "rgba(255,255,255,0.82)" : "#627D98" })}>
-              סך צבירה {formatCurrency(card.totalBalance)}
-            </div>
-
-            <div style={px({ fontSize: 12, color: card.isTotal ? "rgba(255,255,255,0.82)" : "#627D98" })}>דמי ניהול מצבירה (משוקלל)</div>
-            <div style={px({ fontSize: 32, fontWeight: 900, lineHeight: 1.1, marginTop: 2, marginBottom: 14, color: card.isTotal ? "#fff" : "#00215D" })}>
-              {formatFeePct(card.feeFromBalance)}
-            </div>
-
-            <div style={px({ display: "flex", justifyContent: "space-between", alignItems: "center", borderTop: `1px solid ${card.isTotal ? "rgba(255,255,255,0.22)" : "#EEE4D8"}`, paddingTop: 12 })}>
-              <span style={px({ fontSize: 12, color: card.isTotal ? "rgba(255,255,255,0.82)" : "#627D98" })}>דמי ניהול מהפקדה</span>
-              <strong style={px({ fontSize: 16, fontWeight: 800, color: card.isTotal ? "#fff" : "#FF2756" })}>{formatFeePct(card.feeFromDeposit)}</strong>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      <div class="client-panel client-margin-top">
-        <h3>דמי ניהול לפי מוצר</h3>
-        <p class="client-panel-subtitle">
-          פוליסות מנהלים לפי תאריך הקמה: 1991–2004 → 0.6% מצבירה + 15% ריאלי; לפני 1991 → ללא דמי ניהול (מבטיחת תשואה).
-        </p>
-        {tableProducts.length ? (
-          <div class="client-table-wrap">
-            <table class="client-table client-fees-table">
-              <thead>
-                <tr>
-                  <th>מוצר</th>
-                  <th>ייחוס</th>
-                  <th>מספר פוליסה</th>
-                  <th>צבירה</th>
-                  <th>דמי ניהול מצבירה</th>
-                  <th>דמי ניהול מהפקדה</th>
-                  <th>מרווח ריאלי</th>
-                  <th>מבטיחת תשואה</th>
-                </tr>
-              </thead>
-              <tbody>
-                {tableProducts.map((product, index) => {
-                  const fee = productFeeInfo(product);
-                  return (
-                    <tr key={product.id || index}>
-                      <td>{product.planName || "—"}</td>
-                      <td>{attributionLabel(product)}</td>
-                      <td>{product.policyNo || "—"}</td>
-                      <td>{formatCurrency(product.currentValue)}</td>
-                      <td>{fee.guaranteed ? "—" : formatFeePct(fee.feeFromBalance)}</td>
-                      <td>{fee.feeFromDeposit > 0 ? formatFeePct(fee.feeFromDeposit) : "—"}</td>
-                      <td>{fee.realSpread ? `${fee.realSpread}%` : "—"}</td>
-                      <td>{fee.guaranteed ? (fee.guaranteedYield > 0 ? formatFeePct(fee.guaranteedYield) : "כן") : "—"}</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        ) : (
-          <div class="client-empty-state">לא נמצאו מוצרים עם נתוני דמי ניהול.</div>
-        )}
-      </div>
     </div>
   );
 }
@@ -3746,21 +3623,22 @@ function DisabilityIcon() {
   </svg>;
 }
 function SavingsGrowthIcon() {
-  // 4B · ascending bars (projected accumulation) — project colors (navy + pink)
-  return <svg width="30" height="30" viewBox="0 0 24 24" fill="none">
-    <path d="M4 20H20" stroke="#00215D" stroke-width="2" stroke-linecap="round"/>
-    <rect x="5" y="13" width="3.3" height="6" rx="1" stroke="#00215D" stroke-width="2"/>
-    <rect x="10.3" y="9" width="3.3" height="10" rx="1" stroke="#00215D" stroke-width="2"/>
-    <rect x="15.6" y="5" width="3.3" height="14" rx="1" fill="#FF2756"/>
+  return <svg width="30" height="30" viewBox="0 0 30 30" fill="none">
+    <ellipse cx="7.5" cy="23" rx="3.5" ry="5" fill="#C8EDD8" stroke="#00215D" stroke-width="1.3"/>
+    <ellipse cx="15" cy="21" rx="4.5" ry="7" fill="#4DB87A" stroke="#00215D" stroke-width="1.3"/>
+    <ellipse cx="22.5" cy="22" rx="3.5" ry="6" fill="#C8EDD8" stroke="#00215D" stroke-width="1.3"/>
+    <path d="M5 15L10 10L16 13L23 5" stroke="#00215D" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M20 5H24V9" stroke="#00215D" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
   </svg>;
 }
 function CoinsStackIcon() {
-  // 2B · wallet (total assets) — project colors (navy + pink)
-  return <svg width="30" height="30" viewBox="0 0 24 24" fill="none">
-    <path d="M4 7C4 6 4.8 5 6 5H17C18 5 19 6 19 7V8" stroke="#00215D" stroke-width="2" stroke-linecap="round"/>
-    <rect x="3" y="7" width="17" height="12" rx="2.5" stroke="#00215D" stroke-width="2"/>
-    <path d="M20 11H16.5C15.4 11 14.7 11.9 14.7 13C14.7 14.1 15.4 15 16.5 15H20" stroke="#FF2756" stroke-width="2"/>
-    <circle cx="16.6" cy="13" r="1" fill="#FF2756"/>
+  return <svg width="30" height="30" viewBox="0 0 30 30" fill="none">
+    <ellipse cx="11" cy="8" rx="7" ry="2.8" fill="#C8EDD8" stroke="#00215D" stroke-width="1.3"/>
+    <path d="M4 8v4c0 1.55 3.13 2.8 7 2.8s7-1.25 7-2.8V8" stroke="#00215D" stroke-width="1.3" fill="none"/>
+    <path d="M4 12v4c0 1.55 3.13 2.8 7 2.8s7-1.25 7-2.8v-4" stroke="#00215D" stroke-width="1.3" fill="none"/>
+    <ellipse cx="20" cy="19" rx="7" ry="2.8" fill="#4DB87A" stroke="#00215D" stroke-width="1.3"/>
+    <path d="M13 19v4c0 1.55 3.13 2.8 7 2.8s7-1.25 7-2.8v-4" stroke="#00215D" stroke-width="1.3" fill="none"/>
+    <path d="M18.4 19.2l1.2 1.2 2.2-2.4" stroke="#00215D" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
   </svg>;
 }
 function VaultSavingsIcon() {
@@ -3779,19 +3657,29 @@ function VaultSavingsIcon() {
   </svg>;
 }
 function CalendarDepositIcon() {
-  // 1B · deposit arrow (monthly deposit) — project colors (navy + pink)
-  return <svg width="30" height="30" viewBox="0 0 24 24" fill="none">
-    <path d="M12 3V12" stroke="#FF2756" stroke-width="2.2" stroke-linecap="round"/>
-    <path d="M8.5 8.5L12 12L15.5 8.5" stroke="#FF2756" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
-    <path d="M4 13V19A2 2 0 0 0 6 21H18A2 2 0 0 0 20 19V13" stroke="#00215D" stroke-width="2" stroke-linecap="round"/>
+  return <svg width="30" height="30" viewBox="0 0 30 30" fill="none">
+    <rect x="2" y="6" width="19" height="17" rx="2.5" fill="#C8EDD8" stroke="#00215D" stroke-width="1.4"/>
+    <line x1="2" y1="12" x2="21" y2="12" stroke="#00215D" stroke-width="1.4"/>
+    <line x1="7" y1="3" x2="7" y2="8" stroke="#00215D" stroke-width="1.5" stroke-linecap="round"/>
+    <line x1="14" y1="3" x2="14" y2="8" stroke="#00215D" stroke-width="1.5" stroke-linecap="round"/>
+    <rect x="5" y="15" width="3" height="3" rx="0.8" fill="#4DB87A"/>
+    <rect x="10" y="15" width="3" height="3" rx="0.8" fill="#4DB87A"/>
+    <rect x="5" y="20" width="3" height="3" rx="0.8" fill="#4DB87A"/>
+    <path d="M22 18H27" stroke="#4DB87A" stroke-width="1.6" stroke-linecap="round"/>
+    <path d="M24.5 15.5L27 18L24.5 20.5" stroke="#4DB87A" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
   </svg>;
 }
 function SafePensionIcon() {
-  // 3A · recurring pension payment (₪ inside refresh arrow) — project colors
-  return <svg width="30" height="30" viewBox="0 0 24 24" fill="none">
-    <path d="M20 12A8 8 0 1 1 17.5 6.3" stroke="#00215D" stroke-width="2" stroke-linecap="round"/>
-    <path d="M17 3.5V6.5H14" stroke="#00215D" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-    <path d="M12 8.4V15.6M9.8 9.7H13C13.7 9.7 14.2 10.2 14.2 11C14.2 11.8 13.7 12.3 13 12.3H10.4" stroke="#FF2756" stroke-width="1.7" stroke-linecap="round"/>
+  return <svg width="30" height="30" viewBox="0 0 30 30" fill="none">
+    <rect x="3" y="8" width="15" height="15" rx="2.5" fill="#C8EDD8" stroke="#00215D" stroke-width="1.4"/>
+    <circle cx="10.5" cy="15.5" r="4" fill="none" stroke="#00215D" stroke-width="1.3"/>
+    <circle cx="10.5" cy="15.5" r="1.8" fill="#4DB87A"/>
+    <line x1="18" y1="11" x2="22" y2="9" stroke="#00215D" stroke-width="1.3" stroke-linecap="round"/>
+    <line x1="18" y1="15.5" x2="24" y2="15.5" stroke="#00215D" stroke-width="1.3" stroke-linecap="round"/>
+    <line x1="18" y1="20" x2="22" y2="22" stroke="#00215D" stroke-width="1.3" stroke-linecap="round"/>
+    <circle cx="24" cy="9" r="2" fill="#4DB87A" stroke="#00215D" stroke-width="1"/>
+    <circle cx="26" cy="15.5" r="2" fill="#4DB87A" stroke="#00215D" stroke-width="1"/>
+    <circle cx="24" cy="22" r="2" fill="#4DB87A" stroke="#00215D" stroke-width="1"/>
   </svg>;
 }
 function PercentArrowIcon() {
@@ -3906,8 +3794,6 @@ const clientDashboardCss = `
   .client-table { width: 100%; min-width: 760px; border-collapse: collapse; table-layout: auto; }
   .client-table th { background: ${theme.navy}; color: #fff; padding: 12px 10px; font-size: 12px; text-align: right; white-space: nowrap; }
   .client-table td { padding: 12px 10px; border-bottom: 1px solid ${theme.divider}; color: ${theme.text}; font-size: 12px; white-space: nowrap; }
-  .client-fees-table { min-width: 0 !important; table-layout: fixed; }
-  .client-fees-table th, .client-fees-table td { white-space: normal; word-break: break-word; padding: 10px 8px; }
   .client-insurance-table { table-layout: fixed; min-width: 0; width: 100%; }
   .client-insurance-table th { padding: 9px 7px; font-size: 11px; }
   .client-insurance-table td { padding: 8px 7px; font-size: 12px; }

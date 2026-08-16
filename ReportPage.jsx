@@ -414,9 +414,9 @@ function CapitalClassificationOwnerBlock({ entry, styles }) {
   return (
     <div
       style={{
-        border: "1px solid #EEE4D8",
+        border: "1px solid #E7ECF3",
         borderRadius: 18,
-        background: "linear-gradient(180deg, #FFFFFF 0%, #FCFBF8 100%)",
+        background: "linear-gradient(180deg, #FFFFFF 0%, #F7F9FC 100%)",
         overflow: "hidden",
       }}
     >
@@ -427,7 +427,7 @@ function CapitalClassificationOwnerBlock({ entry, styles }) {
           alignItems: "center",
           gap: 12,
           padding: "16px 18px",
-          borderBottom: "1px solid #EEE4D8",
+          borderBottom: "1px solid #E7ECF3",
           background: "#FFFFFF",
           flexWrap: "wrap",
         }}
@@ -490,7 +490,7 @@ function CapitalMiniStat({ label, value }) {
     <div
       style={{
         background: isCapital ? "#FFFDF7" : isPension ? "#F8FBFF" : "#F7F9FC",
-        border: isCapital ? "1px solid #F1E4C8" : isPension ? "1px solid #DDEAF8" : "1px solid #E2D8CA",
+        border: isCapital ? "1px solid #F1E4C8" : isPension ? "1px solid #DDEAF8" : "1px solid #DDE3EC",
         borderRadius: 14,
         padding: "10px 12px",
         textAlign: "center",
@@ -512,7 +512,7 @@ function CapitalLegend() {
       style={{
         margin: "0 0 14px",
         background: "#FFFFFF",
-        border: "1px solid #EEE4D8",
+        border: "1px solid #E7ECF3",
         borderRadius: 14,
         padding: "12px 14px",
         display: "flex",
@@ -594,7 +594,7 @@ function getCapitalCellTone(column) {
 }
 
 function getCapitalToneBackground(tone, isHeader = false, isTotal = false) {
-  if (tone === "capital") return isHeader ? "#FFF8EA" : isTotal ? "#FFF8EA" : "#FFFDF7";
+  if (tone === "capital") return isHeader ? "#EEF2FA" : isTotal ? "#EEF2FA" : "#FFFDF7";
   if (tone === "pension") return isHeader ? "#EEF6FF" : isTotal ? "#EEF6FF" : "#F8FBFF";
   return isHeader ? "#EEF2FA" : isTotal ? "#EEF2FA" : "#FFFFFF";
 }
@@ -645,7 +645,7 @@ function CapitalClassificationTable({ title, subtitle, rows, type }) {
         </div>
       </div>
 
-      <div style={{ overflowX: "auto", border: "1px solid #E2D1BF", borderRadius: 14, background: "#fff", boxShadow: "0 4px 12px rgba(16,42,67,0.04)" }}>
+      <div style={{ overflowX: "auto", border: "1px solid #DDE3EC", borderRadius: 14, background: "#fff", boxShadow: "0 4px 12px rgba(16,42,67,0.04)" }}>
         <table style={{ width: "100%", minWidth, borderCollapse: "collapse", tableLayout: "fixed", direction: "rtl" }}>
           <thead>
             <tr>
@@ -690,7 +690,7 @@ function CapitalClassificationTable({ title, subtitle, rows, type }) {
                         fontSize: 11,
                         fontWeight: isTotalColumn ? 900 : 600,
                         color: isTotalColumn ? "#00215D" : "#102A43",
-                        background: rowIndex % 2 ? "#FFFFFF" : "#FCFBF8",
+                        background: rowIndex % 2 ? "#FFFFFF" : "#F7F9FC",
                         whiteSpace: "normal",
                         wordBreak: "break-word",
                         direction: column.type === "number" ? "ltr" : "rtl",
@@ -736,7 +736,7 @@ function CapitalClassificationTable({ title, subtitle, rows, type }) {
         <div
           style={{
             marginTop: 10,
-            border: "1px solid #EEE4D8",
+            border: "1px solid #E7ECF3",
             borderRadius: 12,
             background: "#FFFFFF",
             color: "#627D98",
@@ -1237,11 +1237,11 @@ export default function ReportPage({
       ? "חשיפה בינונית"
       : "חשיפה גבוהה";
 
-  const pageBg = "#F9F7F3";
+  const pageBg = "#F4F6F9";
   const surface = "#FFFFFF";
-  const surfaceAlt = "#FCFBF8";
-  const border = "#E2D1BF";
-  const divider = "#EEE4D8";
+  const surfaceAlt = "#F7F9FC";
+  const border = "#DDE3EC";
+  const divider = "#E7ECF3";
   const text = "#102A43";
   const textSoft = "#627D98";
   const navy = "#00215D";
@@ -1899,7 +1899,7 @@ export default function ReportPage({
       textAlign: "right",
       fontSize: "12px",
       color: text,
-      borderBottom: "1px solid #F0E6DA",
+      borderBottom: "1px solid #E7ECF3",
       padding: "12px 10px",
       whiteSpace: "nowrap",
     },
@@ -1935,8 +1935,8 @@ export default function ReportPage({
       textAlign: "center",
       fontSize: "12px",
       color: text,
-      borderBottom: "1px solid #F0E6DA",
-      borderLeft: "1px solid #F0E6DA",
+      borderBottom: "1px solid #E7ECF3",
+      borderLeft: "1px solid #E7ECF3",
       padding: "12px 10px",
       whiteSpace: "nowrap",
       background: "#fff",
@@ -1956,11 +1956,11 @@ export default function ReportPage({
       textAlign: "center",
       fontSize: "12px",
       color: navy,
-      borderBottom: "1px solid #E2D1BF",
-      borderLeft: "1px solid #E2D1BF",
+      borderBottom: "1px solid #DDE3EC",
+      borderLeft: "1px solid #DDE3EC",
       padding: "12px 10px",
       whiteSpace: "nowrap",
-      background: "#FFF7E8",
+      background: "#F7F9FC",
       fontWeight: 900,
     },
     section28Grid: {
@@ -1991,7 +1991,7 @@ export default function ReportPage({
       gap: "10px",
       alignItems: "center",
       padding: "8px 0",
-      borderBottom: "1px solid #F0E6DA",
+      borderBottom: "1px solid #E7ECF3",
     },
     section28Label: {
       color: textSoft,
@@ -2037,8 +2037,8 @@ export default function ReportPage({
       textAlign: "center",
       fontSize: "11px",
       color: text,
-      borderBottom: "1px solid #F0E6DA",
-      borderLeft: "1px solid #F0E6DA",
+      borderBottom: "1px solid #E7ECF3",
+      borderLeft: "1px solid #E7ECF3",
       padding: "10px 8px",
       whiteSpace: "nowrap",
       background: "#fff",
@@ -2106,7 +2106,7 @@ export default function ReportPage({
     summaryTopicCard: {
       border: `1px solid ${divider}`,
       borderRadius: "16px",
-      background: "linear-gradient(180deg, #FFFFFF 0%, #FCFBF8 100%)",
+      background: "linear-gradient(180deg, #FFFFFF 0%, #F7F9FC 100%)",
       padding: "10px 12px",
       boxShadow: "0 2px 8px rgba(16,42,67,0.035)",
     },
@@ -2399,13 +2399,13 @@ export default function ReportPage({
             line-height: 1.55 !important;
             margin: 0 0 12px !important;
             padding: 0 2px 10px !important;
-            border-bottom: 1px solid #EEE4D8 !important;
+            border-bottom: 1px solid #E7ECF3 !important;
           }
 
           .client-menu-member-row {
             width: 100% !important;
-            border: 1px solid #EEE4D8 !important;
-            background: linear-gradient(180deg, #FFFFFF 0%, #FCFBF8 100%) !important;
+            border: 1px solid #E7ECF3 !important;
+            background: linear-gradient(180deg, #FFFFFF 0%, #F7F9FC 100%) !important;
             border-radius: 14px !important;
             min-height: 48px !important;
             padding: 0 14px !important;
@@ -2457,8 +2457,8 @@ export default function ReportPage({
           }
 
           .client-menu-empty {
-            border: 1px dashed #E2D1BF !important;
-            background: #FCFBF8 !important;
+            border: 1px dashed #DDE3EC !important;
+            background: #F7F9FC !important;
             color: #627D98 !important;
             border-radius: 14px !important;
             padding: 14px !important;
@@ -2512,7 +2512,7 @@ export default function ReportPage({
             width: 316px !important;
             max-width: calc(100vw - 32px) !important;
             background: rgba(255, 255, 255, 0.98) !important;
-            border: 1px solid #E2D1BF !important;
+            border: 1px solid #DDE3EC !important;
             border-radius: 22px !important;
             box-shadow: 0 18px 40px rgba(16,42,67,0.16) !important;
             padding: 18px !important;
@@ -2541,7 +2541,7 @@ export default function ReportPage({
             gap: 10px !important;
             align-items: center !important;
             padding: 14px 16px !important;
-            border: 1px solid #EEE4D8 !important;
+            border: 1px solid #E7ECF3 !important;
             border-radius: 14px !important;
             background: #FFFFFF !important;
             cursor: pointer !important;
@@ -2576,8 +2576,8 @@ export default function ReportPage({
           }
 
           .client-menu-empty {
-            border: 1px dashed #E2D1BF;
-            background: #FCFBF8;
+            border: 1px dashed #DDE3EC;
+            background: #F7F9FC;
             color: #627D98;
             border-radius: 14px;
             padding: 14px;
@@ -2630,7 +2630,7 @@ export default function ReportPage({
             width: 300px;
             max-width: calc(100vw - 32px);
             background: #ffffff;
-            border: 1px solid #E2D1BF;
+            border: 1px solid #DDE3EC;
             border-radius: 18px;
             box-shadow: 0 16px 34px rgba(16,42,67,0.16);
             padding: 14px;
@@ -2652,7 +2652,7 @@ export default function ReportPage({
           }
 
           .client-menu-section {
-            border-top: 1px solid #EEE4D8;
+            border-top: 1px solid #E7ECF3;
             padding-top: 12px;
             margin-top: 12px;
           }
@@ -2664,7 +2664,7 @@ export default function ReportPage({
             justify-content: space-between;
             gap: 8px;
             padding: 13px 12px;
-            border: 1px solid #EEE4D8;
+            border: 1px solid #E7ECF3;
             border-radius: 12px;
             background: #FFFFFF;
             cursor: pointer;
@@ -2819,13 +2819,13 @@ export default function ReportPage({
             line-height: 1.55 !important;
             margin: 0 0 12px !important;
             padding: 0 2px 10px !important;
-            border-bottom: 1px solid #EEE4D8 !important;
+            border-bottom: 1px solid #E7ECF3 !important;
           }
 
           .client-menu-member-row {
             width: 100% !important;
-            border: 1px solid #EEE4D8 !important;
-            background: linear-gradient(180deg, #FFFFFF 0%, #FCFBF8 100%) !important;
+            border: 1px solid #E7ECF3 !important;
+            background: linear-gradient(180deg, #FFFFFF 0%, #F7F9FC 100%) !important;
             border-radius: 14px !important;
             min-height: 48px !important;
             padding: 0 14px !important;
@@ -2877,8 +2877,8 @@ export default function ReportPage({
           }
 
           .client-menu-empty {
-            border: 1px dashed #E2D1BF !important;
-            background: #FCFBF8 !important;
+            border: 1px dashed #DDE3EC !important;
+            background: #F7F9FC !important;
             color: #627D98 !important;
             border-radius: 14px !important;
             padding: 14px !important;
@@ -3007,13 +3007,13 @@ export default function ReportPage({
             line-height: 1.55 !important;
             margin: 0 0 12px !important;
             padding: 0 2px 10px !important;
-            border-bottom: 1px solid #EEE4D8 !important;
+            border-bottom: 1px solid #E7ECF3 !important;
           }
 
           .client-menu-member-row {
             width: 100% !important;
-            border: 1px solid #EEE4D8 !important;
-            background: linear-gradient(180deg, #FFFFFF 0%, #FCFBF8 100%) !important;
+            border: 1px solid #E7ECF3 !important;
+            background: linear-gradient(180deg, #FFFFFF 0%, #F7F9FC 100%) !important;
             border-radius: 14px !important;
             min-height: 48px !important;
             padding: 0 14px !important;
@@ -3070,8 +3070,8 @@ export default function ReportPage({
           }
 
           .client-menu-empty {
-            border: 1px dashed #E2D1BF !important;
-            background: #FCFBF8 !important;
+            border: 1px dashed #DDE3EC !important;
+            background: #F7F9FC !important;
             color: #627D98 !important;
             border-radius: 14px !important;
             padding: 14px !important;
@@ -3579,9 +3579,9 @@ export default function ReportPage({
                   <div
                     key={`${entry.owner || "owner"}-${entry.sourceFileName || index}`}
                     style={{
-                      border: "1px solid #EEE4D8",
+                      border: "1px solid #E7ECF3",
                       borderRadius: 18,
-                      background: "linear-gradient(180deg, #FFFFFF 0%, #FCFBF8 100%)",
+                      background: "linear-gradient(180deg, #FFFFFF 0%, #F7F9FC 100%)",
                       padding: 16,
                     }}
                   >
@@ -3635,9 +3635,9 @@ export default function ReportPage({
                   <div
                     key={`${entry.owner || "owner"}-${index}`}
                     style={{
-                      border: "1px solid #EEE4D8",
+                      border: "1px solid #E7ECF3",
                       borderRadius: 18,
-                      background: "linear-gradient(180deg, #FFFFFF 0%, #FCFBF8 100%)",
+                      background: "linear-gradient(180deg, #FFFFFF 0%, #F7F9FC 100%)",
                       padding: 16,
                     }}
                   >
@@ -4395,7 +4395,7 @@ function Section28CostSplit({ group, styles }) {
 
   const cardStyle = {
     ...styles.section28Group,
-    background: "linear-gradient(180deg, #FFFFFF 0%, #FCFBF8 100%)",
+    background: "linear-gradient(180deg, #FFFFFF 0%, #F7F9FC 100%)",
   };
 
   return (
@@ -4533,11 +4533,11 @@ function Section28DataRow({ row, styles, isLast = false, forceHighlight = false 
   const rowStyle = isHighlighted
     ? {
         ...styles.section28Row,
-        border: "1px solid #E2D1BF",
+        border: "1px solid #DDE3EC",
         borderRadius: 14,
         padding: "10px 12px",
         marginTop: 8,
-        background: "linear-gradient(135deg, #FFF7E8 0%, #EEF2FA 100%)",
+        background: "linear-gradient(135deg, #F7F9FC 0%, #EEF2FA 100%)",
         boxShadow: "0 4px 12px rgba(0,33,93,0.05)",
       }
     : {
@@ -4584,13 +4584,13 @@ function Section28EmptyNote() {
   return (
     <div
       style={{
-        border: "1px dashed #E2D1BF",
+        border: "1px dashed #DDE3EC",
         borderRadius: 12,
         padding: "10px 12px",
         color: "#627D98",
         fontSize: 11,
         textAlign: "center",
-        background: "#FCFBF8",
+        background: "#F7F9FC",
       }}
     >
       אין נתון להצגה
@@ -4609,7 +4609,7 @@ function Section28ComparisonBars({ rows }) {
     <div
       style={{
         background: "#FFFFFF",
-        border: "1px solid #EEE4D8",
+        border: "1px solid #E7ECF3",
         borderRadius: 16,
         padding: 12,
         minHeight: "100%",
@@ -4986,9 +4986,9 @@ function ManualRecognizedPensionTable({ rows, styles }) {
       <div style={{ marginTop: 12, display: "flex", justifyContent: "flex-start" }}>
         <div
           style={{
-            background: "#FFF7E8",
+            background: "#F7F9FC",
             color: "#00215D",
-            border: "1px solid #E2D1BF",
+            border: "1px solid #DDE3EC",
             borderRadius: 999,
             padding: "8px 14px",
             fontSize: 12,
@@ -5014,7 +5014,7 @@ function TaxSavingGapSummary({ pdfTotal, manualTotal }) {
         marginTop: 22,
         padding: "18px 20px",
         borderRadius: 18,
-        border: "1px solid #E2D1BF",
+        border: "1px solid #DDE3EC",
         background:
           "linear-gradient(135deg, rgba(255,255,255,1) 0%, rgba(255,247,232,1) 100%)",
         display: "flex",
@@ -5141,7 +5141,7 @@ function EquityBarModern({ value }) {
           height: "16px",
           borderRadius: "999px",
           background:
-            "linear-gradient(270deg, #F9F7F3 0%, #EAF1FB 45%, #E2D1BF 75%, #00215D 100%)",
+            "linear-gradient(270deg, #F4F6F9 0%, #EAF1FB 45%, #DDE3EC 75%, #00215D 100%)",
           overflow: "hidden",
         }}
       >
@@ -5556,12 +5556,12 @@ function DonutBreakdownCard({
       ) : (
         <div
           style={{
-            border: "1px dashed #E2D1BF",
+            border: "1px dashed #DDE3EC",
             borderRadius: "16px",
             padding: "18px",
             color: "#627D98",
             fontSize: "12px",
-            background: "#FCFBF8",
+            background: "#F7F9FC",
           }}
         >
           אין נתוני אפיקים להצגה

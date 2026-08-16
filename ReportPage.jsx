@@ -414,9 +414,9 @@ function CapitalClassificationOwnerBlock({ entry, styles }) {
   return (
     <div
       style={{
-        border: "1px solid #EEE4D8",
+        border: "1px solid #E7ECF3",
         borderRadius: 18,
-        background: "linear-gradient(180deg, #FFFFFF 0%, #FCFBF8 100%)",
+        background: "linear-gradient(180deg, #FFFFFF 0%, #F7F9FC 100%)",
         overflow: "hidden",
       }}
     >
@@ -427,7 +427,7 @@ function CapitalClassificationOwnerBlock({ entry, styles }) {
           alignItems: "center",
           gap: 12,
           padding: "16px 18px",
-          borderBottom: "1px solid #EEE4D8",
+          borderBottom: "1px solid #E7ECF3",
           background: "#FFFFFF",
           flexWrap: "wrap",
         }}
@@ -490,7 +490,7 @@ function CapitalMiniStat({ label, value }) {
     <div
       style={{
         background: isCapital ? "#FFFDF7" : isPension ? "#F8FBFF" : "#F7F9FC",
-        border: isCapital ? "1px solid #F1E4C8" : isPension ? "1px solid #DDEAF8" : "1px solid #E2D8CA",
+        border: isCapital ? "1px solid #F1E4C8" : isPension ? "1px solid #DDEAF8" : "1px solid #DDE3EC",
         borderRadius: 14,
         padding: "10px 12px",
         textAlign: "center",
@@ -512,7 +512,7 @@ function CapitalLegend() {
       style={{
         margin: "0 0 14px",
         background: "#FFFFFF",
-        border: "1px solid #EEE4D8",
+        border: "1px solid #E7ECF3",
         borderRadius: 14,
         padding: "12px 14px",
         display: "flex",
@@ -594,7 +594,7 @@ function getCapitalCellTone(column) {
 }
 
 function getCapitalToneBackground(tone, isHeader = false, isTotal = false) {
-  if (tone === "capital") return isHeader ? "#FFF8EA" : isTotal ? "#FFF8EA" : "#FFFDF7";
+  if (tone === "capital") return isHeader ? "#EEF2FA" : isTotal ? "#EEF2FA" : "#FFFDF7";
   if (tone === "pension") return isHeader ? "#EEF6FF" : isTotal ? "#EEF6FF" : "#F8FBFF";
   return isHeader ? "#EEF2FA" : isTotal ? "#EEF2FA" : "#FFFFFF";
 }
@@ -645,7 +645,7 @@ function CapitalClassificationTable({ title, subtitle, rows, type }) {
         </div>
       </div>
 
-      <div style={{ overflowX: "auto", border: "1px solid #E2D1BF", borderRadius: 14, background: "#fff", boxShadow: "0 4px 12px rgba(16,42,67,0.04)" }}>
+      <div style={{ overflowX: "auto", border: "1px solid #DDE3EC", borderRadius: 14, background: "#fff", boxShadow: "0 4px 12px rgba(16,42,67,0.04)" }}>
         <table style={{ width: "100%", minWidth, borderCollapse: "collapse", tableLayout: "fixed", direction: "rtl" }}>
           <thead>
             <tr>
@@ -690,7 +690,7 @@ function CapitalClassificationTable({ title, subtitle, rows, type }) {
                         fontSize: 11,
                         fontWeight: isTotalColumn ? 900 : 600,
                         color: isTotalColumn ? "#00215D" : "#102A43",
-                        background: rowIndex % 2 ? "#FFFFFF" : "#FCFBF8",
+                        background: rowIndex % 2 ? "#FFFFFF" : "#F7F9FC",
                         whiteSpace: "normal",
                         wordBreak: "break-word",
                         direction: column.type === "number" ? "ltr" : "rtl",
@@ -736,7 +736,7 @@ function CapitalClassificationTable({ title, subtitle, rows, type }) {
         <div
           style={{
             marginTop: 10,
-            border: "1px solid #EEE4D8",
+            border: "1px solid #E7ECF3",
             borderRadius: 12,
             background: "#FFFFFF",
             color: "#627D98",
@@ -1237,11 +1237,11 @@ export default function ReportPage({
       ? "חשיפה בינונית"
       : "חשיפה גבוהה";
 
-  const pageBg = "#F9F7F3";
+  const pageBg = "#F4F6F9";
   const surface = "#FFFFFF";
-  const surfaceAlt = "#FCFBF8";
-  const border = "#E2D1BF";
-  const divider = "#EEE4D8";
+  const surfaceAlt = "#F7F9FC";
+  const border = "#DDE3EC";
+  const divider = "#E7ECF3";
   const text = "#102A43";
   const textSoft = "#627D98";
   const navy = "#00215D";
@@ -1899,7 +1899,7 @@ export default function ReportPage({
       textAlign: "right",
       fontSize: "12px",
       color: text,
-      borderBottom: "1px solid #F0E6DA",
+      borderBottom: "1px solid #E7ECF3",
       padding: "12px 10px",
       whiteSpace: "nowrap",
     },
@@ -1935,8 +1935,8 @@ export default function ReportPage({
       textAlign: "center",
       fontSize: "12px",
       color: text,
-      borderBottom: "1px solid #F0E6DA",
-      borderLeft: "1px solid #F0E6DA",
+      borderBottom: "1px solid #E7ECF3",
+      borderLeft: "1px solid #E7ECF3",
       padding: "12px 10px",
       whiteSpace: "nowrap",
       background: "#fff",
@@ -1956,11 +1956,11 @@ export default function ReportPage({
       textAlign: "center",
       fontSize: "12px",
       color: navy,
-      borderBottom: "1px solid #E2D1BF",
-      borderLeft: "1px solid #E2D1BF",
+      borderBottom: "1px solid #DDE3EC",
+      borderLeft: "1px solid #DDE3EC",
       padding: "12px 10px",
       whiteSpace: "nowrap",
-      background: "#FFF7E8",
+      background: "#F7F9FC",
       fontWeight: 900,
     },
     section28Grid: {
@@ -1991,7 +1991,7 @@ export default function ReportPage({
       gap: "10px",
       alignItems: "center",
       padding: "8px 0",
-      borderBottom: "1px solid #F0E6DA",
+      borderBottom: "1px solid #E7ECF3",
     },
     section28Label: {
       color: textSoft,
@@ -2037,8 +2037,8 @@ export default function ReportPage({
       textAlign: "center",
       fontSize: "11px",
       color: text,
-      borderBottom: "1px solid #F0E6DA",
-      borderLeft: "1px solid #F0E6DA",
+      borderBottom: "1px solid #E7ECF3",
+      borderLeft: "1px solid #E7ECF3",
       padding: "10px 8px",
       whiteSpace: "nowrap",
       background: "#fff",
@@ -2106,7 +2106,7 @@ export default function ReportPage({
     summaryTopicCard: {
       border: `1px solid ${divider}`,
       borderRadius: "16px",
-      background: "linear-gradient(180deg, #FFFFFF 0%, #FCFBF8 100%)",
+      background: "linear-gradient(180deg, #FFFFFF 0%, #F7F9FC 100%)",
       padding: "10px 12px",
       boxShadow: "0 2px 8px rgba(16,42,67,0.035)",
     },
@@ -2399,13 +2399,13 @@ export default function ReportPage({
             line-height: 1.55 !important;
             margin: 0 0 12px !important;
             padding: 0 2px 10px !important;
-            border-bottom: 1px solid #EEE4D8 !important;
+            border-bottom: 1px solid #E7ECF3 !important;
           }
 
           .client-menu-member-row {
             width: 100% !important;
-            border: 1px solid #EEE4D8 !important;
-            background: linear-gradient(180deg, #FFFFFF 0%, #FCFBF8 100%) !important;
+            border: 1px solid #E7ECF3 !important;
+            background: linear-gradient(180deg, #FFFFFF 0%, #F7F9FC 100%) !important;
             border-radius: 14px !important;
             min-height: 48px !important;
             padding: 0 14px !important;
@@ -2457,8 +2457,8 @@ export default function ReportPage({
           }
 
           .client-menu-empty {
-            border: 1px dashed #E2D1BF !important;
-            background: #FCFBF8 !important;
+            border: 1px dashed #DDE3EC !important;
+            background: #F7F9FC !important;
             color: #627D98 !important;
             border-radius: 14px !important;
             padding: 14px !important;
@@ -2512,7 +2512,7 @@ export default function ReportPage({
             width: 316px !important;
             max-width: calc(100vw - 32px) !important;
             background: rgba(255, 255, 255, 0.98) !important;
-            border: 1px solid #E2D1BF !important;
+            border: 1px solid #DDE3EC !important;
             border-radius: 22px !important;
             box-shadow: 0 18px 40px rgba(16,42,67,0.16) !important;
             padding: 18px !important;
@@ -2541,7 +2541,7 @@ export default function ReportPage({
             gap: 10px !important;
             align-items: center !important;
             padding: 14px 16px !important;
-            border: 1px solid #EEE4D8 !important;
+            border: 1px solid #E7ECF3 !important;
             border-radius: 14px !important;
             background: #FFFFFF !important;
             cursor: pointer !important;
@@ -2576,8 +2576,8 @@ export default function ReportPage({
           }
 
           .client-menu-empty {
-            border: 1px dashed #E2D1BF;
-            background: #FCFBF8;
+            border: 1px dashed #DDE3EC;
+            background: #F7F9FC;
             color: #627D98;
             border-radius: 14px;
             padding: 14px;
@@ -2630,7 +2630,7 @@ export default function ReportPage({
             width: 300px;
             max-width: calc(100vw - 32px);
             background: #ffffff;
-            border: 1px solid #E2D1BF;
+            border: 1px solid #DDE3EC;
             border-radius: 18px;
             box-shadow: 0 16px 34px rgba(16,42,67,0.16);
             padding: 14px;
@@ -2652,7 +2652,7 @@ export default function ReportPage({
           }
 
           .client-menu-section {
-            border-top: 1px solid #EEE4D8;
+            border-top: 1px solid #E7ECF3;
             padding-top: 12px;
             margin-top: 12px;
           }
@@ -2664,7 +2664,7 @@ export default function ReportPage({
             justify-content: space-between;
             gap: 8px;
             padding: 13px 12px;
-            border: 1px solid #EEE4D8;
+            border: 1px solid #E7ECF3;
             border-radius: 12px;
             background: #FFFFFF;
             cursor: pointer;
@@ -2819,13 +2819,13 @@ export default function ReportPage({
             line-height: 1.55 !important;
             margin: 0 0 12px !important;
             padding: 0 2px 10px !important;
-            border-bottom: 1px solid #EEE4D8 !important;
+            border-bottom: 1px solid #E7ECF3 !important;
           }
 
           .client-menu-member-row {
             width: 100% !important;
-            border: 1px solid #EEE4D8 !important;
-            background: linear-gradient(180deg, #FFFFFF 0%, #FCFBF8 100%) !important;
+            border: 1px solid #E7ECF3 !important;
+            background: linear-gradient(180deg, #FFFFFF 0%, #F7F9FC 100%) !important;
             border-radius: 14px !important;
             min-height: 48px !important;
             padding: 0 14px !important;
@@ -2877,8 +2877,8 @@ export default function ReportPage({
           }
 
           .client-menu-empty {
-            border: 1px dashed #E2D1BF !important;
-            background: #FCFBF8 !important;
+            border: 1px dashed #DDE3EC !important;
+            background: #F7F9FC !important;
             color: #627D98 !important;
             border-radius: 14px !important;
             padding: 14px !important;
@@ -3007,13 +3007,13 @@ export default function ReportPage({
             line-height: 1.55 !important;
             margin: 0 0 12px !important;
             padding: 0 2px 10px !important;
-            border-bottom: 1px solid #EEE4D8 !important;
+            border-bottom: 1px solid #E7ECF3 !important;
           }
 
           .client-menu-member-row {
             width: 100% !important;
-            border: 1px solid #EEE4D8 !important;
-            background: linear-gradient(180deg, #FFFFFF 0%, #FCFBF8 100%) !important;
+            border: 1px solid #E7ECF3 !important;
+            background: linear-gradient(180deg, #FFFFFF 0%, #F7F9FC 100%) !important;
             border-radius: 14px !important;
             min-height: 48px !important;
             padding: 0 14px !important;
@@ -3070,8 +3070,8 @@ export default function ReportPage({
           }
 
           .client-menu-empty {
-            border: 1px dashed #E2D1BF !important;
-            background: #FCFBF8 !important;
+            border: 1px dashed #DDE3EC !important;
+            background: #F7F9FC !important;
             color: #627D98 !important;
             border-radius: 14px !important;
             padding: 14px !important;
@@ -3579,9 +3579,9 @@ export default function ReportPage({
                   <div
                     key={`${entry.owner || "owner"}-${entry.sourceFileName || index}`}
                     style={{
-                      border: "1px solid #EEE4D8",
+                      border: "1px solid #E7ECF3",
                       borderRadius: 18,
-                      background: "linear-gradient(180deg, #FFFFFF 0%, #FCFBF8 100%)",
+                      background: "linear-gradient(180deg, #FFFFFF 0%, #F7F9FC 100%)",
                       padding: 16,
                     }}
                   >
@@ -3635,9 +3635,9 @@ export default function ReportPage({
                   <div
                     key={`${entry.owner || "owner"}-${index}`}
                     style={{
-                      border: "1px solid #EEE4D8",
+                      border: "1px solid #E7ECF3",
                       borderRadius: 18,
-                      background: "linear-gradient(180deg, #FFFFFF 0%, #FCFBF8 100%)",
+                      background: "linear-gradient(180deg, #FFFFFF 0%, #F7F9FC 100%)",
                       padding: 16,
                     }}
                   >
@@ -4395,7 +4395,7 @@ function Section28CostSplit({ group, styles }) {
 
   const cardStyle = {
     ...styles.section28Group,
-    background: "linear-gradient(180deg, #FFFFFF 0%, #FCFBF8 100%)",
+    background: "linear-gradient(180deg, #FFFFFF 0%, #F7F9FC 100%)",
   };
 
   return (
@@ -4533,11 +4533,11 @@ function Section28DataRow({ row, styles, isLast = false, forceHighlight = false 
   const rowStyle = isHighlighted
     ? {
         ...styles.section28Row,
-        border: "1px solid #E2D1BF",
+        border: "1px solid #DDE3EC",
         borderRadius: 14,
         padding: "10px 12px",
         marginTop: 8,
-        background: "linear-gradient(135deg, #FFF7E8 0%, #EEF2FA 100%)",
+        background: "linear-gradient(135deg, #F7F9FC 0%, #EEF2FA 100%)",
         boxShadow: "0 4px 12px rgba(0,33,93,0.05)",
       }
     : {
@@ -4584,13 +4584,13 @@ function Section28EmptyNote() {
   return (
     <div
       style={{
-        border: "1px dashed #E2D1BF",
+        border: "1px dashed #DDE3EC",
         borderRadius: 12,
         padding: "10px 12px",
         color: "#627D98",
         fontSize: 11,
         textAlign: "center",
-        background: "#FCFBF8",
+        background: "#F7F9FC",
       }}
     >
       אין נתון להצגה
@@ -4609,7 +4609,7 @@ function Section28ComparisonBars({ rows }) {
     <div
       style={{
         background: "#FFFFFF",
-        border: "1px solid #EEE4D8",
+        border: "1px solid #E7ECF3",
         borderRadius: 16,
         padding: 12,
         minHeight: "100%",
@@ -4986,9 +4986,9 @@ function ManualRecognizedPensionTable({ rows, styles }) {
       <div style={{ marginTop: 12, display: "flex", justifyContent: "flex-start" }}>
         <div
           style={{
-            background: "#FFF7E8",
+            background: "#F7F9FC",
             color: "#00215D",
-            border: "1px solid #E2D1BF",
+            border: "1px solid #DDE3EC",
             borderRadius: 999,
             padding: "8px 14px",
             fontSize: 12,
@@ -5014,7 +5014,7 @@ function TaxSavingGapSummary({ pdfTotal, manualTotal }) {
         marginTop: 22,
         padding: "18px 20px",
         borderRadius: 18,
-        border: "1px solid #E2D1BF",
+        border: "1px solid #DDE3EC",
         background:
           "linear-gradient(135deg, rgba(255,255,255,1) 0%, rgba(255,247,232,1) 100%)",
         display: "flex",
@@ -5141,7 +5141,7 @@ function EquityBarModern({ value }) {
           height: "16px",
           borderRadius: "999px",
           background:
-            "linear-gradient(270deg, #F9F7F3 0%, #EAF1FB 45%, #E2D1BF 75%, #00215D 100%)",
+            "linear-gradient(270deg, #F4F6F9 0%, #EAF1FB 45%, #DDE3EC 75%, #00215D 100%)",
           overflow: "hidden",
         }}
       >
@@ -5556,12 +5556,12 @@ function DonutBreakdownCard({
       ) : (
         <div
           style={{
-            border: "1px dashed #E2D1BF",
+            border: "1px dashed #DDE3EC",
             borderRadius: "16px",
             padding: "18px",
             color: "#627D98",
             fontSize: "12px",
-            background: "#FCFBF8",
+            background: "#F7F9FC",
           }}
         >
           אין נתוני אפיקים להצגה
@@ -5851,25 +5851,25 @@ function PrintReportA4({ reportData, conversationSummary = "", actionRecommendat
       .print-report-root { display: block !important; direction: rtl; font-family: Calibri, Arial, sans-serif; color: #102A43; }
       .print-a4-page { width: 210mm; height: 297mm; padding: 9mm 10mm; background: #fff; page-break-after: always; break-after: page; overflow: hidden; box-sizing: border-box; position: relative; }
       .print-a4-page:last-child { page-break-after: auto; break-after: auto; }
-      .print-page-header { display: flex; justify-content: space-between; align-items: center; padding-bottom: 4mm; margin-bottom: 5mm; border-bottom: 1px solid #E2D1BF; }
+      .print-page-header { display: flex; justify-content: space-between; align-items: center; padding-bottom: 4mm; margin-bottom: 5mm; border-bottom: 1px solid #DDE3EC; }
       .print-logo-text { color: #00215D; font-size: 22px; font-weight: 300; direction: ltr; }
       .print-page-title { color: #00215D; font-size: 18px; font-weight: 900; margin: 0; }
       .print-muted { color: #627D98; font-size: 10.5px; line-height: 1.55; }
       .print-grid-2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4mm; }
       .print-grid-3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4mm; }
       .print-grid-4 { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 3mm; }
-      .print-card { border: 1px solid #E2D1BF; border-radius: 5mm; padding: 4mm; background: #FFFFFF; break-inside: avoid; page-break-inside: avoid; }
-      .print-card-soft { background: #FCFBF8; border: 1px solid #EEE4D8; border-radius: 4mm; padding: 2.8mm; }
+      .print-card { border: 1px solid #DDE3EC; border-radius: 5mm; padding: 4mm; background: #FFFFFF; break-inside: avoid; page-break-inside: avoid; }
+      .print-card-soft { background: #F7F9FC; border: 1px solid #E7ECF3; border-radius: 4mm; padding: 2.8mm; }
       .print-kpi-label { color: #627D98; font-size: 10.5px; font-weight: 800; margin-bottom: 2mm; }
       .print-kpi-value { color: #00215D; font-size: 19px; font-weight: 900; line-height: 1.1; direction: ltr; text-align: right; }
       .print-section-heading { color: #00215D; font-size: 13px; font-weight: 900; margin: 0 0 3mm; }
       .print-table { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 8.5px; }
       .print-table th { background: #00215D; color: white; padding: 1.4mm; border-left: 1px solid rgba(255,255,255,.22); font-weight: 900; }
-      .print-table td { padding: 1.35mm; border: 1px solid #EEE4D8; vertical-align: top; word-break: break-word; }
+      .print-table td { padding: 1.35mm; border: 1px solid #E7ECF3; vertical-align: top; word-break: break-word; }
       .print-bar-track { height: 6mm; background: #EAF1FB; border-radius: 999px; overflow: hidden; }
       .print-bar-fill { height: 100%; background: linear-gradient(90deg, #FF2756, #00215D); border-radius: 999px; }
-      .print-footer { position: absolute; bottom: 6mm; right: 10mm; left: 10mm; display: flex; justify-content: space-between; color: #8AA0B8; font-size: 9px; border-top: 1px solid #EEE4D8; padding-top: 3mm; }
-      .print-list-row { display: grid; grid-template-columns: 20mm minmax(0, 1fr) 28mm; gap: 2mm; align-items: center; border-bottom: 1px solid #EEE4D8; padding: 1.7mm 0; font-size: 9.2px; }
+      .print-footer { position: absolute; bottom: 6mm; right: 10mm; left: 10mm; display: flex; justify-content: space-between; color: #8AA0B8; font-size: 9px; border-top: 1px solid #E7ECF3; padding-top: 3mm; }
+      .print-list-row { display: grid; grid-template-columns: 20mm minmax(0, 1fr) 28mm; gap: 2mm; align-items: center; border-bottom: 1px solid #E7ECF3; padding: 1.7mm 0; font-size: 9.2px; }
       .print-swatch { width: 3mm; height: 3mm; border-radius: 50%; display: inline-block; margin-left: 2mm; }
       .print-pie { width: 42mm; height: 42mm; border-radius: 50%; position: relative; box-shadow: inset 0 0 0 2px rgba(255,255,255,.95), inset 0 -5px 9px rgba(0,0,0,.12), 0 5px 12px rgba(0,33,93,.10); flex: 0 0 auto; }
       .print-pie::after { content: ""; position: absolute; inset: 30%; border-radius: 50%; background: #fff; box-shadow: inset 0 4px 8px rgba(0,33,93,.06); }
@@ -5886,8 +5886,8 @@ function PrintReportA4({ reportData, conversationSummary = "", actionRecommendat
       .print-page-2-exposures { display: grid; grid-template-columns: minmax(0, .95fr) minmax(0, 1.05fr); gap: 4mm; align-items: stretch; }
       .print-page-2-exposures .print-card { min-height: 64mm !important; }
       .print-page-2-exposures .print-pie-card { min-height: 66mm !important; }
-      .print-exposure-stack { border: 1px solid #E2D1BF; border-radius: 5mm; padding: 4mm; background: #FFFFFF; min-height: 66mm; display: flex; flex-direction: column; gap: 4mm; box-sizing: border-box; }
-      .print-exposure-card { background: #FCFBF8; border: 1px solid #EEE4D8; border-radius: 4mm; padding: 4mm; flex: 1; display: flex; flex-direction: column; justify-content: center; }
+      .print-exposure-stack { border: 1px solid #DDE3EC; border-radius: 5mm; padding: 4mm; background: #FFFFFF; min-height: 66mm; display: flex; flex-direction: column; gap: 4mm; box-sizing: border-box; }
+      .print-exposure-card { background: #F7F9FC; border: 1px solid #E7ECF3; border-radius: 4mm; padding: 4mm; flex: 1; display: flex; flex-direction: column; justify-content: center; }
       .print-exposure-row { display: flex; justify-content: space-between; align-items: baseline; gap: 3mm; margin-bottom: 3mm; }
       .print-exposure-legend { display: flex; gap: 4mm; align-items: center; flex-wrap: wrap; color: #627D98; font-size: 9px; font-weight: 800; margin-top: 2.5mm; }
       .print-exposure-dot { width: 3mm; height: 3mm; border-radius: 50%; display: inline-block; margin-left: 1mm; vertical-align: middle; }
@@ -5897,25 +5897,25 @@ function PrintReportA4({ reportData, conversationSummary = "", actionRecommendat
       .print-half-page { height: 123mm; }
       .print-appendix-grid { display: grid; grid-template-columns: minmax(0, 1.78fr) minmax(0, 0.82fr); gap: 4.5mm; align-items: start; direction: rtl; }
       .print-appendix-block { min-height: auto !important; break-inside: auto !important; page-break-inside: auto !important; }
-      .print-appendix-card { border: 1px solid #E2D1BF; border-radius: 5mm; padding: 3.2mm; background: #FFFFFF; box-sizing: border-box; overflow: hidden; }
+      .print-appendix-card { border: 1px solid #DDE3EC; border-radius: 5mm; padding: 3.2mm; background: #FFFFFF; box-sizing: border-box; overflow: hidden; }
       .print-appendix-page { padding: 7mm 9mm !important; }
       .print-appendix-page .print-page-header { margin-bottom: 3.5mm; padding-bottom: 3mm; }
       .print-appendix-page .print-section-heading { font-size: 12px; margin-bottom: 2.2mm; }
-      .print-appendix-page .print-card-soft { border-radius: 5mm; background: linear-gradient(180deg, #FFFFFF 0%, #FCFBF8 100%); }
+      .print-appendix-page .print-card-soft { border-radius: 5mm; background: linear-gradient(180deg, #FFFFFF 0%, #F7F9FC 100%); }
       .print-appendix-grid > .print-appendix-card:first-child { min-height: auto; }
       .print-appendix-grid > .print-appendix-card:nth-child(2) { min-height: auto; }
-      .print-section28-summary-box { border: 1px solid #E2D1BF; border-radius: 4mm; background: #FCFBF8; padding: 3mm 4mm; margin-top: 2.5mm; }
+      .print-section28-summary-box { border: 1px solid #DDE3EC; border-radius: 4mm; background: #F7F9FC; padding: 3mm 4mm; margin-top: 2.5mm; }
       .print-capital-page { padding: 7mm 8mm !important; }
       .print-capital-page .print-page-header { margin-bottom: 3mm; padding-bottom: 3mm; }
-      .print-capital-owner { border: 1px solid #E2D1BF; border-radius: 5mm; background: #FFFFFF; overflow: hidden; margin-bottom: 4mm; }
-      .print-capital-owner-header { display: flex; justify-content: space-between; align-items: center; gap: 3mm; padding: 3mm 4mm; border-bottom: 1px solid #EEE4D8; background: #FCFBF8; }
+      .print-capital-owner { border: 1px solid #DDE3EC; border-radius: 5mm; background: #FFFFFF; overflow: hidden; margin-bottom: 4mm; }
+      .print-capital-owner-header { display: flex; justify-content: space-between; align-items: center; gap: 3mm; padding: 3mm 4mm; border-bottom: 1px solid #E7ECF3; background: #F7F9FC; }
       .print-capital-owner-title { color: #00215D; font-size: 12px; font-weight: 900; }
       .print-capital-owner-source { color: #627D98; font-size: 8.2px; margin-top: 1mm; }
       .print-capital-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2mm; min-width: 70mm; }
       .print-capital-stat { background: #F4F7FB; border: 1px solid #D8E2EF; border-radius: 3mm; padding: 1.8mm; text-align: center; }
       .print-capital-stat-label { color: #627D98; font-size: 7.6px; font-weight: 800; }
       .print-capital-stat-value { color: #00215D; font-size: 9.2px; font-weight: 900; direction: ltr; margin-top: .8mm; }
-      .print-capital-legend { display: flex; gap: 12px; align-items: center; justify-content: flex-start; flex-wrap: wrap; margin: 0 0 6px; padding: 6px 8px; border: 1px solid #EEE4D8; border-radius: 8px; background: #FFFFFF; color: #486581; font-size: 8px; font-weight: 700; }
+      .print-capital-legend { display: flex; gap: 12px; align-items: center; justify-content: flex-start; flex-wrap: wrap; margin: 0 0 6px; padding: 6px 8px; border: 1px solid #E7ECF3; border-radius: 8px; background: #FFFFFF; color: #486581; font-size: 8px; font-weight: 700; }
       .print-capital-legend span { display: inline-flex; align-items: center; gap: 4px; }
       .print-capital-legend i { width: 9px; height: 9px; border-radius: 3px; display: inline-block; }
       .print-capital-legend .legend-capital { background: #FFFDF7; border: 1px solid #F1E4C8; }
@@ -5929,16 +5929,16 @@ function PrintReportA4({ reportData, conversationSummary = "", actionRecommendat
       .print-capital-total td { background: #EEF2FA; color: #1D4ED8; font-weight: 900; }
       .print-section28-summary-label { color: #00215D; font-size: 9.2px; font-weight: 900; line-height: 1.35; margin-bottom: 1.5mm; }
       .print-section28-summary-value { color: #FF2756; font-size: 12px; font-weight: 900; direction: ltr; text-align: left; }
-      .print-section28-compact-title { color: #00215D; font-size: 10.5px; font-weight: 900; margin: 0 0 2mm; padding-bottom: 1.5mm; border-bottom: 1px solid #EEE4D8; }
-      .print-mini-row { display: grid; grid-template-columns: minmax(0, 1fr) 32mm; gap: 2mm; padding: 1.7mm 0; border-bottom: 1px solid #EEE4D8; font-size: 9px; align-items: center; }
+      .print-section28-compact-title { color: #00215D; font-size: 10.5px; font-weight: 900; margin: 0 0 2mm; padding-bottom: 1.5mm; border-bottom: 1px solid #E7ECF3; }
+      .print-mini-row { display: grid; grid-template-columns: minmax(0, 1fr) 32mm; gap: 2mm; padding: 1.7mm 0; border-bottom: 1px solid #E7ECF3; font-size: 9px; align-items: center; }
       .print-mini-value { color: #00215D; font-weight: 900; direction: ltr; text-align: left; white-space: nowrap; }
       .print-section28-two-cols { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 3mm; align-items: start; }
-      .print-section28-side-card { background: #FFFFFF; border: 1px solid #EEE4D8; border-radius: 4mm; padding: 2.6mm; }
-      .print-section28-side-title { color: #00215D; font-size: 10.5px; font-weight: 900; padding-bottom: 2mm; margin-bottom: 2mm; border-bottom: 1px solid #EEE4D8; }
-      .print-section28-line { display: grid; grid-template-columns: minmax(0, 1fr) 22mm; gap: 2mm; align-items: center; padding: 1.65mm 0; border-bottom: 1px solid #F0E6DA; }
+      .print-section28-side-card { background: #FFFFFF; border: 1px solid #E7ECF3; border-radius: 4mm; padding: 2.6mm; }
+      .print-section28-side-title { color: #00215D; font-size: 10.5px; font-weight: 900; padding-bottom: 2mm; margin-bottom: 2mm; border-bottom: 1px solid #E7ECF3; }
+      .print-section28-line { display: grid; grid-template-columns: minmax(0, 1fr) 22mm; gap: 2mm; align-items: center; padding: 1.65mm 0; border-bottom: 1px solid #E7ECF3; }
       .print-section28-line-label { color: #627D98; font-size: 7.8px; font-weight: 800; line-height: 1.22; }
       .print-section28-line-value { color: #00215D; font-size: 8.8px; font-weight: 900; direction: ltr; text-align: left; white-space: nowrap; }
-      .print-section28-line-highlight { border: 1px solid #E2D1BF; border-radius: 4mm; padding: 2mm 2.5mm; margin-top: 2mm; background: linear-gradient(135deg, #FFF7E8 0%, #EEF2FA 100%); box-shadow: 0 1mm 3mm rgba(0,33,93,0.05); }
+      .print-section28-line-highlight { border: 1px solid #DDE3EC; border-radius: 4mm; padding: 2mm 2.5mm; margin-top: 2mm; background: linear-gradient(135deg, #F7F9FC 0%, #EEF2FA 100%); box-shadow: 0 1mm 3mm rgba(0,33,93,0.05); }
       .print-section28-line-highlight .print-section28-line-label { color: #00215D; font-weight: 900; }
       .print-section28-line-highlight .print-section28-line-value { color: #FF2756; }
       .print-section28-monthly { margin-top: 2.5mm; border: 1px solid #D8DEE9; border-radius: 4mm; background: linear-gradient(135deg, #00215D 0%, #001845 100%); color: #fff; padding: 2.6mm; text-align: center; }
@@ -6312,7 +6312,7 @@ function PrintReportA4({ reportData, conversationSummary = "", actionRecommendat
                     whiteSpace: "pre-wrap",
                     fontSize: 10.8,
                     lineHeight: 1.75,
-                    borderColor: isTopicBlock ? "#E2D1BF" : "#EEE4D8",
+                    borderColor: isTopicBlock ? "#DDE3EC" : "#E7ECF3",
                   }}
                 >
                   {isTopicBlock ? (
@@ -6339,7 +6339,7 @@ function PrintReportA4({ reportData, conversationSummary = "", actionRecommendat
         {printActionBlocks.length ? (
           <div style={{ display: "flex", flexDirection: "column", gap: "3mm" }}>
             {printActionBlocks.map((block, blockIndex) => (
-              <div key={`action-print-block-${blockIndex}`} className="print-card-soft" style={{ borderColor: "#E2D1BF" }}>
+              <div key={`action-print-block-${blockIndex}`} className="print-card-soft" style={{ borderColor: "#DDE3EC" }}>
                 <div style={{ color: "#00215D", fontSize: 11.5, fontWeight: 900, marginBottom: "2mm" }}>
                   {block.title}
                 </div>
@@ -6355,7 +6355,7 @@ function PrintReportA4({ reportData, conversationSummary = "", actionRecommendat
                           <div
                             key={`${block.title}-${line}-${lineIndex}`}
                             style={{
-                              border: "1px solid #EEE4D8",
+                              border: "1px solid #E7ECF3",
                               borderRadius: "4mm",
                               background: "#FFFFFF",
                               padding: "2.2mm 3mm",
@@ -6386,7 +6386,7 @@ function PrintReportA4({ reportData, conversationSummary = "", actionRecommendat
                         <div
                           key={`${block.title}-${line}-${lineIndex}`}
                           style={{
-                            border: "1px solid #EEE4D8",
+                            border: "1px solid #E7ECF3",
                             borderRadius: "4mm",
                             background: "#FFFFFF",
                             padding: "2.2mm 3mm",

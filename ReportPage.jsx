@@ -324,12 +324,12 @@ function getCapitalTotalCapital(row) {
   const explicit = getCapitalRowNumber(row, "totalCapital");
   if (explicit > 0) return explicit;
 
-  // סה"כ הון = M + P + R + K + I
+  // סה"כ הון = פיצוים הונים מעסיק נוכחי + תגמולים הונים +
+  //           תגמולים קצבתים עד שנת 2000 + פיצוים הונים פטורים / נזילים
   return (
     getCapitalRowNumber(row, "capitalSeverance") +
     getCapitalRowNumber(row, "capitalRewards") +
     getCapitalRowNumber(row, "annuityRewardsUntil2000") +
-    getCapitalRowNumber(row, "previousEmployersSeveranceRightsSequence") +
     getCapitalRowNumber(row, "liquidExemptSeverance")
   );
 }
@@ -579,7 +579,6 @@ function getCapitalCellTone(column) {
     "capitalRewards",
     "annuityRewardsUntil2000",
     "capitalSeverance",
-    "previousEmployersSeveranceRightsSequence",
     "liquidExemptSeverance",
     "totalCapital",
   ]);

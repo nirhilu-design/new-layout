@@ -290,22 +290,22 @@ function getCapitalClassificationGroupInfo(row) {
 }
 
 function enrichCapitalClassificationTotals(row) {
-  // Classification per the RAW DATA sheet legend:
-  //   סה"כ הון  = עמודה M + P + R + K + I
-  //   סה"כ קצבה = עמודה Q + N + L + J
-  // (פיצויים למס / מעסיק נוכחי – עמודה O – מוצג בנפרד ואינו נכלל בהון/קצבה.)
+  // Classification per the requested logic:
+  //   סה"כ הון  = פיצוים הונים מעסיק נוכחי + תגמולים הונים +
+  //               תגמולים קצבתים עד שנת 2000 + פיצוים הונים פטורים / נזילים
+  //   סה"כ קצבה = תגמולים קצבתים + פיצוים קצבתים מעסיק נוכחי +
+  //               פיצוים ממעסיקים קודמים ברצף קצבה + פיצוים קצבתים פטורים / נזילים
   const totalCapital =
-    Number(row.capitalSeverance || 0) + // M – פיצוים הונים מעסיק נוכחי
-    Number(row.capitalRewards || 0) + // P – תגמולים הונים
-    Number(row.annuityRewardsUntil2000 || 0) + // R – תגמולים קצבתים עד שנת 2000
-    Number(row.previousEmployersSeveranceRightsSequence || 0) + // K – רצף זכויות
-    Number(row.liquidExemptSeverance || 0); // I – פיצוים הונים פטורים / נזילים
+    Number(row.capitalSeverance || 0) + // פיצוים הונים מעסיק נוכחי
+    Number(row.capitalRewards || 0) + // תגמולים הונים
+    Number(row.annuityRewardsUntil2000 || 0) + // תגמולים קצבתים עד שנת 2000
+    Number(row.liquidExemptSeverance || 0); // פיצוים הונים פטורים / נזילים
 
   const totalPension =
-    Number(row.annuityRewards || 0) + // Q – תגמולים קצבתים
-    Number(row.currentEmployerAnnuitySeverance || 0) + // N – פיצוים קצבתים מעסיק נוכחי
-    Number(row.previousEmployersSeveranceAnnuitySequence || 0) + // L – רצף קצבה
-    Number(row.annuitySeverance || 0); // J – פיצוים קצבתים פטורים / נזילים
+    Number(row.annuityRewards || 0) + // תגמולים קצבתים
+    Number(row.currentEmployerAnnuitySeverance || 0) + // פיצוים קצבתים מעסיק נוכחי
+    Number(row.previousEmployersSeveranceAnnuitySequence || 0) + // פיצוים ממעסיקים קודמים ברצף קצבה
+    Number(row.annuitySeverance || 0); // פיצוים קצבתים פטורים / נזילים
 
   return {
     ...row,
@@ -942,17 +942,32 @@ export default function UploadPage({ setReportData }) {
         return item;
       })
       .filter((row) => {
-        const hasIdentity =
-          String(row.policyNumber || "").trim() ||
-          String(row.managerName || "").trim() ||
-          String(row.planName || "").trim() ||
-          String(row.productType || "").trim();
+        const identityText = [
+          row.policyNumber,
+          row.managerName,
+          row.planName,
+          row.productType,
+        ]
+          .map((value) => String(value || "").trim())
+          .filter(Boolean)
+          .join(" ");
+
+        // A real policy row always carries a textual identity (יצרן / תוכנית /
+        // מוצר / מספר קופה). The file's own summary row (‎=SUM(...)‎) and the
+        // legend rows below the table have amounts or notes but no identity, so
+        // requiring an identity keeps them from being counted as policies and
+        // double-counting the "סה\"כ קופה" total.
+        const hasIdentity = Boolean(identityText);
+
+        // Guard against a labelled totals row (e.g. a "סה\"כ" line inside the
+        // data range) that does carry text in an identity column.
+        const looksLikeTotalsRow = /^\s*(סה"?כ|סה״כ|סהכ|total)\b/i.test(identityText);
 
         const hasAmount = CAPITAL_CLASSIFICATION_NUMERIC_FIELDS.some(
           (field) => Number(row[field] || 0) > 0
         );
 
-        return hasIdentity || hasAmount;
+        return hasIdentity && hasAmount && !looksLikeTotalsRow;
       });
 
     if (!normalizedRows.length) {

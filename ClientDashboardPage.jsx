@@ -1375,13 +1375,13 @@ function getCapitalRowCapitalValue(row, isStudyFund = false) {
   const explicit = getCapitalNumber(row, ["totalCapital", "capitalTotal", "סהכ הון", "סה״כ הון"]);
   if (explicit) return explicit;
 
-  // סה"כ הון = M + P + R + K + I
+  // סה"כ הון = פיצוים הונים מעסיק נוכחי + תגמולים הונים +
+  //           תגמולים קצבתים עד שנת 2000 + פיצוים הונים פטורים / נזילים
   return getCapitalSum(row, [
-    "capitalSeverance", // M
-    "capitalRewards", // P
-    "annuityRewardsUntil2000", // R
-    "previousEmployersSeveranceRightsSequence", // K
-    "liquidExemptSeverance", // I
+    "capitalSeverance", // פיצוים הונים מעסיק נוכחי
+    "capitalRewards", // תגמולים הונים
+    "annuityRewardsUntil2000", // תגמולים קצבתים עד שנת 2000
+    "liquidExemptSeverance", // פיצוים הונים פטורים / נזילים
   ]);
 }
 

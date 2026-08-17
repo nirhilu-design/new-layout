@@ -1376,11 +1376,13 @@ function getCapitalRowCapitalValue(row, isStudyFund = false) {
   if (explicit) return explicit;
 
   // סה"כ הון = פיצוים הונים מעסיק נוכחי + תגמולים הונים +
-  //           תגמולים קצבתים עד שנת 2000 + פיצוים הונים פטורים / נזילים
+  //           תגמולים קצבתים עד שנת 2000 + פיצוים ממעסיקים קודמים ברצף זכויות +
+  //           פיצוים הונים פטורים / נזילים
   return getCapitalSum(row, [
     "capitalSeverance", // פיצוים הונים מעסיק נוכחי
     "capitalRewards", // תגמולים הונים
     "annuityRewardsUntil2000", // תגמולים קצבתים עד שנת 2000
+    "previousEmployersSeveranceRightsSequence", // רצף זכויות (מעמד הון)
     "liquidExemptSeverance", // פיצוים הונים פטורים / נזילים
   ]);
 }

@@ -292,13 +292,15 @@ function getCapitalClassificationGroupInfo(row) {
 function enrichCapitalClassificationTotals(row) {
   // Classification per the requested logic:
   //   סה"כ הון  = פיצוים הונים מעסיק נוכחי + תגמולים הונים +
-  //               תגמולים קצבתים עד שנת 2000 + פיצוים הונים פטורים / נזילים
+  //               תגמולים קצבתים עד שנת 2000 + פיצוים ממעסיקים קודמים ברצף
+  //               זכויות + פיצוים הונים פטורים / נזילים
   //   סה"כ קצבה = תגמולים קצבתים + פיצוים קצבתים מעסיק נוכחי +
   //               פיצוים ממעסיקים קודמים ברצף קצבה + פיצוים קצבתים פטורים / נזילים
   const totalCapital =
     Number(row.capitalSeverance || 0) + // פיצוים הונים מעסיק נוכחי
     Number(row.capitalRewards || 0) + // תגמולים הונים
     Number(row.annuityRewardsUntil2000 || 0) + // תגמולים קצבתים עד שנת 2000
+    Number(row.previousEmployersSeveranceRightsSequence || 0) + // רצף זכויות (מעמד הון)
     Number(row.liquidExemptSeverance || 0); // פיצוים הונים פטורים / נזילים
 
   const totalPension =

@@ -408,13 +408,16 @@ function CapitalClassificationOwnerBlock({ entry, styles }) {
   const pensionRows = normalizeCapitalReportArray(entry?.pensionPolicies);
   const studyRows = normalizeCapitalReportArray(entry?.studyFunds);
   const allRows = [...pensionRows, ...studyRows];
+  // סה"כ קופה = כל הכספים (פוליסות + קרנות השתלמות).
+  // סה"כ תגמולים / פיצויים / הון / קצבה = פוליסות בלבד; קרנות השתלמות
+  // מוצגות בנפרד כצבירה ואינן נכללות בסיווג ההוני / הקצבתי.
   const totalBalance =
     summarizeCapitalRows(allRows, "totalBalance") ||
     summarizeCapitalRows(studyRows, "redemptionValue");
-  const totalRewards = summarizeCapitalRows(allRows, "totalRewards");
-  const totalSeverance = summarizeCapitalRows(allRows, "totalSeverance");
-  const totalCapital = summarizeCapitalDerivedRows(allRows, "totalCapital");
-  const totalPension = summarizeCapitalDerivedRows(allRows, "totalPension");
+  const totalRewards = summarizeCapitalRows(pensionRows, "totalRewards");
+  const totalSeverance = summarizeCapitalRows(pensionRows, "totalSeverance");
+  const totalCapital = summarizeCapitalDerivedRows(pensionRows, "totalCapital");
+  const totalPension = summarizeCapitalDerivedRows(pensionRows, "totalPension");
 
   return (
     <div
@@ -6509,11 +6512,13 @@ function PrintReportA4({ reportData, conversationSummary = "", actionRecommendat
         const pensionRows = normalizeCapitalReportArray(entry.pensionPolicies);
         const studyRows = normalizeCapitalReportArray(entry.studyFunds);
         const allRows = [...pensionRows, ...studyRows];
+        // סה"כ קופה = כל הכספים; שאר הסיכומים = פוליסות בלבד (קרנות
+        // השתלמות מוצגות בנפרד כצבירה ואינן נכללות בהון / קצבה).
         const totalBalance = summarizeCapitalRows(allRows, "totalBalance") || summarizeCapitalRows(studyRows, "redemptionValue");
-        const totalRewards = summarizeCapitalRows(allRows, "totalRewards");
-        const totalSeverance = summarizeCapitalRows(allRows, "totalSeverance");
-        const totalCapital = summarizeCapitalDerivedRows(allRows, "totalCapital");
-        const totalPension = summarizeCapitalDerivedRows(allRows, "totalPension");
+        const totalRewards = summarizeCapitalRows(pensionRows, "totalRewards");
+        const totalSeverance = summarizeCapitalRows(pensionRows, "totalSeverance");
+        const totalCapital = summarizeCapitalDerivedRows(pensionRows, "totalCapital");
+        const totalPension = summarizeCapitalDerivedRows(pensionRows, "totalPension");
 
         return (
           <div className="print-capital-owner" key={`${entry.owner}-${entryIndex}`}>

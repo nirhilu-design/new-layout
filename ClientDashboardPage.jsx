@@ -1357,48 +1357,32 @@ function getCapitalRowCompensationValue(row) {
 }
 
 function getCapitalRowPensionValue(row) {
-  const components = getCapitalSum(row, [
-    "annuityRewards",
-    "pensionRewards",
-    "annuitySeverance",
-    "pensionCompensation",
-    "previousEmployersSeveranceRightsSequence",
-    "currentEmployerSeveranceTaxable",
-    "taxableCompensation",
-    "pension",
-    "תגמולים קצבתיים",
-    "פיצויים קצבתיים",
-    "פיצויים מעסיק נוכחי למס",
-    "פיצויים ממעסיקים קודמים ברצף זכויות",
-    "פנסיה",
+  const explicit = getCapitalNumber(row, ["totalPension", "pensionTotal", "סהכ קצבה", "סה״כ קצבה"]);
+  if (explicit) return explicit;
+
+  // סה"כ קצבה = Q + N + L + J
+  return getCapitalSum(row, [
+    "annuityRewards", // Q
+    "currentEmployerAnnuitySeverance", // N
+    "previousEmployersSeveranceAnnuitySequence", // L
+    "annuitySeverance", // J
   ]);
-
-  if (components) return components;
-
-  return getCapitalNumber(row, ["totalPension", "pensionTotal", "סהכ קצבה", "סה״כ קצבה"]);
 }
 
 function getCapitalRowCapitalValue(row, isStudyFund = false) {
   if (isStudyFund) return getCapitalRowFundValue(row);
 
-  const components = getCapitalSum(row, [
-    "capitalRewards",
-    "annuityRewardsUntil2000",
-    "pre2000Rewards",
-    "rewardsBefore2000",
-    "capitalSeverance",
-    "liquidExemptSeverance",
-    "capitalCompensation",
-    "liquidCompensation",
-    "exemptCompensation",
-    "תגמולים הוניים",
-    "תגמולים קצבתיים עד 1.1.2000",
-    "פיצויים הוניים",
+  const explicit = getCapitalNumber(row, ["totalCapital", "capitalTotal", "סהכ הון", "סה״כ הון"]);
+  if (explicit) return explicit;
+
+  // סה"כ הון = M + P + R + K + I
+  return getCapitalSum(row, [
+    "capitalSeverance", // M
+    "capitalRewards", // P
+    "annuityRewardsUntil2000", // R
+    "previousEmployersSeveranceRightsSequence", // K
+    "liquidExemptSeverance", // I
   ]);
-
-  if (components) return components;
-
-  return getCapitalNumber(row, ["totalCapital", "capitalTotal", "סהכ הון", "סה״כ הון"]);
 }
 
 function getCapitalSummary(sections) {

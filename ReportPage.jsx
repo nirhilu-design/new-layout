@@ -324,10 +324,12 @@ function getCapitalTotalCapital(row) {
   const explicit = getCapitalRowNumber(row, "totalCapital");
   if (explicit > 0) return explicit;
 
+  // סה"כ הון = M + P + R + K + I
   return (
+    getCapitalRowNumber(row, "capitalSeverance") +
     getCapitalRowNumber(row, "capitalRewards") +
     getCapitalRowNumber(row, "annuityRewardsUntil2000") +
-    getCapitalRowNumber(row, "capitalSeverance") +
+    getCapitalRowNumber(row, "previousEmployersSeveranceRightsSequence") +
     getCapitalRowNumber(row, "liquidExemptSeverance")
   );
 }
@@ -336,11 +338,12 @@ function getCapitalTotalPension(row) {
   const explicit = getCapitalRowNumber(row, "totalPension");
   if (explicit > 0) return explicit;
 
+  // סה"כ קצבה = Q + N + L + J
   return (
     getCapitalRowNumber(row, "annuityRewards") +
-    getCapitalRowNumber(row, "annuitySeverance") +
-    getCapitalRowNumber(row, "previousEmployersSeveranceRightsSequence") +
-    getCapitalRowNumber(row, "pension")
+    getCapitalRowNumber(row, "currentEmployerAnnuitySeverance") +
+    getCapitalRowNumber(row, "previousEmployersSeveranceAnnuitySequence") +
+    getCapitalRowNumber(row, "annuitySeverance")
   );
 }
 
@@ -576,13 +579,15 @@ function getCapitalCellTone(column) {
     "capitalRewards",
     "annuityRewardsUntil2000",
     "capitalSeverance",
+    "previousEmployersSeveranceRightsSequence",
     "liquidExemptSeverance",
     "totalCapital",
   ]);
 
   const pensionKeys = new Set([
     "annuityRewards",
-    "previousEmployersSeveranceRightsSequence",
+    "currentEmployerAnnuitySeverance",
+    "previousEmployersSeveranceAnnuitySequence",
     "annuitySeverance",
     "pension",
     "totalPension",
@@ -608,8 +613,10 @@ function CapitalClassificationTable({ title, subtitle, rows, type }) {
     { key: "annuityRewards", label: "תגמולים קצבתיים", type: "number" },
     { key: "annuityRewardsUntil2000", label: "תגמולים קצבתיים עד 1.1.2000", type: "number" },
     { key: "previousEmployersSeveranceRightsSequence", label: "פיצויים ממעסיקים קודמים ברצף זכויות", type: "number" },
+    { key: "previousEmployersSeveranceAnnuitySequence", label: "פיצויים ממעסיקים קודמים ברצף קצבה", type: "number" },
+    { key: "capitalSeverance", label: "פיצויים הוניים מעסיק נוכחי", type: "number" },
+    { key: "currentEmployerAnnuitySeverance", label: "פיצויים קצבתיים מעסיק נוכחי", type: "number" },
     { key: "currentEmployerSeveranceTaxable", label: "פיצויים מעסיק נוכחי למס", type: "number" },
-    { key: "capitalSeverance", label: "פיצויים הוניים", type: "number" },
     { key: "liquidExemptSeverance", label: "פיצויים הוניים פטורים / נזילים", type: "number" },
     { key: "annuitySeverance", label: "פיצויים קצבתיים פטורים / נזילים", type: "number" },
     { key: "totalCapital", label: "סה״כ הון", type: "number", alwaysVisible: true, isTotalColumn: true },
@@ -6431,8 +6438,10 @@ function PrintReportA4({ reportData, conversationSummary = "", actionRecommendat
       { key: "annuityRewards", label: "תגמולים קצבתיים", type: "number" },
       { key: "annuityRewardsUntil2000", label: "תגמולים קצבתיים עד 1.1.2000", type: "number" },
       { key: "previousEmployersSeveranceRightsSequence", label: "פיצויים ממעסיקים קודמים ברצף זכויות", type: "number" },
+      { key: "previousEmployersSeveranceAnnuitySequence", label: "פיצויים ממעסיקים קודמים ברצף קצבה", type: "number" },
+      { key: "capitalSeverance", label: "פיצויים הוניים מעסיק נוכחי", type: "number" },
+      { key: "currentEmployerAnnuitySeverance", label: "פיצויים קצבתיים מעסיק נוכחי", type: "number" },
       { key: "currentEmployerSeveranceTaxable", label: "פיצויים מעסיק נוכחי למס", type: "number" },
-      { key: "capitalSeverance", label: "פיצויים הוניים", type: "number" },
       { key: "liquidExemptSeverance", label: "פיצויים הוניים פטורים / נזילים", type: "number" },
       { key: "annuitySeverance", label: "פיצויים קצבתיים פטורים / נזילים", type: "number" },
       { key: "totalCapital", label: "סה״כ הון", type: "number", alwaysVisible: true },

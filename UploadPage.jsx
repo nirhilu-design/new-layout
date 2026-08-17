@@ -126,8 +126,10 @@ const CAPITAL_CLASSIFICATION_NUMERIC_FIELDS = [
   "totalBalance",
   "capitalSeverance",
   "annuitySeverance",
+  "currentEmployerAnnuitySeverance",
   "currentEmployerSeveranceTaxable",
   "previousEmployersSeveranceRightsSequence",
+  "previousEmployersSeveranceAnnuitySequence",
   "liquidExemptSeverance",
   "capitalRewards",
   "annuityRewardsUntil2000",
@@ -199,17 +201,35 @@ function formatCapitalClassificationCell(value, cell) {
 }
 
 function findCapitalClassificationColumnIndex(headers, candidates) {
-  const normalizedCandidates = candidates.map(normalizeCapitalClassificationKey);
+  const normalizedHeaders = headers.map(normalizeCapitalClassificationKey);
+  const normalizedCandidates = candidates
+    .map(normalizeCapitalClassificationKey)
+    .filter(Boolean);
 
-  return headers.findIndex((header) => {
-    const normalizedHeader = normalizeCapitalClassificationKey(header);
-    return normalizedCandidates.some(
-      (candidate) =>
-        normalizedHeader === candidate ||
-        normalizedHeader.includes(candidate) ||
-        candidate.includes(normalizedHeader)
+  // Pass 1 — exact match. Columns such as "פיצוים הונים מעסיק נוכחי" and
+  // "פיצוים הונים פטורים / נזילים" share a prefix, so an exact match must win
+  // before any fuzzy "includes" check, otherwise the value lands in the wrong
+  // classification (הון instead of קצבה and vice versa).
+  for (const candidate of normalizedCandidates) {
+    const exact = normalizedHeaders.findIndex((header) => header === candidate);
+    if (exact !== -1) return exact;
+  }
+
+  // Pass 2 — header contains the full candidate phrase.
+  for (const candidate of normalizedCandidates) {
+    const idx = normalizedHeaders.findIndex((header) => header.includes(candidate));
+    if (idx !== -1) return idx;
+  }
+
+  // Pass 3 — candidate contains an abbreviated header.
+  for (const candidate of normalizedCandidates) {
+    const idx = normalizedHeaders.findIndex(
+      (header) => header && candidate.includes(header)
     );
-  });
+    if (idx !== -1) return idx;
+  }
+
+  return -1;
 }
 
 function getCapitalClassificationOwnerLabel(owner) {
@@ -270,18 +290,24 @@ function getCapitalClassificationGroupInfo(row) {
 }
 
 function enrichCapitalClassificationTotals(row) {
+  // Classification per the requested logic:
+  //   סה"כ הון  = פיצוים הונים מעסיק נוכחי + תגמולים הונים +
+  //               תגמולים קצבתים עד שנת 2000 + פיצוים ממעסיקים קודמים ברצף
+  //               זכויות + פיצוים הונים פטורים / נזילים
+  //   סה"כ קצבה = תגמולים קצבתים + פיצוים קצבתים מעסיק נוכחי +
+  //               פיצוים ממעסיקים קודמים ברצף קצבה + פיצוים קצבתים פטורים / נזילים
   const totalCapital =
-    Number(row.capitalRewards || 0) +
-    Number(row.capitalSeverance || 0) +
-    Number(row.liquidExemptSeverance || 0) +
-    Number(row.currentEmployerSeveranceTaxable || 0);
+    Number(row.capitalSeverance || 0) + // פיצוים הונים מעסיק נוכחי
+    Number(row.capitalRewards || 0) + // תגמולים הונים
+    Number(row.annuityRewardsUntil2000 || 0) + // תגמולים קצבתים עד שנת 2000
+    Number(row.previousEmployersSeveranceRightsSequence || 0) + // רצף זכויות (מעמד הון)
+    Number(row.liquidExemptSeverance || 0); // פיצוים הונים פטורים / נזילים
 
   const totalPension =
-    Number(row.annuityRewards || 0) +
-    Number(row.annuityRewardsUntil2000 || 0) +
-    Number(row.annuitySeverance || 0) +
-    Number(row.previousEmployersSeveranceRightsSequence || 0) +
-    Number(row.pension || 0);
+    Number(row.annuityRewards || 0) + // תגמולים קצבתים
+    Number(row.currentEmployerAnnuitySeverance || 0) + // פיצוים קצבתים מעסיק נוכחי
+    Number(row.previousEmployersSeveranceAnnuitySequence || 0) + // פיצוים ממעסיקים קודמים ברצף קצבה
+    Number(row.annuitySeverance || 0); // פיצוים קצבתים פטורים / נזילים
 
   return {
     ...row,
@@ -814,41 +840,50 @@ export default function UploadPage({ setReportData }) {
         "סהכ צבירה",
       ]),
       capitalSeverance: findCapitalClassificationColumnIndex(headers, [
-        "פיצוים הונים",
-        "פיצויים הוניים",
+        "פיצוים הונים מעסיק נוכחי",
+        "פיצויים הוניים מעסיק נוכחי",
       ]),
       annuitySeverance: findCapitalClassificationColumnIndex(headers, [
-        "פיצוים קצבתיים",
-        "פיצויים קצבתיים",
+        "פיצוים קצבתים פטורים / נזילים",
+        "פיצויים קצבתיים פטורים נזילים",
+        "פיצוים קצבתים פטורים נזילים",
+      ]),
+      currentEmployerAnnuitySeverance: findCapitalClassificationColumnIndex(headers, [
+        "פיצוים קצבתים מעסיק נוכחי",
+        "פיצויים קצבתיים מעסיק נוכחי",
       ]),
       currentEmployerSeveranceTaxable: findCapitalClassificationColumnIndex(headers, [
-        "פיצויים למס",
         "פיצוים למס",
-        "פיצויים מעסיק נוכחי",
-        "פיצוים מעסיק נוכחי",
-        "מעסיק נוכחי",
+        "פיצויים למס",
       ]),
       previousEmployersSeveranceRightsSequence: findCapitalClassificationColumnIndex(headers, [
-        "פיצויים ממעסיקים קודמים ברצף זכויות",
         "פיצוים ממעסיקים קודמים ברצף זכויות",
+        "פיצויים ממעסיקים קודמים ברצף זכויות",
         "רצף זכויות",
       ]),
+      previousEmployersSeveranceAnnuitySequence: findCapitalClassificationColumnIndex(headers, [
+        "פיצוים ממעסיקים קודמים ברצף קצבה",
+        "פיצויים ממעסיקים קודמים ברצף קצבה",
+        "רצף קצבה",
+      ]),
       liquidExemptSeverance: findCapitalClassificationColumnIndex(headers, [
+        "פיצוים הונים פטורים / נזילים",
         "פיצויים הוניים פטורים נזילים",
         "פיצוים הונים פטורים נזילים",
-        "פטורים נזילים",
       ]),
       capitalRewards: findCapitalClassificationColumnIndex(headers, [
         "תגמולים הוניים",
         "תגמולים הונים",
       ]),
       annuityRewardsUntil2000: findCapitalClassificationColumnIndex(headers, [
-        "תגמולים קצבתיים עד 1.1.2000",
+        "תגמולים קצבתים עד שנת 2000",
         "תגמולים קצבתיים עד שנת 2000",
-        "עד 1.1.2000",
+        "תגמולים קצבתיים עד 1.1.2000",
         "עד שנת 2000",
+        "עד 1.1.2000",
       ]),
       annuityRewards: findCapitalClassificationColumnIndex(headers, [
+        "תגמולים קצבתים",
         "תגמולים קצבתיים",
       ]),
       pension: findCapitalClassificationColumnIndex(headers, ["פנסיה", "קצבה"]),
@@ -881,11 +916,17 @@ export default function UploadPage({ setReportData }) {
           totalBalance: parseCapitalClassificationNumber(getValue(row, "totalBalance")),
           capitalSeverance: parseCapitalClassificationNumber(getValue(row, "capitalSeverance")),
           annuitySeverance: parseCapitalClassificationNumber(getValue(row, "annuitySeverance")),
+          currentEmployerAnnuitySeverance: parseCapitalClassificationNumber(
+            getValue(row, "currentEmployerAnnuitySeverance")
+          ),
           currentEmployerSeveranceTaxable: parseCapitalClassificationNumber(
             getValue(row, "currentEmployerSeveranceTaxable")
           ),
           previousEmployersSeveranceRightsSequence: parseCapitalClassificationNumber(
             getValue(row, "previousEmployersSeveranceRightsSequence")
+          ),
+          previousEmployersSeveranceAnnuitySequence: parseCapitalClassificationNumber(
+            getValue(row, "previousEmployersSeveranceAnnuitySequence")
           ),
           liquidExemptSeverance: parseCapitalClassificationNumber(
             getValue(row, "liquidExemptSeverance")
@@ -903,17 +944,32 @@ export default function UploadPage({ setReportData }) {
         return item;
       })
       .filter((row) => {
-        const hasIdentity =
-          String(row.policyNumber || "").trim() ||
-          String(row.managerName || "").trim() ||
-          String(row.planName || "").trim() ||
-          String(row.productType || "").trim();
+        const identityText = [
+          row.policyNumber,
+          row.managerName,
+          row.planName,
+          row.productType,
+        ]
+          .map((value) => String(value || "").trim())
+          .filter(Boolean)
+          .join(" ");
+
+        // A real policy row always carries a textual identity (יצרן / תוכנית /
+        // מוצר / מספר קופה). The file's own summary row (‎=SUM(...)‎) and the
+        // legend rows below the table have amounts or notes but no identity, so
+        // requiring an identity keeps them from being counted as policies and
+        // double-counting the "סה\"כ קופה" total.
+        const hasIdentity = Boolean(identityText);
+
+        // Guard against a labelled totals row (e.g. a "סה\"כ" line inside the
+        // data range) that does carry text in an identity column.
+        const looksLikeTotalsRow = /^\s*(סה"?כ|סה״כ|סהכ|total)\b/i.test(identityText);
 
         const hasAmount = CAPITAL_CLASSIFICATION_NUMERIC_FIELDS.some(
           (field) => Number(row[field] || 0) > 0
         );
 
-        return hasIdentity || hasAmount;
+        return hasIdentity && hasAmount && !looksLikeTotalsRow;
       });
 
     if (!normalizedRows.length) {

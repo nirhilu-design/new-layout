@@ -2223,48 +2223,35 @@ function getCapitalRowCompensationValue(row) {
 }
 
 function getCapitalRowPensionValue(row) {
-  const components = getCapitalSum(row, [
+  const explicit = getCapitalNumber(row, ["totalPension", "pensionTotal", "סהכ קצבה", "סה״כ קצבה"]);
+  if (explicit) return explicit;
+
+  // סה"כ קצבה = תגמולים קצבתים + פיצוים קצבתים מעסיק נוכחי +
+  //           פיצוים ממעסיקים קודמים ברצף קצבה + פיצוים קצבתים פטורים / נזילים
+  return getCapitalSum(row, [
     "annuityRewards",
-    "pensionRewards",
+    "currentEmployerAnnuitySeverance",
+    "previousEmployersSeveranceAnnuitySequence",
     "annuitySeverance",
-    "pensionCompensation",
-    "previousEmployersSeveranceRightsSequence",
-    "currentEmployerSeveranceTaxable",
-    "taxableCompensation",
-    "pension",
-    "תגמולים קצבתיים",
-    "פיצויים קצבתיים",
-    "פיצויים מעסיק נוכחי למס",
-    "פיצויים ממעסיקים קודמים ברצף זכויות",
-    "פנסיה",
   ]);
-
-  if (components) return components;
-
-  return getCapitalNumber(row, ["totalPension", "pensionTotal", "סהכ קצבה", "סה״כ קצבה"]);
 }
 
 function getCapitalRowCapitalValue(row, isStudyFund = false) {
   if (isStudyFund) return getCapitalRowFundValue(row);
 
-  const components = getCapitalSum(row, [
+  const explicit = getCapitalNumber(row, ["totalCapital", "capitalTotal", "סהכ הון", "סה״כ הון"]);
+  if (explicit) return explicit;
+
+  // סה"כ הון = פיצוים הונים מעסיק נוכחי + תגמולים הונים +
+  //           תגמולים קצבתים עד שנת 2000 + פיצוים ממעסיקים קודמים ברצף זכויות +
+  //           פיצוים הונים פטורים / נזילים
+  return getCapitalSum(row, [
+    "capitalSeverance",
     "capitalRewards",
     "annuityRewardsUntil2000",
-    "pre2000Rewards",
-    "rewardsBefore2000",
-    "capitalSeverance",
+    "previousEmployersSeveranceRightsSequence",
     "liquidExemptSeverance",
-    "capitalCompensation",
-    "liquidCompensation",
-    "exemptCompensation",
-    "תגמולים הוניים",
-    "תגמולים קצבתיים עד 1.1.2000",
-    "פיצויים הוניים",
   ]);
-
-  if (components) return components;
-
-  return getCapitalNumber(row, ["totalCapital", "capitalTotal", "סהכ הון", "סה״כ הון"]);
 }
 
 function getCapitalSummary(sections) {
@@ -2275,11 +2262,18 @@ function getCapitalSummary(sections) {
 
   return rows.reduce((acc, item) => {
     const row = item.row || {};
+
+    // סה"כ קופה כולל את כל הכספים – פוליסות וגם קרנות השתלמות.
     acc.totalFund += getCapitalRowFundValue(row);
+
+    // תגמולים / פיצויים / הון / קצבה מחושבים על פוליסות בלבד. קרנות
+    // השתלמות מוצגות בנפרד כצבירה ואינן נכללות בסיווג ההוני / הקצבתי.
+    if (item.isStudyFund) return acc;
+
     acc.totalRewards += getCapitalNumber(row, ["totalRewards", "rewardsTotal", "סהכ תגמולים", "סה\"כ תגמולים"]) || getCapitalSum(row, ["capitalRewards", "annuityRewardsUntil2000", "annuityRewards", "תגמולים הוניים", "תגמולים קצבתיים", "תגמולים קצבתיים עד 1.1.2000"]);
     acc.totalCompensation += getCapitalRowCompensationValue(row);
-    acc.totalCapital += getCapitalRowCapitalValue(row, item.isStudyFund);
-    acc.totalPension += item.isStudyFund ? 0 : getCapitalRowPensionValue(row);
+    acc.totalCapital += getCapitalRowCapitalValue(row, false);
+    acc.totalPension += getCapitalRowPensionValue(row);
     return acc;
   }, { totalFund: 0, totalRewards: 0, totalCompensation: 0, totalCapital: 0, totalPension: 0 });
 }

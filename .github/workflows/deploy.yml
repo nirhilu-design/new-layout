@@ -38,5 +38,8 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          # Wrangler v4 is required to deploy an assets-only (static SPA) Worker
+          # that has no `main` script; v3.90 fails with "Missing entry-point".
+          wranglerVersion: "4.42.0"
           workingDirectory: vue-app
           command: deploy

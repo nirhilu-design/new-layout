@@ -326,7 +326,7 @@ function groupCapitalClassificationRows(rows) {
     const key = groupInfo.shouldKeepSingle ? `${groupInfo.key}-${index}` : groupInfo.key;
 
     if (!groupedMap.has(key)) {
-      groupedMap.set(key, {
+      const groupSeed = {
         ...row,
         id: `capital-group-${key}`,
         policyNumber: groupInfo.shouldKeepSingle ? row.policyNumber : "",
@@ -335,7 +335,15 @@ function groupCapitalClassificationRows(rows) {
         sourceRows: [],
         sourcePolicies: [],
         isGrouped: !groupInfo.shouldKeepSingle,
+      };
+      // Zero the numeric fields on the seed so the accumulation loop below
+      // counts every source row exactly once. Otherwise the first row's values
+      // are spread in via `...row` and then added again, double-counting that
+      // row and inflating the totals (most visibly "סה\"כ קופה").
+      CAPITAL_CLASSIFICATION_NUMERIC_FIELDS.forEach((field) => {
+        groupSeed[field] = 0;
       });
+      groupedMap.set(key, groupSeed);
     }
 
     const target = groupedMap.get(key);

@@ -1,0 +1,42 @@
+name: Deploy vue-app to Cloudflare
+
+# בונה ומפרס את אפליקציית ה-Vue (vue-app) ל-Cloudflare Workers בכל דחיפה
+# ל-main, וגם ידנית מלשונית Actions (workflow_dispatch).
+# דורש שני secrets ב-repo: CLOUDFLARE_API_TOKEN ו-CLOUDFLARE_ACCOUNT_ID.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: vue-app/package-lock.json
+
+      - name: Install dependencies
+        working-directory: vue-app
+        run: npm ci
+
+      - name: Build
+        working-directory: vue-app
+        run: npm run build
+
+      - name: Deploy to Cloudflare Workers
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: vue-app
+          command: deploy

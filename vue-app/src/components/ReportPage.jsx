@@ -412,14 +412,16 @@ function CapitalClassificationOwnerBlock({ entry, styles }) {
   const studyRows = normalizeCapitalReportArray(entry?.studyFunds);
   const allRows = [...pensionRows, ...studyRows];
   // סה"כ קופה = כל הכספים (פוליסות + קרנות השתלמות).
-  // סה"כ תגמולים / פיצויים / הון / קצבה = פוליסות בלבד; קרנות השתלמות
-  // מוצגות בנפרד כצבירה ואינן נכללות בסיווג ההוני / הקצבתי.
+  // סה"כ תגמולים / פיצויים / קצבה = פוליסות בלבד.
+  // סה"כ הון = הון הפוליסות (כולל גמל להשקעה) + צבירת קרנות השתלמות
+  //           (קרנות השתלמות הן כספים הוניים).
+  const studyBalance = studyRows.reduce((sum, row) => sum + getStudyFundBalance(row), 0);
   const totalBalance =
     summarizeCapitalRows(allRows, "totalBalance") ||
     summarizeCapitalRows(studyRows, "redemptionValue");
   const totalRewards = summarizeCapitalRows(pensionRows, "totalRewards");
   const totalSeverance = summarizeCapitalRows(pensionRows, "totalSeverance");
-  const totalCapital = summarizeCapitalDerivedRows(pensionRows, "totalCapital");
+  const totalCapital = summarizeCapitalDerivedRows(pensionRows, "totalCapital") + studyBalance;
   const totalPension = summarizeCapitalDerivedRows(pensionRows, "totalPension");
 
   return (
@@ -6093,14 +6095,14 @@ export function PrintReportA4({ reportData, conversationSummary = "", actionReco
   const allCapitalPension = capitalClassificationEntries.flatMap((e) => normalizeCapitalReportArray(e.pensionPolicies));
   const allCapitalStudy = capitalClassificationEntries.flatMap((e) => normalizeCapitalReportArray(e.studyFunds));
   const allCapitalRows = [...allCapitalPension, ...allCapitalStudy];
-  // סה"כ קופה = כל הכספים; שאר הסיכומים = פוליסות בלבד (קרנות השתלמות
-  // מוצגות בנפרד כצבירה ואינן נכללות בהון / קצבה / תגמולים / פיצויים).
+  // סה"כ קופה = כל הכספים; תגמולים/פיצויים/קצבה = פוליסות בלבד.
+  // סה"כ הון = הון הפוליסות (כולל גמל להשקעה) + צבירת קרנות השתלמות.
+  const capStudyBalance = allCapitalStudy.reduce((sum, r) => sum + getStudyFundBalance(r), 0);
   const capTotalBalance = summarizeCapitalRows(allCapitalRows, "totalBalance") || summarizeCapitalRows(allCapitalStudy, "redemptionValue");
   const capTotalRewards = summarizeCapitalRows(allCapitalPension, "totalRewards");
   const capTotalSeverance = summarizeCapitalRows(allCapitalPension, "totalSeverance");
-  const capTotalCapital = summarizeCapitalDerivedRows(allCapitalPension, "totalCapital");
+  const capTotalCapital = summarizeCapitalDerivedRows(allCapitalPension, "totalCapital") + capStudyBalance;
   const capTotalPension = summarizeCapitalDerivedRows(allCapitalPension, "totalPension");
-  const capStudyBalance = allCapitalStudy.reduce((sum, r) => sum + getStudyFundBalance(r), 0);
 
   const capitalColumns = [
     { key: "planName", label: "מוצר / קבוצה" },

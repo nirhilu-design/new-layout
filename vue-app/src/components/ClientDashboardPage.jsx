@@ -2334,23 +2334,31 @@ function CapitalKpi({ title, value, tone = "default" }) {
   );
 }
 
-function getCapitalPensionTableTotals(rows) {
-  return safeArray(rows).reduce((acc, row) => {
-    acc.capitalRewards += getCapitalNumber(row, ["capitalRewards", "תגמולים הוניים"]);
-    acc.pre2000Rewards += getCapitalNumber(row, ["annuityRewardsUntil2000", "pre2000Rewards", "rewardsBefore2000", "תגמולים קצבתיים עד 1.1.2000"]);
-    acc.previousEmployerContinuity += getCapitalNumber(row, ["previousEmployersSeveranceRightsSequence", "previousEmployerContinuity", "previousEmployerSeveranceRights", "פיצויים ממעסיקים קודמים ברצף זכויות"]);
-    acc.currentEmployerTax += getCapitalNumber(row, ["currentEmployerSeveranceTaxable", "taxableCompensation", "currentEmployerCompensationTax", "פיצויים מעסיק נוכחי למס"]);
-    acc.totalPension += getCapitalRowPensionValue(row);
-    acc.totalCapital += getCapitalRowCapitalValue(row, false);
-    return acc;
-  }, {
-    capitalRewards: 0,
-    pre2000Rewards: 0,
-    previousEmployerContinuity: 0,
-    currentEmployerTax: 0,
-    totalPension: 0,
-    totalCapital: 0,
-  });
+// כל עמודות הפירוט (צד הון + צד קצבה + עמודת "פיצויים למס" להצגה).
+// עמודת קצבה/הון בשורה מסתכמת בדיוק ל"סה"כ קצבה"/"סה"כ הון" שבכותרת.
+const CAPITAL_PENSION_COLUMN_DEFS = [
+  { key: "capitalRewards", label: "תגמולים הוניים", aliases: ["תגמולים הוניים"] },
+  { key: "annuityRewardsUntil2000", label: "תגמולים קצבתיים עד 1.1.2000", aliases: ["pre2000Rewards", "rewardsBefore2000", "תגמולים קצבתיים עד 1.1.2000"] },
+  { key: "previousEmployersSeveranceRightsSequence", label: "פיצויים ממעסיקים קודמים ברצף זכויות", aliases: ["previousEmployerContinuity", "previousEmployerSeveranceRights", "פיצויים ממעסיקים קודמים ברצף זכויות"] },
+  { key: "capitalSeverance", label: "פיצויים הוניים מעסיק נוכחי", aliases: ["פיצויים הוניים מעסיק נוכחי"] },
+  { key: "liquidExemptSeverance", label: "פיצויים הוניים פטורים / נזילים", aliases: ["פיצויים הוניים פטורים / נזילים"] },
+  { key: "annuityRewards", label: "תגמולים קצבתיים", aliases: ["תגמולים קצבתיים"] },
+  { key: "currentEmployerAnnuitySeverance", label: "פיצויים קצבתיים מעסיק נוכחי", aliases: ["פיצויים קצבתיים מעסיק נוכחי"] },
+  { key: "previousEmployersSeveranceAnnuitySequence", label: "פיצויים ממעסיקים קודמים ברצף קצבה", aliases: ["פיצויים ממעסיקים קודמים ברצף קצבה"] },
+  { key: "annuitySeverance", label: "פיצויים קצבתיים פטורים / נזילים", aliases: ["פיצויים קצבתיים פטורים / נזילים"] },
+  { key: "currentEmployerSeveranceTaxable", label: "פיצויים מעסיק נוכחי למס", aliases: ["taxableCompensation", "currentEmployerCompensationTax", "פיצויים מעסיק נוכחי למס"] },
+];
+
+function getCapitalColumnValue(row, col) {
+  return getCapitalNumber(row, [col.key, ...(col.aliases || [])]);
+}
+
+// רק עמודות שיש בהן נתונים בשורה כלשהי מוצגות.
+function getActiveCapitalPensionColumns(rows) {
+  const safeRows = safeArray(rows);
+  return CAPITAL_PENSION_COLUMN_DEFS.filter((col) =>
+    safeRows.some((row) => getCapitalColumnValue(row, col) > 0)
+  );
 }
 
 const CapitalOwnerBlock = defineComponent({
@@ -2366,7 +2374,13 @@ const CapitalOwnerBlock = defineComponent({
       };
       const pensionRows = safeArray(section?.pensionPolicies);
       const studyRows = safeArray(section?.studyFunds);
-      const pensionTotals = getCapitalPensionTableTotals(pensionRows);
+      const activePensionColumns = getActiveCapitalPensionColumns(pensionRows);
+      const pensionColumnTotals = activePensionColumns.map((col) =>
+        pensionRows.reduce((sum, row) => sum + getCapitalColumnValue(row, col), 0)
+      );
+      const totalPensionSum = pensionRows.reduce((sum, row) => sum + getCapitalRowPensionValue(row), 0);
+      const totalCapitalSum = pensionRows.reduce((sum, row) => sum + getCapitalRowCapitalValue(row, false), 0);
+      const pensionColSpan = activePensionColumns.length + 3;
       const studyTotal = studyRows.reduce((sum, row) => sum + getCapitalRowFundValue(row), 0);
 
       const toggleRow = (row, index) => {
@@ -2391,10 +2405,7 @@ const CapitalOwnerBlock = defineComponent({
               <thead>
                 <tr>
                   <th>מוצר / קבוצה</th>
-                  <th>תגמולים הוניים</th>
-                  <th>תגמולים קצבתיים עד 1.1.2000</th>
-                  <th>פיצויים ממעסיקים קודמים ברצף זכויות</th>
-                  <th>פיצויים מעסיק נוכחי למס</th>
+                  {activePensionColumns.map((col) => <th key={col.key}>{col.label}</th>)}
                   <th>סה״כ קצבה</th>
                   <th>סה״כ הון</th>
                 </tr>
@@ -2404,19 +2415,16 @@ const CapitalOwnerBlock = defineComponent({
                   const key = row?.id || `${row?.productType || "capital"}-${index}`;
                   return (
                     <Fragment key={key}>
-                      <CapitalPensionRow row={row} index={index} isOpen={Boolean(openRows[key])} onToggle={() => toggleRow(row, index)} />
-                      {openRows[key] ? <CapitalGroupedDetailsRow row={row} /> : null}
+                      <CapitalPensionRow row={row} columns={activePensionColumns} index={index} isOpen={Boolean(openRows[key])} onToggle={() => toggleRow(row, index)} />
+                      {openRows[key] ? <CapitalGroupedDetailsRow row={row} colSpan={pensionColSpan} /> : null}
                     </Fragment>
                   );
                 })}
                 <tr class="total-row client-capital-total-row">
                   <td>סה״כ</td>
-                  <td>{formatCurrency(pensionTotals.capitalRewards)}</td>
-                  <td>{formatCurrency(pensionTotals.pre2000Rewards)}</td>
-                  <td>{formatCurrency(pensionTotals.previousEmployerContinuity)}</td>
-                  <td>{formatCurrency(pensionTotals.currentEmployerTax)}</td>
-                  <td class="pension-total">{formatCurrency(pensionTotals.totalPension)}</td>
-                  <td class="capital-total">{formatCurrency(pensionTotals.totalCapital)}</td>
+                  {pensionColumnTotals.map((total, i) => <td key={activePensionColumns[i].key}>{formatCurrency(total)}</td>)}
+                  <td class="pension-total">{formatCurrency(totalPensionSum)}</td>
+                  <td class="capital-total">{formatCurrency(totalCapitalSum)}</td>
                 </tr>
               </tbody>
             </table>
@@ -2452,14 +2460,10 @@ const CapitalOwnerBlock = defineComponent({
   },
 });
 
-function CapitalPensionRow({ row, index = 0, isOpen = false, onToggle = () => {} }) {
+function CapitalPensionRow({ row, columns = [], index = 0, isOpen = false, onToggle = () => {} }) {
   const productType = getCapitalText(row, ["productType", "productGroup", "productName", "type", "מוצר / קבוצה", "סוג מוצר"]) || "—";
   const sourceRows = safeArray(row?.sourceRows);
   const hasDetails = sourceRows.length > 0;
-  const capitalRewards = getCapitalNumber(row, ["capitalRewards", "תגמולים הוניים"]);
-  const pre2000Rewards = getCapitalNumber(row, ["annuityRewardsUntil2000", "pre2000Rewards", "rewardsBefore2000", "תגמולים קצבתיים עד 1.1.2000"]);
-  const previousEmployerContinuity = getCapitalNumber(row, ["previousEmployersSeveranceRightsSequence", "previousEmployerContinuity", "previousEmployerSeveranceRights", "פיצויים ממעסיקים קודמים ברצף זכויות"]);
-  const currentEmployerTax = getCapitalNumber(row, ["currentEmployerSeveranceTaxable", "taxableCompensation", "currentEmployerCompensationTax", "פיצויים מעסיק נוכחי למס"]);
   const totalPension = getCapitalRowPensionValue(row);
   const totalCapital = getCapitalRowCapitalValue(row, false);
 
@@ -2474,24 +2478,24 @@ function CapitalPensionRow({ row, index = 0, isOpen = false, onToggle = () => {}
         <strong>{productType}</strong>
         {hasDetails ? <small>{sourceRows.length} תוכניות מקובצות</small> : null}
       </td>
-      <td>{capitalRewards ? formatCurrency(capitalRewards) : "—"}</td>
-      <td>{pre2000Rewards ? formatCurrency(pre2000Rewards) : "—"}</td>
-      <td>{previousEmployerContinuity ? formatCurrency(previousEmployerContinuity) : "—"}</td>
-      <td>{currentEmployerTax ? formatCurrency(currentEmployerTax) : "—"}</td>
+      {columns.map((col) => {
+        const value = getCapitalColumnValue(row, col);
+        return <td key={col.key}>{value ? formatCurrency(value) : "—"}</td>;
+      })}
       <td>{totalPension ? formatCurrency(totalPension) : "—"}</td>
       <td>{totalCapital ? formatCurrency(totalCapital) : "—"}</td>
     </tr>
   );
 }
 
-function CapitalGroupedDetailsRow({ row }) {
+function CapitalGroupedDetailsRow({ row, colSpan = 7 }) {
   const sourceRows = safeArray(row?.sourceRows);
 
   if (!sourceRows.length) return null;
 
   return (
     <tr class="client-capital-details-row">
-      <td colspan={7}>
+      <td colspan={colSpan}>
         <div class="client-capital-details-box">
           <div class="client-capital-details-title">התוכניות שנכללו בקבוצה</div>
           <div class="client-table-wrap client-capital-inner-wrap">

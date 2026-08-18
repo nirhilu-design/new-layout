@@ -277,7 +277,11 @@ function getCapitalClassificationUniqueText(values) {
 function getCapitalClassificationGroupInfo(row) {
   const productType = normalizeCapitalClassificationHeader(row?.productType);
   const planName = normalizeCapitalClassificationHeader(row?.planName);
+  const managerName = normalizeCapitalClassificationHeader(row?.managerName);
   const combined = `${productType} ${planName}`;
+  // "סוג מוצר" / "שם תוכנית" הם האינדיקציה המהימנה. אם הם ריקים, נשתמש
+  // בשם החברה המנהלת כגיבוי כדי שמוצר לא ייפול ל"אחר".
+  const searchText = `${combined} ${managerName}`;
 
   if (combined.includes("קלאסית")) {
     return {
@@ -287,8 +291,13 @@ function getCapitalClassificationGroupInfo(row) {
     };
   }
 
-  if (combined.includes("השתלמות")) {
+  if (searchText.includes("השתלמות")) {
     return { key: "study-funds", label: "קרנות השתלמות", shouldKeepSingle: false };
+  }
+
+  // גמל להשקעה — קטגוריה נפרדת, לפני הבדיקות הכלליות של "פנסיה" / "גמל".
+  if (searchText.includes("השקעה")) {
+    return { key: "investment-provident", label: "גמל להשקעה", shouldKeepSingle: false };
   }
 
   if (combined.includes("ותיקה")) {
@@ -305,6 +314,20 @@ function getCapitalClassificationGroupInfo(row) {
 
   if (combined.includes("מנהלים") || combined.includes("פוליסה") || combined.includes("ביטוח")) {
     return { key: "managers-insurance", label: "ביטוח מנהלים", shouldKeepSingle: false };
+  }
+
+  // גיבוי לפי שם החברה המנהלת כאשר עמודות המוצר/התוכנית ריקות.
+  if (searchText.includes("ותיקה")) {
+    return { key: "legacy-pension", label: "קרן פנסיה ותיקה", shouldKeepSingle: false };
+  }
+  if (searchText.includes("מנהלים") || searchText.includes("ביטוח")) {
+    return { key: "managers-insurance", label: "ביטוח מנהלים", shouldKeepSingle: false };
+  }
+  if (searchText.includes("גמל")) {
+    return { key: "provident-funds", label: "קופות גמל", shouldKeepSingle: false };
+  }
+  if (searchText.includes("פנסיה") || searchText.includes("מקיפה") || searchText.includes("קרפ")) {
+    return { key: "pension-funds", label: "קרנות פנסיה", shouldKeepSingle: false };
   }
 
   return {

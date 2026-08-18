@@ -2266,9 +2266,12 @@ function getCapitalSummary(sections) {
     // סה"כ קופה כולל את כל הכספים – פוליסות וגם קרנות השתלמות.
     acc.totalFund += getCapitalRowFundValue(row);
 
-    // תגמולים / פיצויים / הון / קצבה מחושבים על פוליסות בלבד. קרנות
-    // השתלמות מוצגות בנפרד כצבירה ואינן נכללות בסיווג ההוני / הקצבתי.
-    if (item.isStudyFund) return acc;
+    // קרנות השתלמות הן כספים הוניים: הצבירה שלהן נכללת ב"סך הוני" בלבד
+    // (לא בתגמולים / פיצויים / קצבה, שמחושבים על פוליסות בלבד).
+    if (item.isStudyFund) {
+      acc.totalCapital += getCapitalRowFundValue(row);
+      return acc;
+    }
 
     acc.totalRewards += getCapitalNumber(row, ["totalRewards", "rewardsTotal", "סהכ תגמולים", "סה\"כ תגמולים"]) || getCapitalSum(row, ["capitalRewards", "annuityRewardsUntil2000", "annuityRewards", "תגמולים הוניים", "תגמולים קצבתיים", "תגמולים קצבתיים עד 1.1.2000"]);
     acc.totalCompensation += getCapitalRowCompensationValue(row);

@@ -134,6 +134,7 @@ const CAPITAL_CLASSIFICATION_NUMERIC_FIELDS = [
   "capitalRewards",
   "annuityRewardsUntil2000",
   "annuityRewards",
+  "annuityTotalColumn",
   "pension",
   "coefficient",
   "redemptionValue",
@@ -313,24 +314,13 @@ function getCapitalClassificationGroupInfo(row) {
 }
 
 function enrichCapitalClassificationTotals(row) {
-  // Classification per the requested logic:
-  //   סה"כ הון  = פיצוים הונים מעסיק נוכחי + תגמולים הונים +
-  //               תגמולים קצבתים עד שנת 2000 + פיצוים ממעסיקים קודמים ברצף
-  //               זכויות + פיצוים הונים פטורים / נזילים
-  //   סה"כ קצבה = תגמולים קצבתים + פיצוים קצבתים מעסיק נוכחי +
-  //               פיצוים ממעסיקים קודמים ברצף קצבה + פיצוים קצבתים פטורים / נזילים
-  const totalCapital =
-    Number(row.capitalSeverance || 0) + // פיצוים הונים מעסיק נוכחי
-    Number(row.capitalRewards || 0) + // תגמולים הונים
-    Number(row.annuityRewardsUntil2000 || 0) + // תגמולים קצבתים עד שנת 2000
-    Number(row.previousEmployersSeveranceRightsSequence || 0) + // רצף זכויות (מעמד הון)
-    Number(row.liquidExemptSeverance || 0); // פיצוים הונים פטורים / נזילים
-
+  // סך קצבתי = עמודת "סהכ קצבתי" פחות "תגמולים קצבתים עד שנת 2000"
+  //            (הרכיב עד שנת 2000 נכלל בעמודת סהכ קצבתי אך מסווג כהון).
+  // סך הוני  = "סהכ קופה" (סך בקופה) פחות סך קצבתי.
   const totalPension =
-    Number(row.annuityRewards || 0) + // תגמולים קצבתים
-    Number(row.currentEmployerAnnuitySeverance || 0) + // פיצוים קצבתים מעסיק נוכחי
-    Number(row.previousEmployersSeveranceAnnuitySequence || 0) + // פיצוים ממעסיקים קודמים ברצף קצבה
-    Number(row.annuitySeverance || 0); // פיצוים קצבתים פטורים / נזילים
+    Number(row.annuityTotalColumn || 0) - Number(row.annuityRewardsUntil2000 || 0);
+
+  const totalCapital = Number(row.totalBalance || 0) - totalPension;
 
   return {
     ...row,
@@ -917,6 +907,11 @@ export default function UploadPage({ setReportData }) {
         "תגמולים קצבתים",
         "תגמולים קצבתיים",
       ]),
+      annuityTotalColumn: findCapitalClassificationColumnIndex(headers, [
+        "סהכ קצבתי",
+        'סה"כ קצבתי',
+        "סהכ קצבתיי",
+      ]),
       pension: findCapitalClassificationColumnIndex(headers, ["פנסיה", "קצבה"]),
       coefficient: findCapitalClassificationColumnIndex(headers, ["מקדם"]),
       redemptionValue: findCapitalClassificationColumnIndex(headers, [
@@ -930,6 +925,8 @@ export default function UploadPage({ setReportData }) {
       if (index < 0 || index === undefined) return "";
       return row[index] ?? "";
     };
+
+    const hasAnnuityTotalColumn = columnMap.annuityTotalColumn >= 0;
 
     const normalizedRows = rows
       .slice(headerInfo.index + 1)
@@ -967,6 +964,7 @@ export default function UploadPage({ setReportData }) {
             getValue(row, "annuityRewardsUntil2000")
           ),
           annuityRewards: parseCapitalClassificationNumber(getValue(row, "annuityRewards")),
+          annuityTotalColumn: parseCapitalClassificationNumber(getValue(row, "annuityTotalColumn")),
           pension: parseCapitalClassificationNumber(getValue(row, "pension")),
           coefficient: parseCapitalClassificationNumber(getValue(row, "coefficient")),
           redemptionValue: parseCapitalClassificationNumber(getValue(row, "redemptionValue")),
@@ -1005,6 +1003,19 @@ export default function UploadPage({ setReportData }) {
 
     if (!normalizedRows.length) {
       return null;
+    }
+
+    // אם אין בקובץ עמודת "סהכ קצבתי", נגזור אותה מרכיבי הקצבה + עד שנת 2000,
+    // כך שנוסחת enrich (סהכ קצבתי − עד שנת 2000) תיתן את סך הקצבה הנכון.
+    if (!hasAnnuityTotalColumn) {
+      normalizedRows.forEach((row) => {
+        const annuityComponents =
+          Number(row.annuityRewards || 0) +
+          Number(row.currentEmployerAnnuitySeverance || 0) +
+          Number(row.previousEmployersSeveranceAnnuitySequence || 0) +
+          Number(row.annuitySeverance || 0);
+        row.annuityTotalColumn = annuityComponents + Number(row.annuityRewardsUntil2000 || 0);
+      });
     }
 
     const enrichedRows = normalizedRows.map(enrichCapitalClassificationTotals);

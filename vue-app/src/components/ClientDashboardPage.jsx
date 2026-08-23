@@ -2346,7 +2346,6 @@ const CAPITAL_PENSION_COLUMN_DEFS = [
   { key: "capitalSeverance", label: "פיצויים הוניים מעסיק נוכחי", aliases: ["פיצויים הוניים מעסיק נוכחי"] },
   { key: "liquidExemptSeverance", label: "פיצויים הוניים פטורים / נזילים", aliases: ["פיצויים הוניים פטורים / נזילים"] },
   { key: "annuityRewards", label: "תגמולים קצבתיים", aliases: ["תגמולים קצבתיים"] },
-  { key: "currentEmployerAnnuitySeverance", label: "פיצויים קצבתיים מעסיק נוכחי", aliases: ["פיצויים קצבתיים מעסיק נוכחי"] },
   { key: "previousEmployersSeveranceAnnuitySequence", label: "פיצויים ממעסיקים קודמים ברצף קצבה", aliases: ["פיצויים ממעסיקים קודמים ברצף קצבה"] },
   { key: "annuitySeverance", label: "פיצויים קצבתיים פטורים / נזילים", aliases: ["פיצויים קצבתיים פטורים / נזילים"] },
   { key: "currentEmployerSeveranceTaxable", label: "פיצויים מעסיק נוכחי למס", aliases: ["taxableCompensation", "currentEmployerCompensationTax", "פיצויים מעסיק נוכחי למס"] },

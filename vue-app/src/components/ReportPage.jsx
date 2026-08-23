@@ -625,7 +625,6 @@ function CapitalClassificationTable({ title, subtitle, rows, type }) {
     { key: "previousEmployersSeveranceRightsSequence", label: "פיצויים ממעסיקים קודמים ברצף זכויות", type: "number" },
     { key: "previousEmployersSeveranceAnnuitySequence", label: "פיצויים ממעסיקים קודמים ברצף קצבה", type: "number" },
     { key: "capitalSeverance", label: "פיצויים הוניים מעסיק נוכחי", type: "number" },
-    { key: "currentEmployerAnnuitySeverance", label: "פיצויים קצבתיים מעסיק נוכחי", type: "number" },
     { key: "currentEmployerSeveranceTaxable", label: "פיצויים מעסיק נוכחי למס", type: "number" },
     { key: "liquidExemptSeverance", label: "פיצויים הוניים פטורים / נזילים", type: "number" },
     { key: "annuitySeverance", label: "פיצויים קצבתיים פטורים / נזילים", type: "number" },

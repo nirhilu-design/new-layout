@@ -6103,17 +6103,27 @@ export function PrintReportA4({ reportData, conversationSummary = "", actionReco
   const capTotalCapital = summarizeCapitalDerivedRows(allCapitalPension, "totalCapital") + capStudyBalance;
   const capTotalPension = summarizeCapitalDerivedRows(allCapitalPension, "totalPension");
 
+  // עמודות פירוק הנכסים בדוח המודפס — תואמות לטבלת ה־WEB (CAPITAL_PENSION_COLUMN_DEFS).
   const capitalColumns = [
-    { key: "planName", label: "מוצר / קבוצה" },
-    { key: "capitalRewards", label: "תגמולים הוניים", num: true },
-    { key: "annuityRewardsUntil2000", label: "תגמולים קצבתיים עד 1.1.2000", num: true },
-    { key: "previousEmployersSeveranceRightsSequence", label: "פיצויים קודמים ברצף", num: true },
-    { key: "currentEmployerSeveranceTaxable", label: "פיצויים מעסיק נוכחי", num: true },
-    { key: "totalPension", label: 'סה"כ קצבה', num: true },
-    { key: "totalCapital", label: 'סה"כ הון', num: true },
-    { key: "conversionCoefficient", label: "מקדם המרה לקצבה (ערך)*", theoretical: true },
-    { key: "expectedRetirementCost", label: "עלות צפויה לגיל פרישה*", theoretical: true },
+    { key: "planName", label: "מוצר / קבוצה", alwaysVisible: true },
+    { key: "capitalRewards", label: "תגמולים הוניים", num: true, type: "number" },
+    { key: "annuityRewardsUntil2000", label: "תגמולים קצבתיים עד 1.1.2000", num: true, type: "number" },
+    { key: "previousEmployersSeveranceRightsSequence", label: "פיצויים ממעסיקים קודמים ברצף זכויות", num: true, type: "number" },
+    { key: "capitalSeverance", label: "פיצויים הוניים מעסיק נוכחי", num: true, type: "number" },
+    { key: "liquidExemptSeverance", label: "פיצויים הוניים פטורים / נזילים", num: true, type: "number" },
+    { key: "annuityRewards", label: "תגמולים קצבתיים", num: true, type: "number" },
+    { key: "previousEmployersSeveranceAnnuitySequence", label: "פיצויים ממעסיקים קודמים ברצף קצבה", num: true, type: "number" },
+    { key: "annuitySeverance", label: "פיצויים קצבתיים פטורים / נזילים", num: true, type: "number" },
+    { key: "currentEmployerSeveranceTaxable", label: "פיצויים מעסיק נוכחי למס", num: true, type: "number" },
+    { key: "totalPension", label: 'סה"כ קצבה', num: true, type: "number", alwaysVisible: true },
+    { key: "totalCapital", label: 'סה"כ הון', num: true, type: "number", alwaysVisible: true },
   ];
+  // כמו ב־WEB — מוצגות רק עמודות שיש בהן נתונים (בנוסף לעמודות הקבועות).
+  const activeCapitalColumns = getCapitalActiveColumns(allCapitalPension, capitalColumns);
+  const capitalPlanColWidth = 14;
+  const capitalOtherColWidth = activeCapitalColumns.length > 1
+    ? (100 - capitalPlanColWidth) / (activeCapitalColumns.length - 1)
+    : capitalPlanColWidth;
 
   // ---------- Section 28 helpers ----------
   const section28Meaningful = (rows) =>
@@ -6579,23 +6589,23 @@ export function PrintReportA4({ reportData, conversationSummary = "", actionReco
             <table style={px({ fontSize: 8, marginTop: 6, tableLayout: "fixed", width: "100%" })}>
               <thead>
                 <tr style={px({ background: NAVY, color: OFFWHITE })}>
-                  {capitalColumns.map((c) => <th key={c.key} style={px({ padding: "6px 3px", textAlign: "right", wordBreak: "break-word", lineHeight: 1.2, width: c.key === "planName" ? "13%" : "10.8%" })}>{c.label}</th>)}
+                  {activeCapitalColumns.map((c) => <th key={c.key} style={px({ padding: "6px 3px", textAlign: "right", wordBreak: "break-word", lineHeight: 1.2, width: `${c.key === "planName" ? capitalPlanColWidth : capitalOtherColWidth}%` })}>{c.label}</th>)}
                 </tr>
               </thead>
               <tbody>
                 {allCapitalPension.slice(0, 10).map((row, i) => (
                   <tr key={row.id || i} style={px({ background: i % 2 === 0 ? OFFWHITE : DESK })}>
-                    {capitalColumns.map((c) => (
-                      <td key={c.key} style={px({ padding: "5px 3px", borderBottom: `1px solid ${TAN}`, textAlign: "right", direction: c.num ? "ltr" : "rtl", wordBreak: "break-word", color: c.theoretical ? MUTED : undefined })}>
-                        {c.theoretical ? "—" : getCapitalDisplayValue(row, c.key)}
+                    {activeCapitalColumns.map((c) => (
+                      <td key={c.key} style={px({ padding: "5px 3px", borderBottom: `1px solid ${TAN}`, textAlign: "right", direction: c.num ? "ltr" : "rtl", wordBreak: "break-word" })}>
+                        {getCapitalDisplayValue(row, c.key)}
                       </td>
                     ))}
                   </tr>
                 ))}
                 <tr style={px({ background: NAVY, color: OFFWHITE, fontWeight: 700 })}>
-                  {capitalColumns.map((c, i) => (
-                    <td key={c.key} style={px({ padding: "6px 3px", textAlign: "right", direction: c.num ? "ltr" : "rtl", wordBreak: "break-word", opacity: c.theoretical ? 0.7 : 1 })}>
-                      {i === 0 ? 'סה"כ' : c.theoretical ? "—" : c.num ? getCapitalRowValue({ value: summarizeCapitalDerivedRows(allCapitalPension, c.key) }, "value") : ""}
+                  {activeCapitalColumns.map((c, i) => (
+                    <td key={c.key} style={px({ padding: "6px 3px", textAlign: "right", direction: c.num ? "ltr" : "rtl", wordBreak: "break-word" })}>
+                      {i === 0 ? 'סה"כ' : c.num ? getCapitalRowValue({ value: summarizeCapitalDerivedRows(allCapitalPension, c.key) }, "value") : ""}
                     </td>
                   ))}
                 </tr>
@@ -6608,7 +6618,7 @@ export function PrintReportA4({ reportData, conversationSummary = "", actionReco
               <div style={px({ fontSize: 20, fontWeight: 800, color: NAVY, direction: "ltr" })}>{fmtCurrency(capStudyBalance)}</div>
             </div>
           ) : null}
-          <div style={px({ fontSize: 11, color: MUTED, marginTop: 10, lineHeight: 1.6 })}>כספים הוניים כוללים רכיבי הון, תגמולים הוניים ותגמולים קצבתיים עד שנת 2000. קרנות השתלמות מוצגות כצבירה בלבד. * שתי העמודות האחרונות הן הערכה תיאורטית להמחשה בלבד ואינן מבוססות על מקדם בפועל שהתקבל מהגוף המנהל.</div>
+          <div style={px({ fontSize: 11, color: MUTED, marginTop: 10, lineHeight: 1.6 })}>כספים הוניים כוללים רכיבי הון, תגמולים הוניים ותגמולים קצבתיים עד שנת 2000. קרנות השתלמות מוצגות כצבירה בלבד.</div>
         </section>
       ) : null}
 

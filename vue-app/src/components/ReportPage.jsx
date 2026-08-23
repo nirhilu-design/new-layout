@@ -5916,7 +5916,9 @@ export function PrintReportA4({ reportData, conversationSummary = "", actionReco
   const MUTED = "#8892A3";
   const INK = "#1A1A1A";
   const DARKTAN = "#334155";
-  const PALETTE = [NAVY, PINK, TAN, "#C9BBA8", "#9CA3AF", "#6B7280", "#43B5D9", "#8F63C9"];
+  const CREAM = "#F9F7F3";
+  // פלטת אפיקים בצבעי צבירן בלבד: ורוד לפלח הגדול, נייבי וגווניו לאיגרות, בז' לקטנים.
+  const PALETTE = [PINK, NAVY, "#34527E", "#6E88B0", "#BBAA8F", "#E2D1BF", "#8A97B4", "#D8C6AF"];
 
   const today = new Intl.DateTimeFormat("he-IL").format(new Date());
   const reportDate = family.lastUpdated || today;
@@ -5969,10 +5971,10 @@ export function PrintReportA4({ reportData, conversationSummary = "", actionReco
   );
 
   // Build conic-gradient donut segments from {name, value} items.
-  const donutData = (items) => {
+  const donutData = (items, keepZeros = false) => {
     const clean = (Array.isArray(items) ? items : [])
       .map((item) => ({ name: item.name || "ללא שם", value: Number(item.value || 0) }))
-      .filter((item) => item.value > 0)
+      .filter((item) => keepZeros || item.value > 0)
       .sort((a, b) => b.value - a.value);
     const total = clean.reduce((sum, item) => sum + item.value, 0) || 1;
     let current = 0;
@@ -5988,24 +5990,30 @@ export function PrintReportA4({ reportData, conversationSummary = "", actionReco
     return { segments, total, gradient };
   };
 
-  const Donut = ({ title, centerLabel, items, note }) => {
-    const { segments, gradient } = donutData(items);
+  const Donut = ({ title, centerLabel, items, note, showAll }) => {
+    const { segments, gradient } = donutData(items, showAll);
+    const maxPct = segments.reduce((m, s) => Math.max(m, s.percent), 0) || 100;
     return (
-      <div class="rp-avoid" style={px({ display: "grid", gridTemplateColumns: "300px 1fr", gap: 32, alignItems: "center", background: OFFWHITE, border: `1px solid ${TAN}`, borderRadius: 18, padding: 28, marginBottom: 22 })}>
+      <div class="rp-avoid" style={px({ display: "grid", gridTemplateColumns: "240px 1fr", gap: 34, alignItems: "center", background: OFFWHITE, border: `1px solid ${TAN}`, borderRadius: 18, padding: 28, marginBottom: 22 })}>
         <div style={px({ display: "flex", justifyContent: "flex-start" })}>
-          <div style={px({ width: 220, height: 220, borderRadius: "50%", background: `conic-gradient(${gradient})`, display: "flex", alignItems: "center", justifyContent: "center" })}>
-            <div style={px({ width: 130, height: 130, borderRadius: "50%", background: OFFWHITE, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" })}>
+          <div style={px({ width: 210, height: 210, borderRadius: "50%", background: `conic-gradient(${gradient})`, display: "flex", alignItems: "center", justifyContent: "center" })}>
+            <div style={px({ width: 152, height: 152, borderRadius: "50%", background: OFFWHITE, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center" })}>
               <div style={px({ fontSize: 11, color: MUTED })}>חלוקה לפי</div>
               <div style={px({ fontSize: 15, fontWeight: 700, color: NAVY, textAlign: "center" })}>{centerLabel}</div>
             </div>
           </div>
         </div>
-        <div style={px({ display: "flex", flexDirection: "column", gap: 12 })}>
+        <div style={px({ display: "flex", flexDirection: "column", gap: 13 })}>
           {segments.length ? segments.map((seg, i) => (
-            <div key={`${title}-${seg.name}-${i}`} style={px({ display: "flex", alignItems: "center", gap: 12 })}>
-              <div style={px({ width: 13, height: 13, borderRadius: 4, background: seg.color, flexShrink: 0 })} />
-              <div style={px({ flex: 1, fontSize: 14, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" })} title={seg.name}>{seg.name}</div>
-              <div style={px({ fontSize: 15, fontWeight: 800, color: "#00215D", width: 64, textAlign: "left", direction: "ltr" })}>{seg.percent.toFixed(1)}%</div>
+            <div key={`${title}-${seg.name}-${i}`}>
+              <div style={px({ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 })}>
+                <span style={px({ width: 11, height: 11, borderRadius: "50%", background: seg.color, flexShrink: 0 })} />
+                <span style={px({ flex: 1, fontSize: 13.5, color: "#2A3240", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" })} title={seg.name}>{seg.name}</span>
+                <span style={px({ fontSize: 14, fontWeight: 800, color: NAVY, direction: "ltr" })}>{seg.percent.toFixed(1)}%</span>
+              </div>
+              <div style={px({ height: 6, borderRadius: 999, background: DESK, overflow: "hidden" })}>
+                <div style={px({ width: `${Math.max((seg.percent / maxPct) * 100, seg.percent > 0 ? 3 : 0)}%`, height: "100%", background: seg.color, borderRadius: 999 })} />
+              </div>
             </div>
           )) : <div style={px({ fontSize: 14, color: MUTED })}>אין נתונים להצגה</div>}
           {note ? <div style={px({ fontSize: 11, color: MUTED, marginTop: 4 })}>{note}</div> : null}
@@ -6212,47 +6220,33 @@ export function PrintReportA4({ reportData, conversationSummary = "", actionReco
       <section class="rp-section" style={px(pageStyle)}>
         <SectionHeader title="פרטים אישיים" subtitle="בני המשפחה המבוטחים בדוח" />
         <SectionIntro text="כדי לתת לכם תמונה מלאה ופשוטה של העתיד הפיננסי המשפחתי, ריכזנו את כל הנכסים והחיסכונות שלכם במקום אחד. כאן תוכלו לראות את סך הצבירה המעודכנת שנצברה עד כה, לצד חלוקת הכספים בין האפיקים והגופים השונים." />
-        <div style={px({ display: "grid", gridTemplateColumns: members.length > 1 ? "1fr 1fr" : "1fr", gap: 28 })}>
+        <div style={px({ display: "grid", gridTemplateColumns: members.length > 1 ? "1fr 1fr" : "1fr", gap: 22 })}>
           {(members.length ? members : [{ name: "—" }]).slice(0, 4).map((member, i) => {
-            const cardNavy = i % 2 === 0;
-            const bg = cardNavy ? NAVY : PINK;
-            const bubble = cardNavy ? "rgba(255,39,86,0.25)" : "rgba(0,33,93,0.28)";
-            const avatarBg = cardNavy ? PINK : NAVY;
-            const roleLabel = i === 0 ? "מבוטח/ת ראשי/ת" : "בן/בת זוג";
             const name = member.name || "—";
             const memberRetireAge = memberDetail(member, "retireAge");
+            const salary = memberDetail(member, "currentSalary");
             return (
-              <div class="rp-avoid" key={member.id || member.name || i} style={px({ background: bg, color: OFFWHITE, borderRadius: 20, padding: 32, position: "relative", overflow: "hidden" })}>
-                <div style={px({ position: "absolute", left: -60, top: -60, width: 180, height: 180, borderRadius: "50%", background: bubble })} />
-                <div style={px({ position: "relative", zIndex: 1 })}>
-                  <div style={px({ width: 56, height: 56, borderRadius: "50%", background: avatarBg, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 22, fontWeight: 700, marginBottom: 20 })}>{String(name).trim().slice(0, 1) || "?"}</div>
-                  <div style={px({ fontSize: 26, fontWeight: 700 })}>{name}{memberRetireAge ? <span style={px({ fontSize: 15, fontWeight: 600, opacity: 0.8 })}>{` (פרישה בגיל ${memberRetireAge})`}</span> : null}</div>
-                  <div style={px({ fontSize: 13, opacity: 0.8, marginTop: 2 })}>{roleLabel}</div>
-                  <div style={px({ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20, marginTop: 28 })}>
-                    <div>
-                      <div style={px({ fontSize: 12, opacity: 0.7 })}>תאריך לידה</div>
-                      <div style={px({ fontSize: 18, fontWeight: 600, marginTop: 4, direction: "ltr", textAlign: "right" })}>{fmtDate(memberDetail(member, "birthDate"))}</div>
-                    </div>
-                    <div>
-                      <div style={px({ fontSize: 12, opacity: 0.7 })}>שכר נוכחי</div>
-                      <div style={px({ fontSize: 18, fontWeight: 600, marginTop: 4, direction: "ltr", textAlign: "right" })}>{memberDetail(member, "currentSalary") ? fmtCurrency(memberDetail(member, "currentSalary")) : "—"}</div>
-                    </div>
-                    <div style={px({ gridColumn: "span 2" })}>
-                      <div style={px({ fontSize: 12, opacity: 0.7 })}>מקום עבודה אחרון מעודכן</div>
-                      <div style={px({ fontSize: 16, fontWeight: 600, marginTop: 4, opacity: 0.8 })}>{memberDetail(member, "lastWorkplace") || "לא צוין"}</div>
-                    </div>
+              <div class="rp-avoid" key={member.id || member.name || i} style={px({ position: "relative", overflow: "hidden", background: OFFWHITE, border: `1px solid ${TAN}`, borderRadius: 16, padding: "26px 24px" })}>
+                <div style={px({ position: "absolute", top: 0, right: 0, left: 0, height: 5, background: PINK })} />
+                <div style={px({ fontSize: 22, fontWeight: 800, color: NAVY, lineHeight: 1.1, marginTop: 4 })}>{name}</div>
+                {memberRetireAge ? <div style={px({ display: "inline-block", marginTop: 10, fontSize: 12, fontWeight: 700, color: "#6A5B45", background: CREAM, border: "1px solid #EFE7DA", borderRadius: 999, padding: "4px 12px" })}>{`פרישה בגיל ${memberRetireAge}`}</div> : null}
+                <div style={px({ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 18, marginTop: 22 })}>
+                  <div>
+                    <div style={px({ fontSize: 12, color: MUTED })}>תאריך לידה</div>
+                    <div style={px({ fontSize: 17, fontWeight: 700, color: INK, marginTop: 4, direction: "ltr", textAlign: "right" })}>{fmtDate(memberDetail(member, "birthDate"))}</div>
+                  </div>
+                  <div>
+                    <div style={px({ fontSize: 12, color: MUTED })}>שכר נוכחי</div>
+                    <div style={px({ fontSize: 17, fontWeight: 700, color: INK, marginTop: 4, direction: "ltr", textAlign: "right" })}>{salary ? fmtCurrency(salary) : "—"}</div>
+                  </div>
+                  <div style={px({ gridColumn: "span 2", borderTop: `1px solid ${DESK}`, paddingTop: 14 })}>
+                    <div style={px({ fontSize: 12, color: MUTED })}>מקום עבודה אחרון מעודכן</div>
+                    <div style={px({ fontSize: 15, fontWeight: 600, color: INK, marginTop: 4 })}>{memberDetail(member, "lastWorkplace") || "לא צוין"}</div>
                   </div>
                 </div>
               </div>
             );
           })}
-        </div>
-        <div class="rp-avoid" style={px({ marginTop: 28, background: TAN, borderRadius: 16, padding: "24px 28px", display: "flex", justifyContent: "space-between", alignItems: "center" })}>
-          <div style={px({ fontSize: 15, color: DARKTAN, lineHeight: 1.6, maxWidth: 600 })}>סך השכר המצרפי המדווח למשפחה מהווה בסיס לחישובי ההפקדות והקצבאות המוצגים בהמשך הדוח.</div>
-          <div style={px({ textAlign: "left" })}>
-            <div style={px({ fontSize: 13, color: DARKTAN, opacity: 0.75 })}>שכר מצרפי</div>
-            <div style={px({ fontSize: 28, fontWeight: 800, color: NAVY, direction: "ltr" })}>{combinedSalary ? fmtCurrency(combinedSalary) : "—"}</div>
-          </div>
         </div>
       </section>
       )}
@@ -6292,7 +6286,7 @@ export function PrintReportA4({ reportData, conversationSummary = "", actionReco
         <SectionIntro text="הכספים שלכם מושקעים במסלולים שונים כדי לייצר תשואה ולשמור על ערך הכסף לאורך זמן. בחלק זה תוכלו לראות בדיוק איפה הכסף מושקע – כמה ממנו נחשף למניות, כמה מושקע בחו״ל ואיך הוא מתפזר בין האפיקים השונים." />
         <Donut title="products" centerLabel="מוצרים" items={products} />
         <Donut title="managers" centerLabel="גופים מנהלים" items={managers} />
-        <Donut title="channels" centerLabel="אפיקים ראשיים" items={mainGroups} note='ראו פירוט מלא בעמוד "פירוק נכסים".' />
+        <Donut title="channels" centerLabel="אפיקים ראשיים" items={mainGroups} showAll note='ראו פירוט מלא בעמוד "פירוק נכסים".' />
       </section>
       )}
 

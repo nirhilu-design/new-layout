@@ -1404,49 +1404,29 @@ const getCleanSection28CappingData = () =>
       ownerLabel: getFamilyOwnerLabel(item.owner),
     }));
 
-const loadPdfJs = () =>
-  new Promise((resolve, reject) => {
-    if (window.pdfjsLib) {
-      window.pdfjsLib.GlobalWorkerOptions.workerSrc =
-        window.pdfjsLib.GlobalWorkerOptions.workerSrc ||
-        "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
-      resolve(window.pdfjsLib);
-      return;
-    }
+// קריאת ה־PDF נעשית מקומית: ספריית pdf.js מצורפת ל־bundle של האפליקציה
+// (dependency מקומי) במקום להיטען מ־CDN חיצוני. הייבוא הדינמי משאיר את
+// הספרייה מחוץ ל־chunk הראשי כך שהיא נטענת רק כשקולטים קובץ PDF בפועל.
+let pdfJsLibPromise = null;
 
-    const existingScript = document.querySelector(
-      'script[data-pdfjs-loader="true"]'
-    );
+const loadPdfJs = () => {
+  if (!pdfJsLibPromise) {
+    pdfJsLibPromise = (async () => {
+      const pdfjsLib = await import("pdfjs-dist/build/pdf.min.js");
+      const workerSrc = (
+        await import("pdfjs-dist/build/pdf.worker.min.js?url")
+      ).default;
+      pdfjsLib.GlobalWorkerOptions.workerSrc = workerSrc;
+      return pdfjsLib;
+    })().catch((err) => {
+      // אפס את המטמון כדי לאפשר ניסיון טעינה חוזר בקליטה הבאה.
+      pdfJsLibPromise = null;
+      throw err;
+    });
+  }
 
-    if (existingScript) {
-      existingScript.addEventListener("load", () => resolve(window.pdfjsLib));
-      existingScript.addEventListener("error", reject);
-      return;
-    }
-
-    const script = document.createElement("script");
-    script.src =
-      "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js";
-    script.async = true;
-    script.dataset.pdfjsLoader = "true";
-
-    script.onload = () => {
-      if (!window.pdfjsLib) {
-        reject(new Error("ספריית PDF לא נטענה"));
-        return;
-      }
-
-      window.pdfjsLib.GlobalWorkerOptions.workerSrc =
-        "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
-
-      resolve(window.pdfjsLib);
-    };
-
-    script.onerror = () =>
-      reject(new Error("לא ניתן היה לטעון את ספריית קריאת ה־PDF"));
-
-    document.body.appendChild(script);
-  });
+  return pdfJsLibPromise;
+};
 
 const normalizeTableText = (value) =>
   String(value || "")

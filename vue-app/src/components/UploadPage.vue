@@ -716,42 +716,18 @@ const findSection28ComparisonRows = (worksheet, XLSX) => {
   );
 };
 
-const loadXlsx = () =>
-  new Promise((resolve, reject) => {
-    if (window.XLSX) {
-      resolve(window.XLSX);
-      return;
-    }
+let xlsxModulePromise = null;
 
-    const existingScript = document.querySelector(
-      'script[data-xlsx-loader="true"]'
-    );
+const loadXlsx = () => {
+  if (!xlsxModulePromise) {
+    xlsxModulePromise = import("xlsx").catch(() => {
+      xlsxModulePromise = null;
+      throw new Error("לא ניתן היה לטעון את ספריית קריאת ה־Excel");
+    });
+  }
 
-    if (existingScript) {
-      existingScript.addEventListener("load", () => resolve(window.XLSX));
-      existingScript.addEventListener("error", reject);
-      return;
-    }
-
-    const script = document.createElement("script");
-    script.src = "https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js";
-    script.async = true;
-    script.dataset.xlsxLoader = "true";
-
-    script.onload = () => {
-      if (!window.XLSX) {
-        reject(new Error("ספריית קריאת Excel לא נטענה"));
-        return;
-      }
-
-      resolve(window.XLSX);
-    };
-
-    script.onerror = () =>
-      reject(new Error("לא ניתן היה לטעון את ספריית קריאת ה־Excel"));
-
-    document.body.appendChild(script);
-  });
+  return xlsxModulePromise;
+};
 
 const extractSection28CappingFromExcel = async (file) => {
   const XLSX = await loadXlsx();

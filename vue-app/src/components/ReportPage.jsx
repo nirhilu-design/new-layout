@@ -5934,6 +5934,17 @@ export function PrintReportA4({ reportData, conversationSummary = "", actionReco
   const firmName = data.firmName || "מבט משפחתי";
   const watermark = data.watermark !== false;
 
+  // Client name(s) for the cover title line — e.g. "משפחת לוי · דניאל ומיכל".
+  const clientNames = members.map((m) => String(m.name || "").trim()).filter(Boolean);
+  const clientFirstNames = clientNames.map((n) => n.split(/\s+/)[0]);
+  const clientNamesJoined =
+    clientFirstNames.length === 0 ? "" :
+    clientFirstNames.length === 1 ? clientFirstNames[0] :
+    `${clientFirstNames.slice(0, -1).join(", ")} ו${clientFirstNames.slice(-1)}`;
+  const coverTitleLine = family.name
+    ? `משפחת ${family.name}${clientNamesJoined ? ` · ${clientNamesJoined}` : ""}`
+    : (clientNames.length ? clientNames.join(" · ") : "דוח משפחתי");
+
   const today = new Intl.DateTimeFormat("he-IL").format(new Date());
   const reportDate = family.lastUpdated || today;
 
@@ -6157,18 +6168,18 @@ export function PrintReportA4({ reportData, conversationSummary = "", actionReco
   const DonutCard = ({ centerTop, centerLabel, items, size = 168, note, twoCol, mb = 14 }) => {
     const segs = donutSegments(items);
     return (
-      <div class="rp-avoid" style={px({ display: "grid", gridTemplateColumns: `${size + 22}px 1fr`, gap: 26, alignItems: "center", background: "#fff", boxShadow: CARD_SOFT, borderRadius: 16, padding: "20px 24px", marginBottom: mb })}>
+      <div class="rp-avoid" style={px({ display: "grid", gridTemplateColumns: `${size + 22}px minmax(0,1fr)`, gap: 26, alignItems: "center", background: "#fff", boxShadow: CARD_SOFT, borderRadius: 16, padding: "20px 24px", marginBottom: mb })}>
         <div style={px({ display: "flex", justifyContent: "flex-start" })}>
           <SvgDonut size={size} segments={segs} centerTop={centerTop} centerLabel={centerLabel} />
         </div>
         {twoCol ? (
-          <div style={px({ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "7px 20px" })}>
+          <div style={px({ display: "grid", gridTemplateColumns: "minmax(0,1fr) minmax(0,1fr)", gap: "8px 20px" })}>
             {segs.map((s, i) => (
-              <div key={i} style={px({ display: "flex", alignItems: "center", gap: 8 })}>
-                <span style={px({ width: 11, height: 11, borderRadius: 3, background: s.color, flexShrink: 0 })} />
-                <span style={px({ flex: 1, fontSize: 11.5, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" })} title={s.name}>{s.name}</span>
-                <strong style={px({ fontSize: 11.5, direction: "ltr", color: NAVY })}>{fmtCurrency(s.value)}</strong>
-                <span style={px({ width: 42, textAlign: "left", direction: "ltr", fontSize: 11, color: MUTED })}>{s.percent.toFixed(1)}%</span>
+              <div key={i} style={px({ display: "flex", alignItems: "flex-start", gap: 8, minWidth: 0 })}>
+                <span style={px({ width: 11, height: 11, borderRadius: 3, background: s.color, flexShrink: 0, marginTop: 3 })} />
+                <span style={px({ flex: 1, minWidth: 0, fontSize: 11.5, lineHeight: 1.3 })} title={s.name}>{s.name}</span>
+                <strong style={px({ fontSize: 11.5, direction: "ltr", color: NAVY, flexShrink: 0 })}>{fmtCurrency(s.value)}</strong>
+                <span style={px({ width: 42, textAlign: "left", direction: "ltr", fontSize: 11, color: MUTED, flexShrink: 0 })}>{s.percent.toFixed(1)}%</span>
               </div>
             ))}
             {note ? <div style={px({ gridColumn: "span 2", fontSize: 10.5, color: MUTED, marginTop: 2 })}>{note}</div> : null}
@@ -6176,9 +6187,9 @@ export function PrintReportA4({ reportData, conversationSummary = "", actionReco
         ) : (
           <div style={px({ display: "flex", flexDirection: "column", gap: 9 })}>
             {segs.length ? segs.map((s, i) => (
-              <div key={i} style={px({ display: "flex", alignItems: "center", gap: 10 })}>
+              <div key={i} style={px({ display: "flex", alignItems: "center", gap: 10, minWidth: 0 })}>
                 <span style={px({ width: 12, height: 12, borderRadius: 4, background: s.color, flexShrink: 0 })} />
-                <span style={px({ flex: 1, fontSize: 13.5, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" })} title={s.name}>{s.name}</span>
+                <span style={px({ flex: 1, minWidth: 0, fontSize: 13.5, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" })} title={s.name}>{s.name}</span>
                 <strong style={px({ fontSize: 13.5, direction: "ltr", color: NAVY })}>{fmtCurrency(s.value)}</strong>
                 <span style={px({ width: 52, textAlign: "left", direction: "ltr", fontSize: 13, color: MUTED })}>{s.percent.toFixed(1)}%</span>
               </div>
@@ -6267,7 +6278,7 @@ export function PrintReportA4({ reportData, conversationSummary = "", actionReco
         <h1 style={px({ margin: "10px 0 0", fontSize: 54, lineHeight: 1.06, fontWeight: 800, color: NAVY, maxWidth: 640 })}>דוח פנסיוני<br />משפחתי מאוחד</h1>
         <div style={px({ marginTop: 16, display: "flex", alignItems: "center", gap: 12 })}>
           <span style={px({ width: 30, height: 2, background: PINK })} />
-          <span style={px({ fontSize: 20, fontWeight: 700, color: NAVY })}>{family.name ? `משפחת ${family.name}` : "דוח משפחתי"}</span>
+          <span style={px({ fontSize: 20, fontWeight: 700, color: NAVY })}>{coverTitleLine}</span>
         </div>
         <div style={px({ marginTop: 14, fontSize: 16.5, lineHeight: 1.75, color: DARKTAN, maxWidth: 520 })}>תמונה מלאה של העתיד שלכם — פנסיה, ביטוח, השקעות ותכנון עתידי, מרוכזים במסמך אחד ברור.</div>
 

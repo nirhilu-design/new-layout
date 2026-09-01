@@ -5911,7 +5911,7 @@ export function PrintReportA4({ reportData, conversationSummary = "", actionReco
 
   // ---- Design tokens (Pension Report Redesign / Claude Design handoff) ----
   const NAVY = "#00215D";
-  const PINK = "#FF2756";
+  const PINK = "#E8536F";
   const TAN = "#DDE3EC";
   const OFFWHITE = "#FFFFFF";
   const DESK = "#F4F6F9";
@@ -5921,15 +5921,15 @@ export function PrintReportA4({ reportData, conversationSummary = "", actionReco
   const HAIR = "#EEF1F6";
   const HAIR2 = "#E4E9F0";
   // 10-color chart palette (handoff order).
-  const PALETTE = [NAVY, PINK, TAN, "#C9BBA8", "#43B5D9", "#8F63C9", "#9CA3AF", "#3D5A8A", "#6B7280", "#F2A0B2"];
-  const GRAD_NAVY = "linear-gradient(180deg,#0B3079,#00215D)";
-  const GRAD_PINK = "linear-gradient(180deg,#FF4A70,#F0143F)";
+  const PALETTE = [NAVY, PINK, TAN, "#C9BBA8", "#5FA6C2", "#8A6DB4", "#9CA3AF", "#3D5A8A", "#6B7280", "#E8A6B4"];
+  const GRAD_NAVY = "linear-gradient(180deg,#12386F,#0A2A5A)";
+  const GRAD_PINK = "linear-gradient(180deg,#EE6A82,#DD435F)";
   const GRAD_ROW = "linear-gradient(180deg,#FAFBFD,#F1F4F9)";
   const GRAD_TOTAL = "linear-gradient(180deg,#E7ECF4,#D3DBE7)";
   const CARD_SOFT = "0 2px 12px rgba(0,33,93,0.08)";
   const CARD_TABLE = "0 10px 24px rgba(0,33,93,0.12),0 2px 4px rgba(0,33,93,0.06)";
   const HEAD_SHADOW = "inset 0 1px 0 rgba(255,255,255,0.18),0 2px 6px rgba(0,33,93,0.35)";
-  const HEAD_SHADOW_PINK = "inset 0 1px 0 rgba(255,255,255,0.22),0 2px 6px rgba(240,20,63,0.3)";
+  const HEAD_SHADOW_PINK = "inset 0 1px 0 rgba(255,255,255,0.22),0 2px 6px rgba(221,67,95,0.28)";
 
   const firmName = data.firmName || "מבט משפחתי";
   const watermark = data.watermark !== false;
@@ -6208,9 +6208,9 @@ export function PrintReportA4({ reportData, conversationSummary = "", actionReco
       soft: { bg: DESK, color: NAVY, lc: MUTED },
     }[tone || "soft"];
     return (
-      <div class="rp-avoid" style={px({ background: map.bg, color: map.color, borderRadius: 14, padding: compact ? "15px 16px" : 20 })}>
-        <div style={px({ fontSize: 11.5, color: map.lc })}>{label}</div>
-        <div style={px({ fontSize: compact ? 20 : 24, fontWeight: 800, marginTop: compact ? 6 : 8, direction: "ltr", textAlign: "right" })}>{value}</div>
+      <div class="rp-avoid" style={px({ background: map.bg, color: map.color, borderRadius: 14, padding: compact ? "18px 18px" : 20 })}>
+        <div style={px({ fontSize: compact ? 12 : 11.5, color: map.lc })}>{label}</div>
+        <div style={px({ fontSize: compact ? 22 : 24, fontWeight: 800, marginTop: compact ? 8 : 8, direction: "ltr", textAlign: "right" })}>{value}</div>
       </div>
     );
   };
@@ -6219,14 +6219,14 @@ export function PrintReportA4({ reportData, conversationSummary = "", actionReco
     const a = Number(withV || 0), b = Number(withoutV || 0);
     const max = Math.max(a, b, 1);
     return (
-      <div class="rp-avoid" style={px({ background: "#fff", boxShadow: CARD_SOFT, borderRadius: 14, padding: compact ? 18 : 24 })}>
-        <div style={px({ fontSize: compact ? 15 : 16, fontWeight: 700, color: NAVY })}>{title}</div>
-        <div style={px({ fontSize: 12.5, color: MUTED, margin: compact ? "4px 0 14px" : "5px 0 18px" })}>{sub}</div>
-        <div style={px({ display: "flex", flexDirection: "column", gap: compact ? 11 : 14 })}>
+      <div class="rp-avoid" style={px({ background: "#fff", boxShadow: CARD_SOFT, borderRadius: 14, padding: compact ? 22 : 24 })}>
+        <div style={px({ fontSize: 16, fontWeight: 700, color: NAVY })}>{title}</div>
+        <div style={px({ fontSize: 12.5, color: MUTED, margin: compact ? "5px 0 16px" : "5px 0 18px" })}>{sub}</div>
+        <div style={px({ display: "flex", flexDirection: "column", gap: compact ? 13 : 14 })}>
           {[{ l: "עם המשך הפקדות", v: a, c: NAVY }, { l: "ללא המשך הפקדות", v: b, c: PINK }].map((r, i) => (
             <div key={i}>
               <div style={px({ display: "flex", justifyContent: "space-between", fontSize: 12.5, marginBottom: 5 })}><span>{r.l}</span><strong style={px({ direction: "ltr" })}>{fmtCurrency(r.v)}</strong></div>
-              <div style={px({ background: DESK, borderRadius: 8, height: compact ? 14 : 16, overflow: "hidden" })}><div style={px({ width: `${Math.max((r.v / max) * 100, r.v ? 4 : 0)}%`, height: "100%", background: r.c, borderRadius: 8 })} /></div>
+              <div style={px({ background: DESK, borderRadius: 8, height: 16, overflow: "hidden" })}><div style={px({ width: `${Math.max((r.v / max) * 100, r.v ? 4 : 0)}%`, height: "100%", background: r.c, borderRadius: 8 })} /></div>
             </div>
           ))}
         </div>
@@ -6237,11 +6237,11 @@ export function PrintReportA4({ reportData, conversationSummary = "", actionReco
   const GaugeCard = ({ title, sub, value, dark, compact }) => {
     const v = Math.max(Math.min(Number(value || 0), 100), 0);
     return (
-      <div class="rp-avoid" style={px({ background: dark ? NAVY : TAN, color: dark ? "#fff" : DARKTAN, borderRadius: 14, padding: compact ? 18 : 24 })}>
-        <div style={px({ fontSize: compact ? 14 : 15, fontWeight: 700 })}>{title}</div>
-        <div style={px({ fontSize: 12.5, opacity: dark ? 0.72 : 0.75, marginBottom: compact ? 10 : 14 })}>{sub}</div>
-        <div style={px({ fontSize: compact ? 28 : 36, fontWeight: 800, color: dark ? "#fff" : NAVY, direction: "ltr", textAlign: "right", marginBottom: compact ? 9 : 10 })}>{`${Math.round(v)}%`}</div>
-        <div style={px({ background: dark ? "rgba(255,255,255,0.16)" : "rgba(0,33,93,0.12)", borderRadius: 8, height: compact ? 13 : 14, overflow: "hidden", display: "flex" })}><div style={px({ width: `${v}%`, height: "100%", background: dark ? PINK : NAVY, borderRadius: 8 })} /></div>
+      <div class="rp-avoid" style={px({ background: dark ? NAVY : TAN, color: dark ? "#fff" : DARKTAN, borderRadius: 14, padding: compact ? 22 : 24 })}>
+        <div style={px({ fontSize: 15, fontWeight: 700 })}>{title}</div>
+        <div style={px({ fontSize: 12.5, opacity: dark ? 0.72 : 0.75, marginBottom: compact ? 13 : 14 })}>{sub}</div>
+        <div style={px({ fontSize: compact ? 33 : 36, fontWeight: 800, color: dark ? "#fff" : NAVY, direction: "ltr", textAlign: "right", marginBottom: 10 })}>{`${Math.round(v)}%`}</div>
+        <div style={px({ background: dark ? "rgba(255,255,255,0.16)" : "rgba(0,33,93,0.12)", borderRadius: 8, height: 14, overflow: "hidden", display: "flex" })}><div style={px({ width: `${v}%`, height: "100%", background: dark ? PINK : NAVY, borderRadius: 8 })} /></div>
         <div style={px({ display: "flex", justifyContent: "space-between", fontSize: 10, opacity: 0.65, marginTop: 5 })}><span>0%</span><span>25%</span><span>50%</span><span>75%</span><span>100%</span></div>
       </div>
     );
@@ -6395,17 +6395,17 @@ export function PrintReportA4({ reportData, conversationSummary = "", actionReco
         {show("pension") ? (
           <>
             {show("personal") ? <SubHead title="סיכום פנסיוני" mt={24} mb={14} /> : null}
-            <div style={px({ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 12, marginTop: show("personal") ? 0 : 4 })}>
+            <div style={px({ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 14, marginTop: show("personal") ? 0 : 4 })}>
               <KpiTile compact tone="navy" label="סך נכסים" value={fmtCurrency(family.totalAssets)} />
               <KpiTile compact tone="soft" label="הפקדה חודשית כוללת" value={fmtCurrency(family.monthlyDeposits)} />
               <KpiTile compact tone="soft" label="צבירה צפויה לפרישה" value={fmtCurrency(family.projectedLumpSumWithDeposits)} />
               <KpiTile compact tone="pink" label="קצבה חודשית צפויה" value={fmtCurrency(family.monthlyPensionWithDeposits)} />
             </div>
-            <div style={px({ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginTop: 14 })}>
+            <div style={px({ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 18, marginTop: 18 })}>
               <CompareCard compact title="השוואת צבירה צפויה" sub="עם המשך הפקדות מול הפסקתן" withV={family.projectedLumpSumWithDeposits} withoutV={family.projectedLumpSumWithoutDeposits} />
               <CompareCard compact title="השוואת קצבה חודשית צפויה" sub="עם המשך הפקדות מול הפסקתן" withV={family.monthlyPensionWithDeposits} withoutV={family.monthlyPensionWithoutDeposits} />
             </div>
-            <div style={px({ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginTop: 14 })}>
+            <div style={px({ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 18, marginTop: 18 })}>
               <GaugeCard compact dark title="חשיפה מנייתית משוקללת" sub="שיעור החשיפה למניות בתיק" value={data.weightedEquityExposure} />
               <GaugeCard compact title="חשיפה לחו״ל" sub="שיעור האחזקה בחו״ל" value={data.weightedForeignExposure} />
             </div>

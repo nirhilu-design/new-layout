@@ -6201,32 +6201,32 @@ export function PrintReportA4({ reportData, conversationSummary = "", actionReco
     );
   };
 
-  const KpiTile = ({ label, value, tone }) => {
+  const KpiTile = ({ label, value, tone, compact }) => {
     const map = {
       navy: { bg: NAVY, color: "#fff", lc: "rgba(255,255,255,0.72)" },
       pink: { bg: PINK, color: "#fff", lc: "rgba(255,255,255,0.85)" },
       soft: { bg: DESK, color: NAVY, lc: MUTED },
     }[tone || "soft"];
     return (
-      <div class="rp-avoid" style={px({ background: map.bg, color: map.color, borderRadius: 16, padding: 20 })}>
+      <div class="rp-avoid" style={px({ background: map.bg, color: map.color, borderRadius: 14, padding: compact ? "15px 16px" : 20 })}>
         <div style={px({ fontSize: 11.5, color: map.lc })}>{label}</div>
-        <div style={px({ fontSize: 24, fontWeight: 800, marginTop: 8, direction: "ltr", textAlign: "right" })}>{value}</div>
+        <div style={px({ fontSize: compact ? 20 : 24, fontWeight: 800, marginTop: compact ? 6 : 8, direction: "ltr", textAlign: "right" })}>{value}</div>
       </div>
     );
   };
 
-  const CompareCard = ({ title, sub, withV, withoutV }) => {
+  const CompareCard = ({ title, sub, withV, withoutV, compact }) => {
     const a = Number(withV || 0), b = Number(withoutV || 0);
     const max = Math.max(a, b, 1);
     return (
-      <div class="rp-avoid" style={px({ background: "#fff", boxShadow: CARD_SOFT, borderRadius: 16, padding: 24 })}>
-        <div style={px({ fontSize: 16, fontWeight: 700, color: NAVY })}>{title}</div>
-        <div style={px({ fontSize: 12.5, color: MUTED, margin: "5px 0 18px" })}>{sub}</div>
-        <div style={px({ display: "flex", flexDirection: "column", gap: 14 })}>
+      <div class="rp-avoid" style={px({ background: "#fff", boxShadow: CARD_SOFT, borderRadius: 14, padding: compact ? 18 : 24 })}>
+        <div style={px({ fontSize: compact ? 15 : 16, fontWeight: 700, color: NAVY })}>{title}</div>
+        <div style={px({ fontSize: 12.5, color: MUTED, margin: compact ? "4px 0 14px" : "5px 0 18px" })}>{sub}</div>
+        <div style={px({ display: "flex", flexDirection: "column", gap: compact ? 11 : 14 })}>
           {[{ l: "עם המשך הפקדות", v: a, c: NAVY }, { l: "ללא המשך הפקדות", v: b, c: PINK }].map((r, i) => (
             <div key={i}>
-              <div style={px({ display: "flex", justifyContent: "space-between", fontSize: 13, marginBottom: 6 })}><span>{r.l}</span><strong style={px({ direction: "ltr" })}>{fmtCurrency(r.v)}</strong></div>
-              <div style={px({ background: DESK, borderRadius: 8, height: 16, overflow: "hidden" })}><div style={px({ width: `${Math.max((r.v / max) * 100, r.v ? 4 : 0)}%`, height: "100%", background: r.c, borderRadius: 8 })} /></div>
+              <div style={px({ display: "flex", justifyContent: "space-between", fontSize: 12.5, marginBottom: 5 })}><span>{r.l}</span><strong style={px({ direction: "ltr" })}>{fmtCurrency(r.v)}</strong></div>
+              <div style={px({ background: DESK, borderRadius: 8, height: compact ? 14 : 16, overflow: "hidden" })}><div style={px({ width: `${Math.max((r.v / max) * 100, r.v ? 4 : 0)}%`, height: "100%", background: r.c, borderRadius: 8 })} /></div>
             </div>
           ))}
         </div>
@@ -6234,18 +6234,27 @@ export function PrintReportA4({ reportData, conversationSummary = "", actionReco
     );
   };
 
-  const GaugeCard = ({ title, sub, value, dark }) => {
+  const GaugeCard = ({ title, sub, value, dark, compact }) => {
     const v = Math.max(Math.min(Number(value || 0), 100), 0);
     return (
-      <div class="rp-avoid" style={px({ background: dark ? NAVY : TAN, color: dark ? "#fff" : DARKTAN, borderRadius: 16, padding: 24 })}>
-        <div style={px({ fontSize: 15, fontWeight: 700 })}>{title}</div>
-        <div style={px({ fontSize: 12.5, opacity: dark ? 0.72 : 0.75, marginBottom: 14 })}>{sub}</div>
-        <div style={px({ fontSize: 36, fontWeight: 800, color: dark ? "#fff" : NAVY, direction: "ltr", textAlign: "right", marginBottom: 10 })}>{`${Math.round(v)}%`}</div>
-        <div style={px({ background: dark ? "rgba(255,255,255,0.16)" : "rgba(0,33,93,0.12)", borderRadius: 8, height: 14, overflow: "hidden", display: "flex" })}><div style={px({ width: `${v}%`, height: "100%", background: dark ? PINK : NAVY, borderRadius: 8 })} /></div>
-        <div style={px({ display: "flex", justifyContent: "space-between", fontSize: 10.5, opacity: 0.65, marginTop: 6 })}><span>0%</span><span>25%</span><span>50%</span><span>75%</span><span>100%</span></div>
+      <div class="rp-avoid" style={px({ background: dark ? NAVY : TAN, color: dark ? "#fff" : DARKTAN, borderRadius: 14, padding: compact ? 18 : 24 })}>
+        <div style={px({ fontSize: compact ? 14 : 15, fontWeight: 700 })}>{title}</div>
+        <div style={px({ fontSize: 12.5, opacity: dark ? 0.72 : 0.75, marginBottom: compact ? 10 : 14 })}>{sub}</div>
+        <div style={px({ fontSize: compact ? 28 : 36, fontWeight: 800, color: dark ? "#fff" : NAVY, direction: "ltr", textAlign: "right", marginBottom: compact ? 9 : 10 })}>{`${Math.round(v)}%`}</div>
+        <div style={px({ background: dark ? "rgba(255,255,255,0.16)" : "rgba(0,33,93,0.12)", borderRadius: 8, height: compact ? 13 : 14, overflow: "hidden", display: "flex" })}><div style={px({ width: `${v}%`, height: "100%", background: dark ? PINK : NAVY, borderRadius: 8 })} /></div>
+        <div style={px({ display: "flex", justifyContent: "space-between", fontSize: 10, opacity: 0.65, marginTop: 5 })}><span>0%</span><span>25%</span><span>50%</span><span>75%</span><span>100%</span></div>
       </div>
     );
   };
+
+  // Sub-heading used inside merged pages to separate two chapters on one page.
+  const SubHead = ({ title, mt = 20, mb = 12 }) => (
+    <div style={px({ display: "flex", alignItems: "center", gap: 12, margin: `${mt}px 0 ${mb}px` })}>
+      <span style={px({ width: 6, height: 6, borderRadius: "50%", background: PINK, flexShrink: 0 })} />
+      <span style={px({ fontSize: 16, fontWeight: 800, color: NAVY, flexShrink: 0 })}>{title}</span>
+      <span style={px({ flex: 1, height: 1, background: HAIR })} />
+    </div>
+  );
 
   // Shared table cell styles.
   const hc = { padding: "11px 12px", textAlign: "right", fontWeight: 700 };
@@ -6340,75 +6349,72 @@ export function PrintReportA4({ reportData, conversationSummary = "", actionReco
     </section>
   ));
 
-  // ---- 01 · פרטים אישיים ----
-  if (show("personal")) {
+  // ---- 01 · פרטים אישיים + סיכום פנסיוני (עמוד ממוזג) ----
+  if (show("personal") || show("pension")) {
     pages.push((n, total) => (
-      <section class="rp-section" key="personal" style={px(pageBase)}>
+      <section class="rp-section" key="personal-pension" style={px(pageBase)}>
         <Watermark style={{ bottom: -200, left: -180, width: 460, height: 460 }} />
-        <ChapterHeader num="01" title="פרטים אישיים" subtitle="בני המשפחה המבוטחים בדוח" />
-        <Lead mb={24} text="כדי לתת לכם תמונה מלאה ופשוטה של העתיד הפיננסי המשפחתי, ריכזנו את כל הנכסים והחיסכונות שלכם במקום אחד. כאן תוכלו לראות את סך הצבירה המעודכנת שנצברה עד כה, לצד חלוקת הכספים בין האפיקים והגופים השונים." />
+        <ChapterHeader num={String(n - 1).padStart(2, "0")} title="פרטים אישיים וסיכום פנסיוני" subtitle="בני המשפחה · צבירה, הפקדות ותחזית לגיל פרישה" />
+        <Lead mb={14} text="ריכזנו את בני המשפחה המבוטחים לצד תמונת החיסכון הפנסיוני — סך הצבירה המעודכן, ההפקדות, והתחזית לצבירה ולקצבה החודשית בגיל פרישה, בהשוואה בין המשך הפקדות להפסקתן." />
 
-        <div style={px({ display: "grid", gridTemplateColumns: members.length > 1 ? "1fr 1fr" : "1fr", gap: 22 })}>
-          {(members.length ? members : [{ name: "—" }]).slice(0, 4).map((member, i) => {
-            const brand = i % 2 === 0 ? NAVY : PINK;
-            const name = member.name || "—";
-            const role = i === 0 ? "מבוטח ראשי" : "בן/בת זוג";
-            const retireAge = memberDetail(member, "retireAge");
-            return (
-              <div class="rp-avoid" key={member.id || name || i} style={px({ background: "#fff", borderTop: `4px solid ${brand}`, borderRadius: 18, boxShadow: CARD_SOFT, padding: 28 })}>
-                <div style={px({ display: "flex", alignItems: "center", gap: 14, marginBottom: 20 })}>
-                  <div style={px({ width: 50, height: 50, borderRadius: "50%", background: DESK, color: brand, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 21, fontWeight: 800 })}>{String(name).trim().slice(0, 1) || "?"}</div>
-                  <div>
-                    <div style={px({ fontSize: 23, fontWeight: 800, color: NAVY })}>{name}</div>
-                    <div style={px({ fontSize: 12.5, color: MUTED, marginTop: 1 })}>{role}{retireAge ? ` · פרישה בגיל ${retireAge}` : ""}</div>
+        {show("personal") ? (
+          <>
+            <div style={px({ display: "grid", gridTemplateColumns: members.length > 1 ? "1fr 1fr" : "1fr", gap: 16 })}>
+              {(members.length ? members : [{ name: "—" }]).slice(0, 4).map((member, i) => {
+                const brand = i % 2 === 0 ? NAVY : PINK;
+                const name = member.name || "—";
+                const role = i === 0 ? "מבוטח ראשי" : "בן/בת זוג";
+                const retireAge = memberDetail(member, "retireAge");
+                return (
+                  <div class="rp-avoid" key={member.id || name || i} style={px({ background: "#fff", borderTop: `4px solid ${brand}`, borderRadius: 16, boxShadow: CARD_SOFT, padding: "18px 20px" })}>
+                    <div style={px({ display: "flex", alignItems: "center", gap: 12, marginBottom: 14 })}>
+                      <div style={px({ width: 44, height: 44, borderRadius: "50%", background: DESK, color: brand, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 19, fontWeight: 800 })}>{String(name).trim().slice(0, 1) || "?"}</div>
+                      <div>
+                        <div style={px({ fontSize: 20, fontWeight: 800, color: NAVY })}>{name}</div>
+                        <div style={px({ fontSize: 12, color: MUTED, marginTop: 1 })}>{role}{retireAge ? ` · פרישה בגיל ${retireAge}` : ""}</div>
+                      </div>
+                    </div>
+                    <div style={px({ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 })}>
+                      <div><div style={px({ fontSize: 11, color: MUTED })}>תאריך לידה</div><div style={px({ fontSize: 15.5, fontWeight: 700, marginTop: 2, direction: "ltr", textAlign: "right", color: INK })}>{fmtDate(memberDetail(member, "birthDate"))}</div></div>
+                      <div><div style={px({ fontSize: 11, color: MUTED })}>שכר נוכחי</div><div style={px({ fontSize: 15.5, fontWeight: 700, marginTop: 2, direction: "ltr", textAlign: "right", color: INK })}>{memberDetail(member, "currentSalary") ? fmtCurrency(memberDetail(member, "currentSalary")) : "—"}</div></div>
+                      <div style={px({ gridColumn: "span 2", borderTop: `1px solid ${HAIR}`, paddingTop: 9 })}><div style={px({ fontSize: 11, color: MUTED })}>מקום עבודה אחרון מעודכן</div><div style={px({ fontSize: 14, fontWeight: 600, marginTop: 2, color: DARKTAN })}>{memberDetail(member, "lastWorkplace") || "לא צוין"}</div></div>
+                    </div>
                   </div>
-                </div>
-                <div style={px({ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 })}>
-                  <div><div style={px({ fontSize: 11.5, color: MUTED })}>תאריך לידה</div><div style={px({ fontSize: 17, fontWeight: 700, marginTop: 3, direction: "ltr", textAlign: "right", color: INK })}>{fmtDate(memberDetail(member, "birthDate"))}</div></div>
-                  <div><div style={px({ fontSize: 11.5, color: MUTED })}>שכר נוכחי</div><div style={px({ fontSize: 17, fontWeight: 700, marginTop: 3, direction: "ltr", textAlign: "right", color: INK })}>{memberDetail(member, "currentSalary") ? fmtCurrency(memberDetail(member, "currentSalary")) : "—"}</div></div>
-                  <div style={px({ gridColumn: "span 2", borderTop: `1px solid ${HAIR}`, paddingTop: 12 })}><div style={px({ fontSize: 11.5, color: MUTED })}>מקום עבודה אחרון מעודכן</div><div style={px({ fontSize: 15.5, fontWeight: 600, marginTop: 3, color: DARKTAN })}>{memberDetail(member, "lastWorkplace") || "לא צוין"}</div></div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-
-        <div style={px({ marginTop: 22, display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 1, background: "#EDF1F6", borderRadius: 16, overflow: "hidden", boxShadow: CARD_SOFT })}>
-          {[["שכר מצרפי", combinedSalary], ["הפקדה חודשית כוללת", family.monthlyDeposits], ["סך כיסויי חיים", totalLifeCoverage]].map(([lbl, val], i) => (
-            <div key={i} style={px({ background: "#fff", padding: "20px 22px" })}>
-              <div style={px({ fontSize: 11.5, color: MUTED })}>{lbl}</div>
-              <div style={px({ fontSize: 26, fontWeight: 800, color: NAVY, direction: "ltr", textAlign: "right", marginTop: 4 })}>{val ? fmtCurrency(val) : "—"}</div>
+                );
+              })}
             </div>
-          ))}
-        </div>
 
-        <div style={px({ marginTop: 20, background: DESK, borderRadius: 16, padding: "20px 24px", fontSize: 13.5, color: DARKTAN, lineHeight: 1.7 })}>סך השכר המצרפי המדווח למשפחה מהווה בסיס לחישובי ההפקדות והקצבאות המוצגים בהמשך הדוח.</div>
+            <div style={px({ marginTop: 14, display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 1, background: "#EDF1F6", borderRadius: 14, overflow: "hidden", boxShadow: CARD_SOFT })}>
+              {[["שכר מצרפי", combinedSalary], ["הפקדה חודשית כוללת", family.monthlyDeposits], ["סך כיסויי חיים", totalLifeCoverage]].map(([lbl, val], i) => (
+                <div key={i} style={px({ background: "#fff", padding: "14px 18px" })}>
+                  <div style={px({ fontSize: 11, color: MUTED })}>{lbl}</div>
+                  <div style={px({ fontSize: 23, fontWeight: 800, color: NAVY, direction: "ltr", textAlign: "right", marginTop: 3 })}>{val ? fmtCurrency(val) : "—"}</div>
+                </div>
+              ))}
+            </div>
+          </>
+        ) : null}
 
-        <Foot n={n} total={total} />
-      </section>
-    ));
-  }
+        {show("pension") ? (
+          <>
+            {show("personal") ? <SubHead title="סיכום פנסיוני" /> : null}
+            <div style={px({ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 12, marginTop: show("personal") ? 0 : 4 })}>
+              <KpiTile compact tone="navy" label="סך נכסים" value={fmtCurrency(family.totalAssets)} />
+              <KpiTile compact tone="soft" label="הפקדה חודשית כוללת" value={fmtCurrency(family.monthlyDeposits)} />
+              <KpiTile compact tone="soft" label="צבירה צפויה לפרישה" value={fmtCurrency(family.projectedLumpSumWithDeposits)} />
+              <KpiTile compact tone="pink" label="קצבה חודשית צפויה" value={fmtCurrency(family.monthlyPensionWithDeposits)} />
+            </div>
+            <div style={px({ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginTop: 14 })}>
+              <CompareCard compact title="השוואת צבירה צפויה" sub="עם המשך הפקדות מול הפסקתן" withV={family.projectedLumpSumWithDeposits} withoutV={family.projectedLumpSumWithoutDeposits} />
+              <CompareCard compact title="השוואת קצבה חודשית צפויה" sub="עם המשך הפקדות מול הפסקתן" withV={family.monthlyPensionWithDeposits} withoutV={family.monthlyPensionWithoutDeposits} />
+            </div>
+            <div style={px({ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginTop: 14 })}>
+              <GaugeCard compact dark title="חשיפה מנייתית משוקללת" sub="שיעור החשיפה למניות בתיק" value={data.weightedEquityExposure} />
+              <GaugeCard compact title="חשיפה לחו״ל" sub="שיעור האחזקה בחו״ל" value={data.weightedForeignExposure} />
+            </div>
+          </>
+        ) : null}
 
-  // ---- 02 · סיכום פנסיוני ----
-  if (show("pension")) {
-    pages.push((n, total) => (
-      <section class="rp-section" key="pension" style={px(pageBase)}>
-        <ChapterHeader num="02" title="סיכום פנסיוני" subtitle="ריכוז צבירה, הפקדות ותחזית לגיל פרישה" />
-        <Lead text="הנה הצצה לאיך שהעתיד שלכם עשוי להיראות ביום הפרישה. החישוב מציג את הצבירה והקצבה החודשית הצפויה לכם, תוך השוואה בין המשך הפקדות שוטפות לבין מצב שבו נעצרות ההפקדות." />
-        <div style={px({ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 14 })}>
-          <KpiTile tone="navy" label="סך נכסים" value={fmtCurrency(family.totalAssets)} />
-          <KpiTile tone="soft" label="הפקדה חודשית כוללת" value={fmtCurrency(family.monthlyDeposits)} />
-          <KpiTile tone="soft" label="צבירה צפויה לפרישה" value={fmtCurrency(family.projectedLumpSumWithDeposits)} />
-          <KpiTile tone="pink" label="קצבה חודשית צפויה" value={fmtCurrency(family.monthlyPensionWithDeposits)} />
-        </div>
-        <div style={px({ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20, marginTop: 20 })}>
-          <CompareCard title="השוואת צבירה צפויה" sub="עם המשך הפקדות מול הפסקתן" withV={family.projectedLumpSumWithDeposits} withoutV={family.projectedLumpSumWithoutDeposits} />
-          <CompareCard title="השוואת קצבה חודשית צפויה" sub="עם המשך הפקדות מול הפסקתן" withV={family.monthlyPensionWithDeposits} withoutV={family.monthlyPensionWithoutDeposits} />
-        </div>
-        <div style={px({ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20, marginTop: 20 })}>
-          <GaugeCard dark title="חשיפה מנייתית משוקללת" sub="שיעור החשיפה למניות בתיק" value={data.weightedEquityExposure} />
-          <GaugeCard title="חשיפה לחו״ל" sub="שיעור האחזקה בחו״ל" value={data.weightedForeignExposure} />
-        </div>
         <Foot n={n} total={total} />
       </section>
     ));
@@ -6419,7 +6425,7 @@ export function PrintReportA4({ reportData, conversationSummary = "", actionReco
     pages.push((n, total) => (
       <section class="rp-section" key="allocation" style={px(pageBase)}>
         <Watermark style={{ top: -190, left: -190, width: 480, height: 480 }} />
-        <ChapterHeader num="03" title="התפלגות נכסים" right={
+        <ChapterHeader num={String(n - 1).padStart(2, "0")} title="התפלגות נכסים" right={
           <div style={px({ textAlign: "left" })}>
             <div style={px({ fontSize: 11.5, color: MUTED, fontWeight: 700 })}>סך צבירה מנוהלת</div>
             <div style={px({ fontSize: 28, fontWeight: 800, color: NAVY, direction: "ltr" })}>{fmtCurrency(family.totalAssets)}</div>
@@ -6434,12 +6440,19 @@ export function PrintReportA4({ reportData, conversationSummary = "", actionReco
     ));
   }
 
-  // ---- 04 · תשואה משוקללת ----
-  if (show("allocation")) {
+  // ---- 03 · תשואה משוקללת + דמי ניהול (עמוד ממוזג) ----
+  if (show("allocation") || (show("managementFees") && feeCards.length)) {
+    const hasWeightedPage = show("allocation");
+    const hasFeesPage = show("managementFees") && feeCards.length;
+    const mergedTitle = hasWeightedPage && hasFeesPage ? "תשואה משוקללת ודמי ניהול" : hasWeightedPage ? "תשואה משוקללת" : "דמי ניהול";
+    const mergedSub = hasWeightedPage && hasFeesPage ? "ביצועי המוצרים ועלויות הניהול" : hasWeightedPage ? "תשואות ומדדי סיכון · ברמת קבוצת מוצר" : "שיעורים משוקללים לפי צבירה · עלות בכסף";
     pages.push((n, total) => (
-      <section class="rp-section" key="weighted" style={px(pageBase)}>
-        <ChapterHeader num="04" title="תשואה משוקללת" subtitle="תשואות ומדדי סיכון · ברמת קבוצת מוצר" />
-        <Lead mb={20} text="התשואות ומדדי הסיכון מוצגים ברמת קבוצת מוצר, משוקללים לפי הצבירה בכל קבוצה — כדי לאפשר מבט ניהולי על התיק, ללא פירוט לפי פוליסה." />
+      <section class="rp-section" key="weighted-fees" style={px(pageBase)}>
+        <Watermark style={{ bottom: -210, left: -200, width: 500, height: 500 }} />
+        <ChapterHeader num={String(n - 1).padStart(2, "0")} title={mergedTitle} subtitle={mergedSub} />
+        {hasWeightedPage ? (
+        <>
+        <Lead mb={16} text="התשואות ומדדי הסיכון מוצגים ברמת קבוצת מוצר, משוקללים לפי הצבירה בכל קבוצה — כדי לאפשר מבט ניהולי על התיק, ללא פירוט לפי פוליסה." />
         {weightedReturns.groups.length ? (
           <>
             <table style={px({ ...tableWrap, fontSize: 12.5 })}>
@@ -6480,26 +6493,20 @@ export function PrintReportA4({ reportData, conversationSummary = "", actionReco
         ) : (
           <EmptyPanel title="לא התקבלו נתוני תשואה להצגה" subtitle="ככל שיועברו נתוני מוצרים, תוצג כאן תשואה משוקללת ברמת קבוצת מוצר." />
         )}
-        <Foot n={n} total={total} />
-      </section>
-    ));
-  }
+        </>
+        ) : null}
 
-  // ---- 05 · דמי ניהול ----
-  if (show("managementFees") && feeCards.length) {
-    pages.push((n, total) => (
-      <section class="rp-section" key="fees" style={px(pageBase)}>
-        <Watermark style={{ bottom: -210, left: -200, width: 500, height: 500 }} />
-        <ChapterHeader num="05" title="דמי ניהול" subtitle="שיעורים משוקללים לפי צבירה · עלות בכסף" />
-        <Lead mb={20} text="כדי לשמור על שקיפות מלאה, ריכזנו את סך העלויות הנלוות לניהול התיק — דמי הניהול הנגבים מההפקדה השוטפת ומהצבירה המצטברת, בשיעורים ובכסף — ברמת בן משפחה וברמה המשפחתית." />
+        {hasFeesPage ? (
+        <>
+        {hasWeightedPage ? <SubHead title="דמי ניהול" mt={14} mb={10} /> : <Lead mb={16} text="כדי לשמור על שקיפות מלאה, ריכזנו את סך העלויות הנלוות לניהול התיק — דמי הניהול הנגבים מההפקדה השוטפת ומהצבירה המצטברת, בשיעורים ובכסף — ברמת בן משפחה וברמה המשפחתית." />}
         <div style={px({ display: "grid", gridTemplateColumns: `repeat(${Math.min(feeCards.length, 3)},1fr)`, gap: 14 })}>
           {feeCards.map((c, i) => (
-            <div class="rp-avoid" key={i} style={px({ background: c.isTotal ? NAVY : "#fff", color: c.isTotal ? "#fff" : INK, boxShadow: c.isTotal ? "none" : CARD_SOFT, borderRadius: 16, padding: "18px 20px" })}>
+            <div class="rp-avoid" key={i} style={px({ background: c.isTotal ? NAVY : "#fff", color: c.isTotal ? "#fff" : INK, boxShadow: c.isTotal ? "none" : CARD_SOFT, borderRadius: 14, padding: "14px 16px" })}>
               <div style={px({ fontSize: 14, fontWeight: 800, color: c.isTotal ? "#fff" : NAVY })}>{c.name}</div>
-              <div style={px({ fontSize: 11, color: c.isTotal ? "rgba(255,255,255,0.75)" : MUTED, margin: "2px 0 12px" })}>סך צבירה {fmtCurrency(c.totalBalance)}</div>
+              <div style={px({ fontSize: 11, color: c.isTotal ? "rgba(255,255,255,0.75)" : MUTED, margin: "2px 0 8px" })}>סך צבירה {fmtCurrency(c.totalBalance)}</div>
               <div style={px({ fontSize: 11, color: c.isTotal ? "rgba(255,255,255,0.75)" : MUTED })}>דמי ניהול מצבירה (משוקלל)</div>
-              <div style={px({ fontSize: 26, fontWeight: 800, color: c.isTotal ? "#fff" : NAVY, direction: "ltr", textAlign: "right" })}>{fmtPct2(c.feeFromBalance)}</div>
-              <div style={px({ display: "flex", justifyContent: "space-between", alignItems: "center", borderTop: `1px solid ${c.isTotal ? "rgba(255,255,255,0.22)" : HAIR}`, marginTop: 10, paddingTop: 8 })}>
+              <div style={px({ fontSize: 22, fontWeight: 800, color: c.isTotal ? "#fff" : NAVY, direction: "ltr", textAlign: "right" })}>{fmtPct2(c.feeFromBalance)}</div>
+              <div style={px({ display: "flex", justifyContent: "space-between", alignItems: "center", borderTop: `1px solid ${c.isTotal ? "rgba(255,255,255,0.22)" : HAIR}`, marginTop: 8, paddingTop: 7 })}>
                 <span style={px({ fontSize: 11, color: c.isTotal ? "rgba(255,255,255,0.75)" : MUTED })}>דמי ניהול מהפקדה</span>
                 <strong style={px({ fontSize: 13, direction: "ltr", color: c.isTotal ? "#fff" : PINK })}>{fmtPct2(c.feeFromDeposit)}</strong>
               </div>
@@ -6509,42 +6516,50 @@ export function PrintReportA4({ reportData, conversationSummary = "", actionReco
 
         {feeMoney.length ? (
           <>
-            <div style={px({ fontSize: 16, fontWeight: 700, color: NAVY, margin: "26px 0 12px" })}>עלות דמי הניהול בכסף</div>
+            <div style={px({ fontSize: 15, fontWeight: 700, color: NAVY, margin: "16px 0 10px" })}>עלות דמי הניהול בכסף</div>
             <div style={px({ display: "grid", gridTemplateColumns: `repeat(${Math.min(feeMoney.length, 2)},1fr)`, gap: 14 })}>
               {feeMoney.map((m, i) => (
-                <div class="rp-avoid" key={i} style={px({ background: "#fff", boxShadow: CARD_SOFT, borderRadius: 16, padding: "20px 22px" })}>
+                <div class="rp-avoid" key={i} style={px({ background: "#fff", boxShadow: CARD_SOFT, borderRadius: 14, padding: "15px 18px" })}>
                   <div style={px({ fontSize: 12.5, color: MUTED })}>{m.name} · עלות שנתית</div>
-                  <div style={px({ fontSize: 24, fontWeight: 800, color: NAVY, direction: "ltr", textAlign: "right", marginTop: 5 })}>{capMoney(m.annual)}</div>
+                  <div style={px({ fontSize: 22, fontWeight: 800, color: NAVY, direction: "ltr", textAlign: "right", marginTop: 4 })}>{capMoney(m.annual)}</div>
                 </div>
               ))}
             </div>
-            <div class="rp-avoid" style={px({ marginTop: 14, background: NAVY, color: "#fff", borderRadius: 18, padding: "24px 26px", display: "flex", justifyContent: "space-between", alignItems: "center" })}>
+            <div class="rp-avoid" style={px({ marginTop: 12, background: NAVY, color: "#fff", borderRadius: 16, padding: "18px 22px", display: "flex", justifyContent: "space-between", alignItems: "center" })}>
               <div>
                 <div style={px({ fontSize: 15, fontWeight: 800 })}>עלות משפחתית כוללת</div>
                 <div style={px({ fontSize: 12, opacity: 0.75, marginTop: 3 })}>סך דמי הניהול המשולמים בשנה על ידי המשפחה</div>
               </div>
               <div style={px({ textAlign: "left" })}>
-                <div style={px({ fontSize: 32, fontWeight: 800, direction: "ltr" })}>{capMoney(feeAnnualTotal)}</div>
+                <div style={px({ fontSize: 28, fontWeight: 800, direction: "ltr" })}>{capMoney(feeAnnualTotal)}</div>
                 <div style={px({ fontSize: 11.5, opacity: 0.75, direction: "ltr", textAlign: "left" })}>{`${capMoney(feeMonthlyTotal)} לחודש`}</div>
               </div>
             </div>
             <NoteLine text="העלות בכסף מחושבת לפי דמי הניהול המשוקללים והצבירה/ההפקדה הנוכחיות, בהנחה של המשך המצב הקיים לאורך שנה." />
           </>
         ) : null}
+        </>
+        ) : null}
         <Foot n={n} total={total} />
       </section>
     ));
   }
 
-  // ---- 06 · סכומים למקרה פטירה ----
-  if (show("insurance")) {
+  // ---- 04 · סכומים למקרה פטירה + הלוואות (עמוד ממוזג) ----
+  if (show("insurance") || show("loans")) {
     const sumDeath = members.reduce((s, m) => s + Number(m.deathCoverage || 0), 0);
     const sumDisab = members.reduce((s, m) => s + Number(m.disabilityValue || 0), 0);
+    const hasDeathPage = show("insurance");
+    const hasLoansPage = show("loans");
+    const dlTitle = hasDeathPage && hasLoansPage ? "סכומים למקרה פטירה והלוואות" : hasDeathPage ? "סכומים למקרה פטירה" : "הלוואות";
+    const dlSub = hasDeathPage && hasLoansPage ? "הגנות ביטוחיות והתחייבויות על החיסכון" : hasDeathPage ? "ביטוח חיים, הון למוטבים וקצבת שאירים" : "הלוואות על חשבון מוצרים פנסיוניים";
     pages.push((n, total) => (
-      <section class="rp-section" key="insurance" style={px(pageBase)}>
-        <ChapterHeader num="06" title="סכומים למקרה פטירה" subtitle="ביטוח חיים, הון למוטבים וקצבת שאירים" />
-        <Lead mb={18} text="לצד החיסכון לעתיד, חשוב לוודא שהמשפחה מוגנת גם במקרים בלתי צפויים. חלק זה מפרט את ההגנה הכלכלית הקיימת לכם היום במקרה של אובדן כושר עבודה או פטירה, ואת רשת הביטחון המשפחתית." />
-        <InfoStrip text="הנתונים מציינים את הסכום למקרה פטירה המתקבל בתצורה הונית (סכום חד-פעמי למוטבים), וכן קצבה חודשית לשאירים בכל מקרה שקיימת קרן פנסיה." />
+      <section class="rp-section" key="insurance-loans" style={px(pageBase)}>
+        <Watermark style={{ top: -170, left: -190, width: 460, height: 460 }} />
+        <ChapterHeader num={String(n - 1).padStart(2, "0")} title={dlTitle} subtitle={dlSub} />
+        {hasDeathPage ? (
+        <>
+        <Lead mb={14} text="לצד החיסכון לעתיד, חשוב לוודא שהמשפחה מוגנת גם במקרים בלתי צפויים. חלק זה מפרט את ההגנה הכלכלית הקיימת לכם היום במקרה של אובדן כושר עבודה או פטירה, ואת רשת הביטחון המשפחתית." />
         <div style={px({ fontSize: 16, fontWeight: 700, color: NAVY, marginBottom: 10 })}>כיסויים לפי בן משפחה</div>
         {members.length ? (
           <table style={px({ ...tableWrap, fontSize: 13 })}>
@@ -6596,19 +6611,13 @@ export function PrintReportA4({ reportData, conversationSummary = "", actionReco
             <NoteLine text="סך הקצבה החודשית לאלמנה וליתומים אינה יכולה לעלות על השכר המבוטח; הפיצוי לכל יתום משולם עד גיל 21." />
           </>
         ) : <EmptyPanel title="אין נתוני פיצוי חודשי מקרן פנסיה להצגה" />}
-        <Foot n={n} total={total} />
-      </section>
-    ));
-  }
+        </>
+        ) : null}
 
-  // ---- 07 · הלוואות ----
-  if (show("loans")) {
-    pages.push((n, total) => (
-      <section class="rp-section" key="loans" style={px(pageBase)}>
-        <Watermark style={{ top: -170, left: -190, width: 460, height: 460 }} />
-        <ChapterHeader num="07" title="הלוואות" subtitle="הלוואות על חשבון מוצרים פנסיוניים" />
-        <Lead mb={20} text="הלוואות הנלקחות כנגד החיסכון הפנסיוני מקטינות את הצבירה הצפויה בפרישה כל עוד אינן נפרעות. להלן מצב ההלוואות הקיימות ויתרתן." />
-        <div style={px({ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 14, marginBottom: 24 })}>
+        {hasLoansPage ? (
+        <>
+        {hasDeathPage ? <SubHead title="הלוואות" /> : <Lead mb={16} text="הלוואות הנלקחות כנגד החיסכון הפנסיוני מקטינות את הצבירה הצפויה בפרישה כל עוד אינן נפרעות. להלן מצב ההלוואות הקיימות ויתרתן." />}
+        <div style={px({ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 14, marginBottom: 18 })}>
           <div style={px({ background: "#fff", boxShadow: "0 3px 16px rgba(0,33,93,0.12)", borderRadius: 16, padding: 20 })}><div style={px({ fontSize: 11.5, color: MUTED })}>סה״כ הלוואות שנלקחו</div><div style={px({ fontSize: 24, fontWeight: 800, color: NAVY, direction: "ltr", textAlign: "right", marginTop: 6 })}>{fmtCurrency(totalLoansAmount)}</div></div>
           <div style={px({ background: "#fff", boxShadow: "0 3px 16px rgba(0,33,93,0.12)", borderRadius: 16, padding: 20 })}><div style={px({ fontSize: 11.5, color: MUTED })}>יתרת הלוואות</div><div style={px({ fontSize: 24, fontWeight: 800, color: NAVY, direction: "ltr", textAlign: "right", marginTop: 6 })}>{fmtCurrency(totalLoansBalance)}</div></div>
           <div style={px({ background: PINK, color: "#fff", borderRadius: 16, padding: 20 })}><div style={px({ fontSize: 11.5, opacity: 0.85 })}>שיעור מסך הצבירה</div><div style={px({ fontSize: 24, fontWeight: 800, direction: "ltr", textAlign: "right", marginTop: 6 })}>{`${totalLoansPct.toFixed(1)}%`}</div></div>
@@ -6642,16 +6651,18 @@ export function PrintReportA4({ reportData, conversationSummary = "", actionReco
         ) : (
           <EmptyPanel title="לא התקבל מידע על הלוואות להצגה" subtitle="ככל שיועברו נתוני הלוואות, יוצגו כאן פירוט יתרות, ריביות ולוחות סילוקין." />
         )}
+        </>
+        ) : null}
         <Foot n={n} total={total} />
       </section>
     ));
   }
 
-  // ---- 08 · פירוק נכסים ----
+  // ---- 05 · פירוק נכסים ----
   if (show("capitalClassification") && hasCapitalClassification) {
     pages.push((n, total) => (
       <section class="rp-section" key="capital" style={px(pageBase)}>
-        <ChapterHeader num="08" title="פירוק נכסים" subtitle="סיווג הוני / קצבתי · ברמת קבוצת מוצר" />
+        <ChapterHeader num={String(n - 1).padStart(2, "0")} title="פירוק נכסים" subtitle="סיווג הוני / קצבתי · ברמת קבוצת מוצר" />
         <Lead mb={18} text="הכספים מסווגים לפי ייעודם בגיל פרישה: כספים הוניים הניתנים למשיכה כסכום חד-פעמי, וכספים קצבתיים המיועדים לקצבה חודשית. הסיווג מוצג ברמת קבוצת מוצר." />
         <div style={px({ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 12, marginBottom: 18 })}>
           <div style={px({ background: NAVY, color: "#fff", borderRadius: 14, padding: "16px 18px" })}><div style={px({ fontSize: 11, opacity: 0.72 })}>סה״כ קופה</div><div style={px({ fontSize: 21, fontWeight: 800, direction: "ltr", textAlign: "right", marginTop: 5 })}>{fmtCurrency(capTotalBalance)}</div></div>
@@ -6776,7 +6787,7 @@ export function PrintReportA4({ reportData, conversationSummary = "", actionReco
       pages.push((n, total) => (
         <section class="rp-section" key={`s28-${entryIndex}`} style={px(pageBase)}>
           <Watermark style={{ top: -180, left: -180, width: 460, height: 460 }} />
-          <ChapterHeader num="09" title="קיטום סעיף 28" subtitle={entry.ownerLabel || "מבוטח/ת ראשית"} />
+          <ChapterHeader num={String(n - 1).padStart(2, "0")} title="קיטום סעיף 28" subtitle={entry.ownerLabel || "מבוטח/ת ראשית"} />
           <InfoStrip text="קיטום לפי סעיף 28 משמעותו הפחתה יחסית של כלל רכיבי השכר, כך שסכומם הכולל לא יעלה על התקרה הקבועה בחוק — עד פי שמונה משכר המינימום. הקיטום אינו מבטל רכיב שכר מסוים, אלא מפחית באופן יחסי את כלל הרכיבים, ובכך עשוי להגדיל את השכר נטו המשולם בתלוש." />
           <div style={px({ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20, marginBottom: 20 })}>
             <CostCard title="חלק מעסיק" rows={employerRows} summary={employerSummary} />
@@ -6836,7 +6847,7 @@ export function PrintReportA4({ reportData, conversationSummary = "", actionReco
       pages.push((n, total) => (
         <section class="rp-section" key={`recognized-${entryIndex}`} style={px(pageBase)}>
           <Watermark style={{ bottom: -200, left: -200, width: 480, height: 480 }} />
-          <ChapterHeader num="10" title="קצבה מוכרת" subtitle={entry.ownerLabel || "בן/בת זוג"} />
+          <ChapterHeader num={String(n - 1).padStart(2, "0")} title="קצבה מוכרת" subtitle={entry.ownerLabel || "בן/בת זוג"} />
           <InfoStrip text="קצבה מוכרת היא החלק בקצבה שנובע מהפקדות שכבר שולם עליהן מס, או מהפקדות שלא ניתנה בגינן הטבת מס. לכן, בעת קבלת הקצבה בגיל פרישה, חלק זה עשוי להיות פטור ממס, בכפוף להוראות החוק ולהכרה של רשות המסים." />
           {vestedRows.length ? (
             <>
@@ -6906,7 +6917,7 @@ export function PrintReportA4({ reportData, conversationSummary = "", actionReco
   if (show("summary")) {
     pages.push((n, total) => (
       <section class="rp-section" key="summary" style={px(pageBase)}>
-        <ChapterHeader num="11" title="סיכום שיחה" subtitle="תובנות מהפגישה והמלצות להמשך" />
+        <ChapterHeader num={String(n - 1).padStart(2, "0")} title="סיכום שיחה" subtitle="תובנות מהפגישה והמלצות להמשך" />
         {summaryParagraphs.length ? (
           <div style={px({ display: "flex", flexDirection: "column", gap: 12, marginTop: 20 })}>
             {summaryParagraphs.map((block, i) => {

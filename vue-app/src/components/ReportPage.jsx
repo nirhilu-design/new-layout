@@ -6495,15 +6495,14 @@ export function PrintReportA4({ reportData, conversationSummary = "", actionReco
 
         {hasFeesPage ? (
         <>
-        {hasWeightedPage ? <SubHead title="דמי ניהול" mt={14} mb={10} /> : <Lead mb={16} text="כדי לשמור על שקיפות מלאה, ריכזנו את סך העלויות הנלוות לניהול התיק — דמי הניהול הנגבים מההפקדה השוטפת ומהצבירה המצטברת, בשיעורים ובכסף — ברמת בן משפחה וברמה המשפחתית." />}
+        {hasWeightedPage ? <SubHead title="דמי ניהול" mt={12} mb={8} /> : <Lead mb={16} text="כדי לשמור על שקיפות מלאה, ריכזנו את סך העלויות הנלוות לניהול התיק — דמי הניהול הנגבים מההפקדה השוטפת ומהצבירה המצטברת, בשיעורים ובכסף — ברמת בן משפחה וברמה המשפחתית." />}
         <div style={px({ display: "grid", gridTemplateColumns: `repeat(${Math.min(feeCards.length, 3)},1fr)`, gap: 14 })}>
           {feeCards.map((c, i) => (
-            <div class="rp-avoid" key={i} style={px({ background: c.isTotal ? NAVY : "#fff", color: c.isTotal ? "#fff" : INK, boxShadow: c.isTotal ? "none" : CARD_SOFT, borderRadius: 14, padding: "14px 16px" })}>
-              <div style={px({ fontSize: 14, fontWeight: 800, color: c.isTotal ? "#fff" : NAVY })}>{c.name}</div>
-              <div style={px({ fontSize: 11, color: c.isTotal ? "rgba(255,255,255,0.75)" : MUTED, margin: "2px 0 8px" })}>סך צבירה {fmtCurrency(c.totalBalance)}</div>
+            <div class="rp-avoid" key={i} style={px({ background: c.isTotal ? NAVY : "#fff", color: c.isTotal ? "#fff" : INK, boxShadow: c.isTotal ? "none" : CARD_SOFT, borderRadius: 14, padding: "12px 15px" })}>
+              <div style={px({ fontSize: 13.5, fontWeight: 800, color: c.isTotal ? "#fff" : NAVY, marginBottom: 8 })}>{c.name}</div>
               <div style={px({ fontSize: 11, color: c.isTotal ? "rgba(255,255,255,0.75)" : MUTED })}>דמי ניהול מצבירה (משוקלל)</div>
-              <div style={px({ fontSize: 22, fontWeight: 800, color: c.isTotal ? "#fff" : NAVY, direction: "ltr", textAlign: "right" })}>{fmtPct2(c.feeFromBalance)}</div>
-              <div style={px({ display: "flex", justifyContent: "space-between", alignItems: "center", borderTop: `1px solid ${c.isTotal ? "rgba(255,255,255,0.22)" : HAIR}`, marginTop: 8, paddingTop: 7 })}>
+              <div style={px({ fontSize: 20, fontWeight: 800, color: c.isTotal ? "#fff" : NAVY, direction: "ltr", textAlign: "right" })}>{fmtPct2(c.feeFromBalance)}</div>
+              <div style={px({ display: "flex", justifyContent: "space-between", alignItems: "center", borderTop: `1px solid ${c.isTotal ? "rgba(255,255,255,0.22)" : HAIR}`, marginTop: 7, paddingTop: 6 })}>
                 <span style={px({ fontSize: 11, color: c.isTotal ? "rgba(255,255,255,0.75)" : MUTED })}>דמי ניהול מהפקדה</span>
                 <strong style={px({ fontSize: 13, direction: "ltr", color: c.isTotal ? "#fff" : PINK })}>{fmtPct2(c.feeFromDeposit)}</strong>
               </div>
@@ -6513,22 +6512,22 @@ export function PrintReportA4({ reportData, conversationSummary = "", actionReco
 
         {feeMoney.length ? (
           <>
-            <div style={px({ fontSize: 15, fontWeight: 700, color: NAVY, margin: "16px 0 10px" })}>עלות דמי הניהול בכסף</div>
+            <div style={px({ fontSize: 15, fontWeight: 700, color: NAVY, margin: "14px 0 8px" })}>עלות דמי הניהול בכסף</div>
             <div style={px({ display: "grid", gridTemplateColumns: `repeat(${Math.min(feeMoney.length, 2)},1fr)`, gap: 14 })}>
               {feeMoney.map((m, i) => (
-                <div class="rp-avoid" key={i} style={px({ background: "#fff", boxShadow: CARD_SOFT, borderRadius: 14, padding: "15px 18px" })}>
+                <div class="rp-avoid" key={i} style={px({ background: "#fff", boxShadow: CARD_SOFT, borderRadius: 14, padding: "12px 16px" })}>
                   <div style={px({ fontSize: 12.5, color: MUTED })}>{m.name} · עלות שנתית</div>
-                  <div style={px({ fontSize: 22, fontWeight: 800, color: NAVY, direction: "ltr", textAlign: "right", marginTop: 4 })}>{capMoney(m.annual)}</div>
+                  <div style={px({ fontSize: 20, fontWeight: 800, color: NAVY, direction: "ltr", textAlign: "right", marginTop: 3 })}>{capMoney(m.annual)}</div>
                 </div>
               ))}
             </div>
-            <div class="rp-avoid" style={px({ marginTop: 12, background: NAVY, color: "#fff", borderRadius: 16, padding: "18px 22px", display: "flex", justifyContent: "space-between", alignItems: "center" })}>
+            <div class="rp-avoid" style={px({ marginTop: 10, background: NAVY, color: "#fff", borderRadius: 16, padding: "15px 20px", display: "flex", justifyContent: "space-between", alignItems: "center" })}>
               <div>
-                <div style={px({ fontSize: 15, fontWeight: 800 })}>עלות משפחתית כוללת</div>
-                <div style={px({ fontSize: 12, opacity: 0.75, marginTop: 3 })}>סך דמי הניהול המשולמים בשנה על ידי המשפחה</div>
+                <div style={px({ fontSize: 14.5, fontWeight: 800 })}>עלות משפחתית כוללת</div>
+                <div style={px({ fontSize: 11.5, opacity: 0.75, marginTop: 2 })}>סך דמי הניהול המשולמים בשנה על ידי המשפחה</div>
               </div>
               <div style={px({ textAlign: "left" })}>
-                <div style={px({ fontSize: 28, fontWeight: 800, direction: "ltr" })}>{capMoney(feeAnnualTotal)}</div>
+                <div style={px({ fontSize: 26, fontWeight: 800, direction: "ltr" })}>{capMoney(feeAnnualTotal)}</div>
                 <div style={px({ fontSize: 11.5, opacity: 0.75, direction: "ltr", textAlign: "left" })}>{`${capMoney(feeMonthlyTotal)} לחודש`}</div>
               </div>
             </div>

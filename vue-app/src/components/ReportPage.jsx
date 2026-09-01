@@ -6366,29 +6366,26 @@ export function PrintReportA4({ reportData, conversationSummary = "", actionReco
                 const role = i === 0 ? "מבוטח ראשי" : "בן/בת זוג";
                 const retireAge = memberDetail(member, "retireAge");
                 return (
-                  <div class="rp-avoid" key={member.id || name || i} style={px({ background: "#fff", borderTop: `4px solid ${brand}`, borderRadius: 16, boxShadow: CARD_SOFT, padding: "18px 20px" })}>
-                    <div style={px({ display: "flex", alignItems: "center", gap: 12, marginBottom: 14 })}>
-                      <div style={px({ width: 44, height: 44, borderRadius: "50%", background: DESK, color: brand, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 19, fontWeight: 800 })}>{String(name).trim().slice(0, 1) || "?"}</div>
-                      <div>
-                        <div style={px({ fontSize: 20, fontWeight: 800, color: NAVY })}>{name}</div>
-                        <div style={px({ fontSize: 12, color: MUTED, marginTop: 1 })}>{role}{retireAge ? ` · פרישה בגיל ${retireAge}` : ""}</div>
-                      </div>
+                  <div class="rp-avoid" key={member.id || name || i} style={px({ background: "#fff", borderTop: `4px solid ${brand}`, borderRadius: 16, boxShadow: CARD_SOFT, padding: "15px 18px" })}>
+                    <div style={px({ marginBottom: 12 })}>
+                      <div style={px({ fontSize: 17, fontWeight: 800, color: NAVY })}>{name}</div>
+                      <div style={px({ fontSize: 11.5, color: MUTED, marginTop: 1 })}>{role}{retireAge ? ` · פרישה בגיל ${retireAge}` : ""}</div>
                     </div>
-                    <div style={px({ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 })}>
-                      <div><div style={px({ fontSize: 11, color: MUTED })}>תאריך לידה</div><div style={px({ fontSize: 15.5, fontWeight: 700, marginTop: 2, direction: "ltr", textAlign: "right", color: INK })}>{fmtDate(memberDetail(member, "birthDate"))}</div></div>
-                      <div><div style={px({ fontSize: 11, color: MUTED })}>שכר נוכחי</div><div style={px({ fontSize: 15.5, fontWeight: 700, marginTop: 2, direction: "ltr", textAlign: "right", color: INK })}>{memberDetail(member, "currentSalary") ? fmtCurrency(memberDetail(member, "currentSalary")) : "—"}</div></div>
-                      <div style={px({ gridColumn: "span 2", borderTop: `1px solid ${HAIR}`, paddingTop: 9 })}><div style={px({ fontSize: 11, color: MUTED })}>מקום עבודה אחרון מעודכן</div><div style={px({ fontSize: 14, fontWeight: 600, marginTop: 2, color: DARKTAN })}>{memberDetail(member, "lastWorkplace") || "לא צוין"}</div></div>
+                    <div style={px({ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 })}>
+                      <div><div style={px({ fontSize: 11, color: MUTED })}>תאריך לידה</div><div style={px({ fontSize: 14.5, fontWeight: 700, marginTop: 2, direction: "ltr", textAlign: "right", color: INK })}>{fmtDate(memberDetail(member, "birthDate"))}</div></div>
+                      <div><div style={px({ fontSize: 11, color: MUTED })}>שכר נוכחי</div><div style={px({ fontSize: 14.5, fontWeight: 700, marginTop: 2, direction: "ltr", textAlign: "right", color: INK })}>{memberDetail(member, "currentSalary") ? fmtCurrency(memberDetail(member, "currentSalary")) : "—"}</div></div>
+                      <div style={px({ gridColumn: "span 2", borderTop: `1px solid ${HAIR}`, paddingTop: 8 })}><div style={px({ fontSize: 11, color: MUTED })}>מקום עבודה אחרון מעודכן</div><div style={px({ fontSize: 13.5, fontWeight: 600, marginTop: 2, color: DARKTAN })}>{memberDetail(member, "lastWorkplace") || "לא צוין"}</div></div>
                     </div>
                   </div>
                 );
               })}
             </div>
 
-            <div style={px({ marginTop: 14, display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 1, background: "#EDF1F6", borderRadius: 14, overflow: "hidden", boxShadow: CARD_SOFT })}>
+            <div style={px({ marginTop: 12, display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 1, background: "#EDF1F6", borderRadius: 14, overflow: "hidden", boxShadow: CARD_SOFT })}>
               {[["שכר מצרפי", combinedSalary], ["הפקדה חודשית כוללת", family.monthlyDeposits], ["סך כיסויי חיים", totalLifeCoverage]].map(([lbl, val], i) => (
-                <div key={i} style={px({ background: "#fff", padding: "14px 18px" })}>
+                <div key={i} style={px({ background: "#fff", padding: "11px 16px" })}>
                   <div style={px({ fontSize: 11, color: MUTED })}>{lbl}</div>
-                  <div style={px({ fontSize: 23, fontWeight: 800, color: NAVY, direction: "ltr", textAlign: "right", marginTop: 3 })}>{val ? fmtCurrency(val) : "—"}</div>
+                  <div style={px({ fontSize: 19, fontWeight: 800, color: NAVY, direction: "ltr", textAlign: "right", marginTop: 2 })}>{val ? fmtCurrency(val) : "—"}</div>
                 </div>
               ))}
             </div>
@@ -6397,7 +6394,7 @@ export function PrintReportA4({ reportData, conversationSummary = "", actionReco
 
         {show("pension") ? (
           <>
-            {show("personal") ? <SubHead title="סיכום פנסיוני" /> : null}
+            {show("personal") ? <SubHead title="סיכום פנסיוני" mt={24} mb={14} /> : null}
             <div style={px({ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 12, marginTop: show("personal") ? 0 : 4 })}>
               <KpiTile compact tone="navy" label="סך נכסים" value={fmtCurrency(family.totalAssets)} />
               <KpiTile compact tone="soft" label="הפקדה חודשית כוללת" value={fmtCurrency(family.monthlyDeposits)} />

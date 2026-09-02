@@ -6449,7 +6449,7 @@ export function PrintReportA4({ reportData, conversationSummary = "", actionReco
         <ChapterHeader num={String(n - 1).padStart(2, "0")} title={mergedTitle} subtitle={mergedSub} />
         {hasWeightedPage ? (
         <>
-        <Lead mb={16} text="התשואות ומדדי הסיכון מוצגים ברמת קבוצת מוצר, משוקללים לפי הצבירה בכל קבוצה — כדי לאפשר מבט ניהולי על התיק, ללא פירוט לפי פוליסה." />
+        <Lead mb={12} text="התשואות ומדדי הסיכון מוצגים ברמת קבוצת מוצר, משוקללים לפי הצבירה בכל קבוצה — כדי לאפשר מבט ניהולי על התיק, ללא פירוט לפי פוליסה." />
         {weightedReturns.groups.length ? (
           <>
             <table style={px({ ...tableWrap, fontSize: 12.5 })}>
@@ -6485,7 +6485,6 @@ export function PrintReportA4({ reportData, conversationSummary = "", actionReco
                 </tr>
               </tbody>
             </table>
-            <NoteLine text="התשואות והשארפ מוצגים כערך משוקלל לפי צבירה בכל קבוצה. מדדי הסיכון (סטיית תקן, שארפ) מחושבים ל-36 חודשים אחרונים ואינם מהווים הבטחת תשואה עתידית." />
           </>
         ) : (
           <EmptyPanel title="לא התקבלו נתוני תשואה להצגה" subtitle="ככל שיועברו נתוני מוצרים, תוצג כאן תשואה משוקללת ברמת קבוצת מוצר." />

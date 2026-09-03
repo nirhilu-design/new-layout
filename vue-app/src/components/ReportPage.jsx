@@ -5911,25 +5911,29 @@ export function PrintReportA4({ reportData, conversationSummary = "", actionReco
 
   // ---- Design tokens (Pension Report Redesign / Claude Design handoff) ----
   const NAVY = "#00215D";
-  const PINK = "#E8536F";
-  const TAN = "#DDE3EC";
-  const OFFWHITE = "#FFFFFF";
-  const DESK = "#F4F6F9";
-  const MUTED = "#8892A3";
+  const PINK = "#FF2756";          // accent (rose) — strictly limited
+  const TAN = "#E2D1BF";           // border beige / secondary bar fill
+  const TANDARK = "#C0AC94";       // border beige dark
+  const NUMERAL = "#E2D1BF";       // chapter numerals (tan)
+  const OFFWHITE = "#FFFFFF";      // card
+  const PAPER = "#F9F7F3";         // sheet background
+  const DESK = "#EFE7DC";          // exposure-scale track / soft tiles
+  const MUTED = "#6B7590";         // muted label
+  const MONO = "#7A6A56";          // mono caption / page numbers / eyebrows
   const INK = "#1A1A1A";
-  const DARKTAN = "#334155";
-  const HAIR = "#EEF1F6";
-  const HAIR2 = "#E4E9F0";
-  // 10-color chart palette (handoff order).
-  const PALETTE = [NAVY, PINK, TAN, "#C9BBA8", "#5FA6C2", "#8A6DB4", "#9CA3AF", "#3D5A8A", "#6B7280", "#E8A6B4"];
-  const GRAD_NAVY = "linear-gradient(180deg,#12386F,#0A2A5A)";
-  const GRAD_PINK = "linear-gradient(180deg,#EE6A82,#DD435F)";
-  const GRAD_ROW = "linear-gradient(180deg,#FAFBFD,#F1F4F9)";
-  const GRAD_TOTAL = "linear-gradient(180deg,#E7ECF4,#D3DBE7)";
-  const CARD_SOFT = "0 2px 12px rgba(0,33,93,0.08)";
-  const CARD_TABLE = "0 10px 24px rgba(0,33,93,0.12),0 2px 4px rgba(0,33,93,0.06)";
-  const HEAD_SHADOW = "inset 0 1px 0 rgba(255,255,255,0.18),0 2px 6px rgba(0,33,93,0.35)";
-  const HEAD_SHADOW_PINK = "inset 0 1px 0 rgba(255,255,255,0.22),0 2px 6px rgba(221,67,95,0.28)";
+  const DARKTAN = "#3C4A6B";       // long-form paragraph ink
+  const HAIR = "#F2ECE3";          // divider light
+  const HAIR2 = "#E2D1BF";         // card / header hairlines (beige)
+  // Product ramp, ordered by scale (largest = darkest); rose kept out (accent only).
+  const PALETTE = [NAVY, "#2B4A82", "#6E86AE", "#9FB0CC", "#C0AC94", "#E2D1BF", "#8A7A68", "#B7C2D6", "#3D5A8A", "#9CA3AF"];
+  const GRAD_NAVY = "linear-gradient(180deg,#0A2A5A,#00215D)";
+  const GRAD_PINK = "linear-gradient(180deg,#FF3D66,#E31E4B)";
+  const GRAD_ROW = "linear-gradient(180deg,#FCFAF6,#F5F0E9)";
+  const GRAD_TOTAL = "linear-gradient(180deg,#F2ECE3,#E7DFD2)";
+  const CARD_SOFT = "0 0 0 1px #E2D1BF";           // flat hairline border (paper aesthetic)
+  const CARD_TABLE = "0 0 0 1px #E2D1BF";
+  const HEAD_SHADOW = "none";
+  const HEAD_SHADOW_PINK = "none";
 
   const firmName = data.firmName || "מבט משפחתי";
   const watermark = data.watermark !== false;
@@ -6073,7 +6077,7 @@ export function PrintReportA4({ reportData, conversationSummary = "", actionReco
   const pageBase = {
     position: "relative",
     overflow: "hidden",
-    background: OFFWHITE,
+    background: PAPER,
     color: INK,
     direction: "rtl",
     textAlign: "right",
@@ -6089,16 +6093,70 @@ export function PrintReportA4({ reportData, conversationSummary = "", actionReco
   const Watermark = ({ style }) =>
     watermark ? <div style={px({ position: "absolute", borderRadius: "50%", border: "1px solid rgba(0,33,93,0.07)", pointerEvents: "none", ...style })} /> : null;
 
-  const ChapterHeader = ({ num, title, subtitle, right }) => (
-    <div style={px({ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: 16, paddingBottom: 12, borderBottom: `1px solid ${HAIR2}` })}>
-      <div>
-        <div style={px({ display: "flex", alignItems: "center", gap: 9, marginBottom: 7 })}>
-          <span style={px({ width: 24, height: 24, borderRadius: 7, background: NAVY, color: "#fff", fontSize: 11.5, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center", direction: "ltr" })}>{num}</span>
-          <span style={px({ fontSize: 10.5, letterSpacing: ".2em", color: MUTED })}>פרק</span>
+  // Geometric category symbols (46px, 1.5px strokes) — per handoff iconography.
+  const CategorySymbol = ({ id, size = 46 }) => {
+    const base = { width: size, height: size, flexShrink: 0, boxSizing: "border-box" };
+    switch (id) {
+      case "pension": // circle with 62% conic fill
+        return <div style={px({ ...base, borderRadius: "50%", border: `1.5px solid ${NAVY}`, background: `conic-gradient(${NAVY} 0 62%, transparent 0)` })} />;
+      case "allocation": // three ascending bars
+        return (
+          <div style={px({ ...base, display: "flex", alignItems: "flex-end", gap: size * 0.11 })}>
+            <span style={px({ width: size * 0.2, height: size * 0.45, background: TAN })} />
+            <span style={px({ width: size * 0.2, height: size * 0.7, background: "#9FB0CC" })} />
+            <span style={px({ width: size * 0.2, height: size * 0.98, background: NAVY })} />
+          </div>
+        );
+      case "returns": // circle with only top+right border navy
+        return <div style={px({ ...base, borderRadius: "50%", borderTop: `1.5px solid ${NAVY}`, borderRight: `1.5px solid ${NAVY}`, borderBottom: `1.5px solid ${TAN}`, borderLeft: `1.5px solid ${TAN}` })} />;
+      case "protections": // dome with centered dot
+        return (
+          <div style={px({ ...base, borderRadius: "50% 50% 8px 8px", border: `1.5px solid ${NAVY}`, display: "flex", alignItems: "center", justifyContent: "center" })}>
+            <span style={px({ width: size * 0.16, height: size * 0.16, borderRadius: "50%", background: NAVY })} />
+          </div>
+        );
+      case "conversation": // circle with horizontal line
+        return (
+          <div style={px({ ...base, borderRadius: "50%", border: `1.5px solid ${NAVY}`, display: "flex", alignItems: "center", justifyContent: "center" })}>
+            <span style={px({ width: size * 0.5, height: 1.5, background: NAVY })} />
+          </div>
+        );
+      case "decomposition": // 2x2 grid, two opposite cells filled
+        return (
+          <div style={px({ ...base, display: "grid", gridTemplateColumns: "1fr 1fr", gridTemplateRows: "1fr 1fr", gap: 2, border: `1.5px solid ${NAVY}`, padding: 2 })}>
+            <span style={px({ background: NAVY })} /><span /><span /><span style={px({ background: TAN })} />
+          </div>
+        );
+      case "recognized": // ring whose lower half is filled (already taxed)
+        return <div style={px({ ...base, borderRadius: "50%", border: `1.5px solid ${NAVY}`, background: `linear-gradient(180deg, transparent 0 50%, ${NAVY} 50% 100%)` })} />;
+      case "section28": // circle with vertical divider + rose dot at the cut
+        return (
+          <div style={px({ ...base, position: "relative", borderRadius: "50%", border: `1.5px solid ${NAVY}` })}>
+            <span style={px({ position: "absolute", left: "50%", top: size * 0.14, bottom: size * 0.14, width: 1.5, background: NAVY, transform: "translateX(-50%)" })} />
+            <span style={px({ position: "absolute", left: "50%", top: "50%", width: size * 0.2, height: size * 0.2, borderRadius: "50%", background: PINK, transform: "translate(-50%,-50%)" })} />
+          </div>
+        );
+      default:
+        return null;
+    }
+  };
+
+  const ChapterHeader = ({ num, title, subtitle, right, symbol }) => (
+    <div style={px({ marginBottom: 4 })}>
+      <div style={px({ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 16, paddingBottom: 12 })}>
+        <div style={px({ display: "flex", alignItems: "center", gap: 16 })}>
+          {symbol ? <CategorySymbol id={symbol} /> : null}
+          {right ? right : null}
         </div>
-        <div style={px({ fontSize: 31, fontWeight: 800, color: NAVY, lineHeight: 1.1 })}>{title}</div>
+        <div style={px({ display: "flex", alignItems: "center", gap: 16 })}>
+          <div style={px({ textAlign: "right" })}>
+            <div style={px({ fontSize: 24, fontWeight: 700, color: NAVY, lineHeight: 1.15 })}>{title}</div>
+            {subtitle ? <div style={px({ fontSize: 13, color: MUTED, marginTop: 3 })}>{subtitle}</div> : null}
+          </div>
+          <div style={px({ fontFamily: "'IBM Plex Mono','Assistant',monospace", fontSize: 46, fontWeight: 500, color: NUMERAL, lineHeight: 1, direction: "ltr" })}>{num}</div>
+        </div>
       </div>
-      {right ? right : (subtitle ? <div style={px({ fontSize: 13, color: MUTED, paddingBottom: 5 })}>{subtitle}</div> : null)}
+      <div style={px({ height: 2, background: NAVY })} />
     </div>
   );
 
@@ -6115,9 +6173,9 @@ export function PrintReportA4({ reportData, conversationSummary = "", actionReco
   );
 
   const Foot = ({ n, total }) => (
-    <div style={px({ marginTop: "auto", display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: 14, borderTop: `1px solid ${HAIR}`, fontSize: 10.5, color: MUTED })}>
+    <div style={px({ marginTop: "auto", display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: 14, borderTop: `1px solid ${HAIR2}`, fontSize: 11, color: MONO })}>
       <span style={px({ whiteSpace: "nowrap", flexShrink: 0 })}>{firmName} · דוח פנסיוני משפחתי</span>
-      <span style={px({ direction: "ltr", whiteSpace: "nowrap", flexShrink: 0 })}>{`${fmtDateDots(reportDate)} · ${String(n).padStart(2, "0")} / ${String(total).padStart(2, "0")}`}</span>
+      <span style={px({ fontFamily: "'IBM Plex Mono','Assistant',monospace", direction: "ltr", whiteSpace: "nowrap", flexShrink: 0, letterSpacing: ".08em" })}>{`${String(n).padStart(2, "0")} / ${String(total).padStart(2, "0")}`}</span>
     </div>
   );
 
@@ -6269,92 +6327,136 @@ export function PrintReportA4({ reportData, conversationSummary = "", actionReco
   // ============================================================
   const pages = [];
 
+  // Dynamic table-of-contents entries (chapter numbers computed from the enabled set).
+  const tocItems = [];
+  if (show("personal") || show("pension")) tocItems.push("סיכום פנסיוני");
+  if (show("allocation")) tocItems.push("התפלגות נכסים");
+  if (show("allocation") || (show("managementFees") && feeCards.length)) tocItems.push("תשואות ודמי ניהול");
+  if (show("insurance") || show("loans")) tocItems.push("הגנות והלוואות");
+  if (show("capitalClassification") && hasCapitalClassification) tocItems.push("פירוק נכסים");
+  if (show("section28") && hasSection28Capping) section28CappingEntries.forEach(() => tocItems.push("קיטום סעיף 28"));
+  if (show("recognizedPension") && hasRecognizedPension) recognizedPensionEntries.forEach(() => tocItems.push("קצבה מוכרת"));
+  if (show("summary")) tocItems.push("סיכום שיחה");
+
+  // Data-currency month label (MM/YYYY) for the cover header.
+  const dataCurrency = (() => {
+    const src = family.dataValidityDate || reportDate;
+    const m8 = /^(\d{4})(\d{2})(\d{2})$/.exec(String(src).trim());
+    if (m8) return `${m8[2]}/${m8[1]}`;
+    const d = new Date(String(src).trim());
+    if (!Number.isNaN(d.getTime())) return `${String(d.getMonth() + 1).padStart(2, "0")}/${d.getFullYear()}`;
+    return "";
+  })();
+
+  const coverFooterSymbols = [
+    { id: "pension", label: "פנסיה" },
+    { id: "protections", label: "ביטוחים" },
+    { id: "allocation", label: "נכסים" },
+    { id: "decomposition", label: "פירוק נכסים" },
+    { id: "section28", label: "סעיף 28" },
+  ];
+
+  const mono = "'IBM Plex Mono','Assistant',monospace";
+
   // ---- COVER ----
-  pages.push(() => (
-    <section class="rp-section" key="cover" style={px({ ...pageBase, padding: 0 })}>
-      <div style={px({ height: 8, background: NAVY })} />
-      <Watermark style={{ top: -180, left: -200, width: 520, height: 520, border: "1px solid rgba(0,33,93,0.08)" }} />
-      <div style={px({ padding: "52px 54px 30px", display: "flex", flexDirection: "column", flex: 1 })}>
-        <div style={px({ display: "flex", alignItems: "center", justifyContent: "space-between" })}>
-          <div style={px({ display: "flex", alignItems: "center", gap: 10 })}>
-            <span style={px({ width: 9, height: 9, borderRadius: "50%", background: PINK })} />
-            <span style={px({ fontSize: 12.5, letterSpacing: ".18em", color: MUTED })}>מבט משפחתי · דוח פנסיוני</span>
-          </div>
-          <span style={px({ fontSize: 12.5, color: MUTED, direction: "ltr" })}>{fmtDateDots(reportDate)}</span>
+  pages.push((n, total) => {
+    // 18-bar accumulation shape (tall on the left = retirement age; short on the right = today).
+    const BARS = 18, PLOT_W = 700, PLOT_H = 196, BASE_Y = 8 + PLOT_H;
+    const bw = (PLOT_W - 20) / BARS;
+    const withoutFrac = 0.59; // dashed "ללא המשך הפקדות" reference level
+    return (
+    <section class="rp-section" key="cover" style={px({ ...pageBase, padding: "52px 56px 40px" })}>
+      {/* Header */}
+      <div style={px({ display: "flex", alignItems: "flex-start", justifyContent: "space-between", paddingBottom: 16, borderBottom: `1px solid ${HAIR2}` })}>
+        <div style={px({ fontFamily: mono, fontSize: 12, color: MONO, direction: "ltr", textAlign: "left", lineHeight: 1.7 })}>
+          <div>{fmtDateDots(reportDate)}</div>
+          {dataCurrency ? <div>{`נכונות נתונים ${dataCurrency}`}</div> : null}
         </div>
-
-        <div style={px({ marginTop: 44, fontSize: 15, letterSpacing: ".22em", color: PINK, fontWeight: 700 })}>FAMILY WEALTH REVIEW</div>
-        <h1 style={px({ margin: "10px 0 0", fontSize: 54, lineHeight: 1.06, fontWeight: 800, color: NAVY, maxWidth: 640 })}>דוח פנסיוני<br />משפחתי מאוחד</h1>
-        <div style={px({ marginTop: 16, display: "flex", alignItems: "center", gap: 12 })}>
-          <span style={px({ width: 30, height: 2, background: PINK })} />
-          <span style={px({ fontSize: 20, fontWeight: 700, color: NAVY })}>{coverTitleLine}</span>
+        <div style={px({ textAlign: "right" })}>
+          <div style={px({ fontSize: 18, fontWeight: 800, color: NAVY })}>{firmName}</div>
+          <div style={px({ fontFamily: mono, fontSize: 11, letterSpacing: ".2em", color: MONO, marginTop: 3, direction: "ltr", textAlign: "right" })}>FAMILY WEALTH REVIEW</div>
         </div>
-        <div style={px({ marginTop: 14, fontSize: 16.5, lineHeight: 1.75, color: DARKTAN, maxWidth: 520 })}>תמונה מלאה של העתיד שלכם — פנסיה, ביטוח, השקעות ותכנון עתידי, מרוכזים במסמך אחד ברור.</div>
+      </div>
 
-        <div style={px({ marginTop: 40, display: "grid", gridTemplateColumns: "250px 1fr", gap: 34, alignItems: "center" })}>
-          <div style={px({ display: "flex", alignItems: "center", gap: 18 })}>
-            <div style={px({ position: "relative", width: 150, height: 150, flexShrink: 0 })}>
-              <svg width="150" height="150" viewBox="0 0 120 120" style={px({ transform: "rotate(-90deg)", display: "block" })}>
-                <circle cx="60" cy="60" r="44" fill="none" stroke="#F1F4F9" stroke-width="15" />
-                <circle cx="60" cy="60" r="44" fill="none" stroke="#00215D" stroke-width="15" stroke-dasharray="118.94 157.52" stroke-dashoffset="0" stroke-linecap="butt" />
-                <circle cx="60" cy="60" r="44" fill="none" stroke="#FF2756" stroke-width="15" stroke-dasharray="47.52 228.94" stroke-dashoffset="-121.34" stroke-linecap="butt" />
-                <circle cx="60" cy="60" r="44" fill="none" stroke="#DDE3EC" stroke-width="15" stroke-dasharray="42.14 234.32" stroke-dashoffset="-171.25" stroke-linecap="butt" />
-                <circle cx="60" cy="60" r="44" fill="none" stroke="#C9BBA8" stroke-width="15" stroke-dasharray="30.62 245.84" stroke-dashoffset="-215.79" stroke-linecap="butt" />
-                <circle cx="60" cy="60" r="44" fill="none" stroke="#9CA3AF" stroke-width="15" stroke-dasharray="25.25 251.21" stroke-dashoffset="-248.81" stroke-linecap="butt" />
-              </svg>
-              <div style={px({ position: "absolute", inset: 0, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 1 })}>
-                <div style={px({ fontSize: 10, color: MUTED })}>אפיקים</div>
-                <div style={px({ fontSize: 15, fontWeight: 800, color: NAVY })}>5</div>
-              </div>
-            </div>
-            <div style={px({ display: "flex", flexDirection: "column", gap: 7 })}>
-              {[["פנסיה", NAVY], ["ביטוחים", PINK], ["נכסים פיננסיים", "#DDE3EC"], ["נדל״ן", "#C9BBA8"], ["אחר", "#9CA3AF"]].map(([lbl, c]) => (
-                <div key={lbl} style={px({ display: "flex", alignItems: "center", gap: 8, fontSize: 12.5, color: "#243B53" })}>
-                  <span style={px({ width: 10, height: 10, borderRadius: 3, background: c })} />{lbl}
-                </div>
-              ))}
-            </div>
+      {/* Title block */}
+      <div style={px({ marginTop: 44 })}>
+        <div style={px({ width: 40, height: 2, background: PINK, marginBottom: 22, marginRight: 0, marginLeft: "auto" })} />
+        <h1 style={px({ margin: 0, textAlign: "right", fontSize: 58, lineHeight: 1.02, color: NAVY, fontWeight: 800 })}>
+          דוח פנסיוני<br /><span style={px({ fontWeight: 300, color: DARKTAN })}>משפחתי מאוחד</span>
+        </h1>
+        <div style={px({ marginTop: 18, textAlign: "right", fontSize: 16, lineHeight: 1.75, color: DARKTAN, maxWidth: 430, marginRight: 0, marginLeft: "auto" })}>
+          תמונה מלאה של העתיד שלכם — פנסיה, ביטוח, השקעות ותכנון עתידי, מרוכזים במסמך אחד ברור.
+        </div>
+      </div>
+
+      {/* Lead visual: accumulation shape */}
+      <div class="rp-avoid" style={px({ marginTop: 34, background: OFFWHITE, border: `1px solid ${HAIR2}`, padding: "20px 22px 14px" })}>
+        <div style={px({ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 12 })}>
+          <div style={px({ display: "flex", gap: 18, fontSize: 11, color: MUTED, direction: "ltr" })}>
+            <span style={px({ display: "flex", alignItems: "center", gap: 6 })}><span style={px({ width: 16, height: 3, background: NAVY, display: "inline-block" })} />עם המשך הפקדות</span>
+            <span style={px({ display: "flex", alignItems: "center", gap: 6 })}><span style={px({ width: 16, height: 0, borderTop: `2px dashed ${TANDARK}`, display: "inline-block" })} />ללא המשך הפקדות</span>
           </div>
-          <div>
-            <div style={px({ fontSize: 11.5, color: MUTED, marginBottom: 6 })}>צמיחת הצבירה לאורך זמן</div>
-            <svg viewBox="0 0 420 130" width="100%" height="130" preserveAspectRatio="none">
-              <defs><linearGradient id="rpGrow" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color={NAVY} stop-opacity="0.16" /><stop offset="1" stop-color={NAVY} stop-opacity="0" /></linearGradient></defs>
-              <g fill={TAN}>
-                <rect x="24" y="112" width="16" height="16" rx="3" /><rect x="84" y="104" width="16" height="24" rx="3" /><rect x="144" y="96" width="16" height="32" rx="3" /><rect x="204" y="84" width="16" height="44" rx="3" /><rect x="264" y="70" width="16" height="58" rx="3" /><rect x="324" y="54" width="16" height="74" rx="3" /><rect x="384" y="34" width="16" height="94" rx="3" />
-              </g>
-              <polygon points="0,110 60,96 120,102 180,72 240,80 300,48 360,40 420,14 420,130 0,130" fill="url(#rpGrow)" />
-              <polyline points="0,110 60,96 120,102 180,72 240,80 300,48 360,40 420,14" fill="none" stroke={NAVY} stroke-width="3" stroke-linejoin="round" stroke-linecap="round" />
-              <circle cx="418" cy="14" r="5" fill={PINK} />
-            </svg>
+          <div style={px({ textAlign: "right" })}>
+            <div style={px({ fontSize: 15, fontWeight: 700, color: NAVY })}>צמיחת הצבירה לאורך זמן</div>
+            <div style={px({ fontSize: 12, color: MUTED, marginTop: 2 })}>אופק התכנון — מהיום ועד גיל הפרישה</div>
           </div>
         </div>
+        <svg viewBox={`0 0 ${PLOT_W} ${BASE_Y + 4}`} width="100%" height="210" preserveAspectRatio="none" style={px({ display: "block" })}>
+          <defs>
+            <linearGradient id="rpBar" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color={NAVY} /><stop offset="1" stop-color="#9FB0CC" /></linearGradient>
+          </defs>
+          {[0.25, 0.5, 0.75, 1].map((g, i) => (
+            <line key={i} x1="0" x2={PLOT_W} y1={8 + PLOT_H * (1 - g)} y2={8 + PLOT_H * (1 - g)} stroke={HAIR} stroke-width="1" />
+          ))}
+          {Array.from({ length: BARS }).map((_, i) => {
+            const frac = 0.15 + 0.85 * ((BARS - 1 - i) / (BARS - 1));
+            const h = PLOT_H * frac;
+            const x = 12 + i * bw;
+            return <rect key={i} x={x} y={BASE_Y - h} width={bw * 0.62} height={h} fill="url(#rpBar)" />;
+          })}
+          <line x1="0" x2={PLOT_W} y1={BASE_Y - PLOT_H * withoutFrac} y2={BASE_Y - PLOT_H * withoutFrac} stroke={TANDARK} stroke-width="1.5" stroke-dasharray="6 5" />
+          <circle cx={12 + 0.31 * bw} cy={BASE_Y - PLOT_H} r="5" fill={PINK} />
+        </svg>
+        <div style={px({ display: "flex", justifyContent: "space-between", fontFamily: mono, fontSize: 10.5, color: MONO, marginTop: 6, direction: "ltr", flexDirection: "row-reverse" })}>
+          <span>היום</span><span>+10 שנים</span><span>+20 שנים</span><span>גיל פרישה</span>
+        </div>
+      </div>
 
-        <div style={px({ marginTop: "auto", display: "flex", justifyContent: "space-between", alignItems: "flex-end", borderTop: `1px solid ${HAIR}`, paddingTop: 20 })}>
-          <div style={px({ display: "flex", gap: 44 })}>
-            <div>
-              <div style={px({ fontSize: 11.5, color: MUTED })}>תאריך הפקה</div>
-              <div style={px({ fontSize: 18, fontWeight: 700, marginTop: 3, direction: "ltr", textAlign: "right" })}>{fmtDateDots(reportDate)}</div>
+      {/* Table of contents */}
+      <div style={px({ marginTop: 30, display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 18, direction: "rtl" })}>
+        {tocItems.slice(0, 8).map((label, i) => {
+          const isLast = i === Math.min(tocItems.length, 8) - 1;
+          return (
+            <div key={i} style={px({ borderTop: `2px solid ${isLast ? PINK : NAVY}`, paddingTop: 10 })}>
+              <div style={px({ fontFamily: mono, fontSize: 12, color: MONO, direction: "ltr", textAlign: "right" })}>{String(i + 1).padStart(2, "0")}</div>
+              <div style={px({ fontSize: 14, fontWeight: 700, color: NAVY, marginTop: 4, lineHeight: 1.25 })}>{label}</div>
             </div>
-            <div>
-              <div style={px({ fontSize: 11.5, color: MUTED })}>נכונות הנתונים</div>
-              <div style={px({ fontSize: 18, fontWeight: 700, marginTop: 3, direction: "ltr", textAlign: "right" })}>{fmtDateDots(family.dataValidityDate)}</div>
+          );
+        })}
+      </div>
+
+      {/* Footer: category symbols + page counter */}
+      <div style={px({ marginTop: "auto", display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: 20, borderTop: `1px solid ${HAIR2}` })}>
+        <span style={px({ fontFamily: mono, fontSize: 11, color: MONO, direction: "ltr", letterSpacing: ".08em" })}>{`${String(n).padStart(2, "0")} / ${String(total).padStart(2, "0")}`}</span>
+        <div style={px({ display: "flex", gap: 22, alignItems: "center" })}>
+          {coverFooterSymbols.map((s) => (
+            <div key={s.id} style={px({ display: "flex", alignItems: "center", gap: 8 })}>
+              <CategorySymbol id={s.id} size={22} />
+              <span style={px({ fontSize: 12, color: DARKTAN })}>{s.label}</span>
             </div>
-          </div>
-          <div style={px({ display: "flex", alignItems: "center", gap: 14 })}>
-            {data?.clientLogo ? <img src={data.clientLogo} alt="לוגו" style={px({ maxHeight: 34, maxWidth: 120, objectFit: "contain" })} /> : null}
-            <div style={px({ fontSize: 13, fontWeight: 700, color: NAVY })}>{firmName}</div>
-          </div>
+          ))}
         </div>
       </div>
     </section>
-  ));
+    );
+  });
 
   // ---- 01 · פרטים אישיים + סיכום פנסיוני (עמוד ממוזג) ----
   if (show("personal") || show("pension")) {
     pages.push((n, total) => (
       <section class="rp-section" key="personal-pension" style={px(pageBase)}>
         <Watermark style={{ bottom: -200, left: -180, width: 460, height: 460 }} />
-        <ChapterHeader num={String(n - 1).padStart(2, "0")} title="פרטים אישיים וסיכום פנסיוני" subtitle="בני המשפחה · צבירה, הפקדות ותחזית לגיל פרישה" />
+        <ChapterHeader num={String(n - 1).padStart(2, "0")} title="פרטים אישיים וסיכום פנסיוני" subtitle="בני המשפחה · צבירה, הפקדות ותחזית לגיל פרישה" symbol="pension" />
         <Lead mb={14} text="ריכזנו את בני המשפחה המבוטחים לצד תמונת החיסכון הפנסיוני — סך הצבירה המעודכן, ההפקדות, והתחזית לצבירה ולקצבה החודשית בגיל פרישה, בהשוואה בין המשך הפקדות להפסקתן." />
 
         {show("personal") ? (
@@ -6419,19 +6521,75 @@ export function PrintReportA4({ reportData, conversationSummary = "", actionReco
 
   // ---- 03 · התפלגות נכסים ----
   if (show("allocation")) {
+    // Card header: right-aligned title + left count caption.
+    const AllocHead = ({ title, count }) => (
+      <div style={px({ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: 14 })}>
+        {count ? <span style={px({ fontSize: 11, color: MUTED })}>{count}</span> : <span />}
+        <span style={px({ fontSize: 15.5, fontWeight: 700, color: NAVY })}>{title}</span>
+      </div>
+    );
+    const AllocLegendRow = ({ s }) => (
+      <div style={px({ display: "flex", alignItems: "center", gap: 8, minWidth: 0 })}>
+        <span style={px({ width: 11, height: 11, background: s.color, flexShrink: 0 })} />
+        <span style={px({ flex: 1, minWidth: 0, fontSize: 11.5, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" })} title={s.name}>{s.name}</span>
+        <strong style={px({ fontSize: 11.5, direction: "ltr", color: NAVY, flexShrink: 0 })}>{fmtCurrency(s.value)}</strong>
+        <span style={px({ width: 40, textAlign: "left", direction: "ltr", fontSize: 11, color: MUTED, flexShrink: 0 })}>{s.percent.toFixed(1)}%</span>
+      </div>
+    );
+    // Horizontal stacked bar-strip (ordered by scale, product ramp).
+    const BarStrip = ({ segs }) => (
+      <div style={px({ display: "flex", height: 26, overflow: "hidden", marginBottom: 14, gap: 1.5 })}>
+        {segs.map((s, i) => <div key={i} style={px({ width: `${s.percent}%`, background: s.color })} title={s.name} />)}
+      </div>
+    );
+    const prodSegs = donutSegments(products);
+    const mgrSegs = donutSegments(managers);
+    const groupSegs = donutSegments(mainGroups);
+    const topProd = prodSegs[0];
+    const twoGroups = mgrSegs.slice(0, 2).reduce((s, x) => s + x.percent, 0);
     pages.push((n, total) => (
       <section class="rp-section" key="allocation" style={px(pageBase)}>
         <Watermark style={{ top: -190, left: -190, width: 480, height: 480 }} />
-        <ChapterHeader num={String(n - 1).padStart(2, "0")} title="התפלגות נכסים" right={
-          <div style={px({ textAlign: "left" })}>
-            <div style={px({ fontSize: 11.5, color: MUTED, fontWeight: 700 })}>סך צבירה מנוהלת</div>
-            <div style={px({ fontSize: 28, fontWeight: 800, color: NAVY, direction: "ltr" })}>{fmtCurrency(family.totalAssets)}</div>
+        <ChapterHeader num={String(n - 1).padStart(2, "0")} title="התפלגות נכסים" subtitle="מוצרים · גופים מנהלים · אפיקים ראשיים" symbol="allocation" />
+        <div style={px({ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 20, margin: "18px 0 16px" })}>
+          <div style={px({ textAlign: "left", flexShrink: 0 })}>
+            <div style={px({ fontSize: 11, color: MUTED })}>סך צבירה מנוהלת</div>
+            <div style={px({ fontSize: 26, fontWeight: 800, color: NAVY, direction: "ltr", marginTop: 2 })}>{fmtCurrency(family.totalAssets)}</div>
           </div>
-        } />
-        <Lead mb={18} text="הכספים שלכם מושקעים במסלולים שונים כדי לייצר תשואה ולשמור על ערך הכסף לאורך זמן. כאן תוכלו לראות איפה הכסף מושקע — כמה ממנו נחשף למניות, כמה מושקע בחו״ל ואיך הוא מתפזר בין האפיקים." />
-        <DonutCard centerTop="חלוקה לפי" centerLabel="מוצרים" items={products} />
-        <DonutCard centerTop="חלוקה לפי" centerLabel="גופים מנהלים" items={managers} />
-        <DonutCard centerTop="חלוקה לפי" centerLabel="אפיקים ראשיים" items={mainGroups} twoCol mb={0} note='ראו פירוט מלא בפרק ״פירוק נכסים״.' />
+          <div style={px({ fontSize: 13, color: DARKTAN, lineHeight: 1.7, maxWidth: 560 })}>הכספים מושקעים במסלולים שונים כדי לייצר תשואה ולשמור על ערך הכסף לאורך זמן. כאן רואים איפה הכסף מושקע — כמה נחשף למניות, כמה בחו״ל ואיך הוא מתפזר בין האפיקים.</div>
+        </div>
+
+        {/* Products — donut + list */}
+        <div class="rp-avoid" style={px({ background: OFFWHITE, boxShadow: CARD_SOFT, padding: "18px 22px", marginBottom: 14 })}>
+          <AllocHead title="חלוקה לפי מוצרים" count={`${prodSegs.length} קבוצות מוצר`} />
+          <div style={px({ display: "grid", gridTemplateColumns: "minmax(0,1fr) 180px", gap: 24, alignItems: "center" })}>
+            <div style={px({ display: "grid", gridTemplateColumns: "1fr", gap: 8 })}>
+              {prodSegs.map((s, i) => <AllocLegendRow key={i} s={s} />)}
+            </div>
+            <div style={px({ display: "flex", justifyContent: "flex-end" })}>
+              <SvgDonut size={158} segments={prodSegs} centerTop="הגדולה ביותר" centerLabel={topProd ? `${topProd.percent.toFixed(1)}%` : "—"} />
+            </div>
+          </div>
+        </div>
+
+        {/* Managers — bar-strip + list */}
+        <div class="rp-avoid" style={px({ background: OFFWHITE, boxShadow: CARD_SOFT, padding: "18px 22px", marginBottom: 14 })}>
+          <AllocHead title="חלוקה לפי גופים מנהלים" count={`${mgrSegs.length} גופים`} />
+          <BarStrip segs={mgrSegs} />
+          <div style={px({ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px 24px" })}>
+            {mgrSegs.map((s, i) => <AllocLegendRow key={i} s={s} />)}
+          </div>
+          {mgrSegs.length >= 2 ? <div style={px({ marginTop: 12, fontSize: 11, color: MUTED })}>{`${twoGroups.toFixed(1)}% מהצבירה מנוהלת בשני גופים — ${mgrSegs[0].name} ו${mgrSegs[1].name}.`}</div> : null}
+        </div>
+
+        {/* Main groups — bar-strip + list */}
+        <div class="rp-avoid" style={px({ background: OFFWHITE, boxShadow: CARD_SOFT, padding: "18px 22px" })}>
+          <AllocHead title="חלוקה לפי אפיקים ראשיים" count={`${groupSegs.length} אפיקים`} />
+          <BarStrip segs={groupSegs} />
+          <div style={px({ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "7px 24px" })}>
+            {groupSegs.map((s, i) => <AllocLegendRow key={i} s={s} />)}
+          </div>
+        </div>
         <Foot n={n} total={total} />
       </section>
     ));
@@ -6446,7 +6604,7 @@ export function PrintReportA4({ reportData, conversationSummary = "", actionReco
     pages.push((n, total) => (
       <section class="rp-section" key="weighted-fees" style={px(pageBase)}>
         <Watermark style={{ bottom: -210, left: -200, width: 500, height: 500 }} />
-        <ChapterHeader num={String(n - 1).padStart(2, "0")} title={mergedTitle} subtitle={mergedSub} />
+        <ChapterHeader num={String(n - 1).padStart(2, "0")} title={mergedTitle} subtitle={mergedSub} symbol="returns" />
         {hasWeightedPage ? (
         <>
         <Lead mb={12} text="התשואות ומדדי הסיכון מוצגים ברמת קבוצת מוצר, משוקללים לפי הצבירה בכל קבוצה — כדי לאפשר מבט ניהולי על התיק, ללא פירוט לפי פוליסה." />
@@ -6551,7 +6709,7 @@ export function PrintReportA4({ reportData, conversationSummary = "", actionReco
     pages.push((n, total) => (
       <section class="rp-section" key="insurance-loans" style={px(pageBase)}>
         <Watermark style={{ top: -170, left: -190, width: 460, height: 460 }} />
-        <ChapterHeader num={String(n - 1).padStart(2, "0")} title={dlTitle} subtitle={dlSub} />
+        <ChapterHeader num={String(n - 1).padStart(2, "0")} title={dlTitle} subtitle={dlSub} symbol="protections" />
         {hasDeathPage ? (
         <>
         <Lead mb={14} text="לצד החיסכון לעתיד, חשוב לוודא שהמשפחה מוגנת גם במקרים בלתי צפויים. חלק זה מפרט את ההגנה הכלכלית הקיימת לכם היום במקרה של אובדן כושר עבודה או פטירה, ואת רשת הביטחון המשפחתית." />
@@ -6657,7 +6815,7 @@ export function PrintReportA4({ reportData, conversationSummary = "", actionReco
   if (show("capitalClassification") && hasCapitalClassification) {
     pages.push((n, total) => (
       <section class="rp-section" key="capital" style={px(pageBase)}>
-        <ChapterHeader num={String(n - 1).padStart(2, "0")} title="פירוק נכסים" subtitle="סיווג הוני / קצבתי · ברמת קבוצת מוצר" />
+        <ChapterHeader num={String(n - 1).padStart(2, "0")} title="פירוק נכסים" subtitle="סיווג הוני / קצבתי · ברמת קבוצת מוצר" symbol="decomposition" />
         <Lead mb={18} text="הכספים מסווגים לפי ייעודם בגיל פרישה: כספים הוניים הניתנים למשיכה כסכום חד-פעמי, וכספים קצבתיים המיועדים לקצבה חודשית. הסיווג מוצג ברמת קבוצת מוצר." />
         <div style={px({ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 12, marginBottom: 18 })}>
           <div style={px({ background: NAVY, color: "#fff", borderRadius: 14, padding: "16px 18px" })}><div style={px({ fontSize: 11, opacity: 0.72 })}>סה״כ קופה</div><div style={px({ fontSize: 21, fontWeight: 800, direction: "ltr", textAlign: "right", marginTop: 5 })}>{fmtCurrency(capTotalBalance)}</div></div>
@@ -6828,7 +6986,7 @@ export function PrintReportA4({ reportData, conversationSummary = "", actionReco
       pages.push((n, total) => (
         <section class="rp-section" key={`s28-${entryIndex}`} style={px(pageBase)}>
           <Watermark style={{ top: -180, left: -180, width: 460, height: 460 }} />
-          <ChapterHeader num={String(n - 1).padStart(2, "0")} title="קיטום סעיף 28" subtitle={entry.ownerLabel || "מבוטח/ת ראשית"} />
+          <ChapterHeader num={String(n - 1).padStart(2, "0")} title="קיטום סעיף 28" subtitle={entry.ownerLabel || "מבוטח/ת ראשית"} symbol="section28" />
           <InfoStrip text="קיטום לפי סעיף 28 משמעותו הפחתה יחסית של כלל רכיבי השכר, כך שסכומם הכולל לא יעלה על התקרה הקבועה בחוק — עד פי שמונה משכר המינימום. הקיטום אינו מבטל רכיב שכר מסוים, אלא מפחית באופן יחסי את כלל הרכיבים, ובכך עשוי להגדיל את השכר נטו המשולם בתלוש." />
           <div style={px({ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20, marginBottom: 20 })}>
             <CostCard title="חלק מעסיק" rows={employerRows} summary={employerSummary} />
@@ -6921,7 +7079,7 @@ export function PrintReportA4({ reportData, conversationSummary = "", actionReco
       pages.push((n, total) => (
         <section class="rp-section" key={`recognized-${entryIndex}`} style={px(pageBase)}>
           <Watermark style={{ bottom: -200, left: -200, width: 480, height: 480 }} />
-          <ChapterHeader num={String(n - 1).padStart(2, "0")} title="קצבה מוכרת" subtitle={entry.ownerLabel || "בן/בת זוג"} />
+          <ChapterHeader num={String(n - 1).padStart(2, "0")} title="קצבה מוכרת" subtitle={entry.ownerLabel || "בן/בת זוג"} symbol="recognized" />
           <InfoStrip text="קצבה מוכרת היא החלק בקצבה שנובע מהפקדות שכבר שולם עליהן מס, או מהפקדות שלא ניתנה בגינן הטבת מס. לכן, בעת קבלת הקצבה בגיל פרישה, חלק זה עשוי להיות פטור ממס, בכפוף להוראות החוק ולהכרה של רשות המסים." />
           {vestedRows.length ? (
             <>
@@ -6991,7 +7149,7 @@ export function PrintReportA4({ reportData, conversationSummary = "", actionReco
   if (show("summary")) {
     pages.push((n, total) => (
       <section class="rp-section" key="summary" style={px(pageBase)}>
-        <ChapterHeader num={String(n - 1).padStart(2, "0")} title="סיכום שיחה" subtitle="תובנות מהפגישה והמלצות להמשך" />
+        <ChapterHeader num={String(n - 1).padStart(2, "0")} title="סיכום שיחה" subtitle="תובנות מהפגישה והמלצות להמשך" symbol="conversation" />
         {summaryParagraphs.length ? (
           <div style={px({ display: "flex", flexDirection: "column", gap: 12, marginTop: 20 })}>
             {summaryParagraphs.map((block, i) => {
@@ -7030,7 +7188,13 @@ export function PrintReportA4({ reportData, conversationSummary = "", actionReco
           </div>
         ) : null}
 
-        <div style={px({ marginTop: 18, fontSize: 10.5, color: MUTED, lineHeight: 1.7 })}>הדוח נועד להאיר את התמונה הפיננסית המשפחתית ואינו מהווה ייעוץ, שיווק פנסיוני או המלצה לביצוע פעולה. הנתונים מבוססים על המידע שהתקבל מהגופים המנהלים נכון לתאריך נכונות הנתונים המצוין בשער.</div>
+        {/* Ruled handwriting zone — fills the remaining sheet for the advisor to write in. */}
+        <div class="rp-avoid" style={px({ flex: 1, marginTop: 18, display: "flex", flexDirection: "column", background: OFFWHITE, border: `1px solid ${HAIR2}`, padding: "16px 22px 10px", minHeight: 160 })}>
+          <div style={px({ fontSize: 14, fontWeight: 800, color: NAVY })}>מה עלה בפגישה</div>
+          <div style={px({ fontSize: 11.5, color: MUTED, marginTop: 2, marginBottom: 12 })}>אזור לטקסט חופשי — מהמנגנון או בכתב יד</div>
+          <div style={px({ flex: 1, minHeight: 110, backgroundImage: `repeating-linear-gradient(to bottom, transparent 0, transparent 33px, ${HAIR} 33px, ${HAIR} 34px)` })} />
+        </div>
+        <div style={px({ marginTop: 14, fontSize: 10.5, color: MUTED, lineHeight: 1.7 })}>הדוח נועד להאיר את התמונה הפיננסית המשפחתית ואינו מהווה ייעוץ, שיווק פנסיוני או המלצה לביצוע פעולה. הנתונים מבוססים על המידע שהתקבל מהגופים המנהלים נכון לתאריך נכונות הנתונים המצוין בשער.</div>
         <Foot n={n} total={total} />
       </section>
     ));

@@ -6749,10 +6749,56 @@ export function PrintReportA4({ reportData, conversationSummary = "", actionReco
       const employeeRows = pickSection28Rows(costRows, ["גידול בנטו בעקבות קיטום בפיצויים", "גידול בנטו בעקבות קיטום תגמולים", "גידול בנטו בעקבות קיטום קה\"ש מעל לתקרה", "הפרשות עובד קה\"ש מעל תקרה", "הפרשות עובד תגמולים"]);
       const employeeSummary = pickSection28Rows(costRows, ['סה"כ גידול נטו', "סה״כ גידול נטו", "סך הכל גידול נטו"]);
       const comparisonRows = Array.isArray(entry?.comparisonRows) ? entry.comparisonRows : [];
-      const chartRows = comparisonRows.filter((r) => {
-        const l = normalizeSection28Text(r.label).replace(/סהכ/g, 'סה"כ');
-        return (l === "קצבה" || l.includes('סה"כ הון')) && (isMeaningfulSection28Value(r.before) || isMeaningfulSection28Value(r.after));
-      });
+      // Full breakdown of the "סה״כ הון" comparison — the two component rows
+      // (הוני, קופת גמל להשקעה) plus the two totals — matching the design table.
+      const splitCmpLabel = (label) => {
+        const raw = normalizeSection28Text(label);
+        const i = raw.indexOf("(");
+        if (i === -1) return { main: raw, sub: "" };
+        const main = raw.slice(0, i).trim();
+        const sub = raw
+          .slice(i + 1)
+          .replace(")", ",")
+          .replace(/[()]/g, " ")
+          .replace(/\s+/g, " ")
+          .replace(/\s+,/g, ",")
+          .replace(/,\s*$/, "")
+          .trim();
+        return { main, sub };
+      };
+      const findCmpRow = (key) => {
+        const wanted = normalizeSection28Text(key);
+        return comparisonRows.find((r) => normalizeSection28Text(r.label).includes(wanted));
+      };
+      const comparisonTableRows = ['הוני', 'קופת גמל להשקעה', 'סה"כ קצבה', 'סה"כ הון']
+        .map((key) => {
+          const row = findCmpRow(key);
+          if (!row) return null;
+          const isTotal = normalizeSection28Text(row.label).includes('סה"כ');
+          const gapNum =
+            section28NumericValue(row.gap) ||
+            (section28NumericValue(row.after) - section28NumericValue(row.before));
+          return { ...row, ...splitCmpLabel(row.label), isTotal, gapNum };
+        })
+        .filter(Boolean);
+
+      // Retirement-age simulation summary (חיסכון קיים · קצבה מחושבת).
+      const retirementGroup = getSection28Group(groups, "retirement", "סימולציה לגיל פרישה");
+      const retirementRows = section28Meaningful(retirementGroup?.rows);
+      const findRetRow = (part) => retirementRows.find((r) => normalizeSection28Text(r.label).includes(part));
+      const simExistingRow = findRetRow("סכום חסכון קיים") || findRetRow("חיסכון קיים");
+      const simPensionRow = findRetRow("סכום משיכה");
+      const simInterestRow = findRetRow("ריבית שנתית");
+      const simYearsRow = findRetRow("תקופת משיכה בשנים");
+      const fmtRetPct = (v) => {
+        const n = section28NumericValue(v);
+        return `${(Math.abs(n) < 1 ? n * 100 : n).toFixed(1)}%`;
+      };
+      const simMetaParts = [
+        simInterestRow ? fmtRetPct(simInterestRow.value) : "",
+        simYearsRow ? `${Math.round(section28NumericValue(simYearsRow.value))} שנים` : "",
+      ].filter(Boolean);
+      const hasRetirementSim = Boolean(simExistingRow || simPensionRow);
       const CostCard = ({ title, rows, summary }) => (
         <div class="rp-avoid" style={px({ background: "#fff", boxShadow: CARD_SOFT, borderRadius: 16, padding: 22 })}>
           <div style={px({ fontSize: 15.5, fontWeight: 700, color: NAVY, marginBottom: 14 })}>{title}</div>
@@ -6794,37 +6840,70 @@ export function PrintReportA4({ reportData, conversationSummary = "", actionReco
               <div style={px({ fontSize: 30, fontWeight: 800, direction: "ltr" })}>{formatSection28DisplayValue(monthlyRow.value)}</div>
             </div>
           ) : null}
-          {chartRows.length ? (
-            <>
-              <div style={px({ fontSize: 16, fontWeight: 700, color: NAVY, marginBottom: 12 })}>השוואה בין תרחישים</div>
-              <div style={px({ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 })}>
-                {chartRows.map((row, i) => {
-                  const before = Math.abs(section28NumericValue(row.before));
-                  const after = Math.abs(section28NumericValue(row.after));
-                  const max = Math.max(before, after, 1);
-                  const gapNum = section28NumericValue(row.gap) || (section28NumericValue(row.after) - section28NumericValue(row.before));
-                  const title = normalizeSection28Text(row.label) === "קצבה" ? "קצבה חודשית" : row.label;
-                  return (
-                    <div class="rp-avoid" key={`cmp-${i}`} style={px({ background: "#fff", boxShadow: CARD_SOFT, borderRadius: 16, padding: 20 })}>
-                      <div style={px({ fontSize: 13.5, color: MUTED, marginBottom: 12 })}>{title}</div>
-                      <div style={px({ display: "flex", flexDirection: "column", gap: 12 })}>
-                        {[{ l: "לפני קיטום", v: before, dv: row.before, c: NAVY }, { l: "אחרי קיטום", v: after, dv: row.after, c: PINK }].map((b, bi) => (
-                          <div key={bi}>
-                            <div style={px({ display: "flex", justifyContent: "space-between", fontSize: 12.5, marginBottom: 5 })}><span>{b.l}</span><strong style={px({ direction: "ltr" })}>{formatSection28DisplayValue(b.dv)}</strong></div>
-                            <div style={px({ background: DESK, borderRadius: 8, height: 14, overflow: "hidden" })}>
-                              <div style={px({ width: `${Math.max((b.v / max) * 100, b.v ? 4 : 0)}%`, height: "100%", background: b.c, borderRadius: 8 })} />
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                      <div style={px({ marginTop: 12, fontSize: 12.5, fontWeight: 700, color: gapNum < 0 ? PINK : NAVY })}>
-                        פער: {gapNum < 0 ? "‎-" : "‎+"}{formatSection28DisplayValue(Math.abs(gapNum))}
-                      </div>
-                    </div>
-                  );
-                })}
+          {comparisonTableRows.length ? (
+            <div class="rp-avoid" style={px({ marginBottom: hasRetirementSim ? 18 : 0 })}>
+              <div style={px({ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 12, marginBottom: 12 })}>
+                <div style={px({ fontSize: 16, fontWeight: 700, color: NAVY })}>השוואה בין תרחישים · סה״כ הון</div>
+                <div style={px({ fontSize: 11, color: MUTED })}>לגיל פרישה</div>
               </div>
-            </>
+              <table style={px(tableWrap)}>
+                <thead>
+                  <tr style={px(headRow)}>
+                    <th style={px({ ...hc, fontSize: 12.5 })}>סעיף</th>
+                    <th style={px({ ...hc, fontSize: 12.5, textAlign: "left", direction: "ltr" })}>לפני קיטום</th>
+                    <th style={px({ ...hc, fontSize: 12.5, textAlign: "left", direction: "ltr" })}>אחרי קיטום</th>
+                    <th style={px({ ...hc, fontSize: 12.5, textAlign: "left", direction: "ltr" })}>פער</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {comparisonTableRows.map((row, i) => {
+                    const rowBg = row.isTotal ? GRAD_TOTAL : "#fff";
+                    const cell = { ...bc, fontSize: 13, background: rowBg, fontWeight: row.isTotal ? 700 : 400 };
+                    const numCell = { ...cell, direction: "ltr", textAlign: "left", color: NAVY };
+                    const gapText =
+                      row.isTotal && row.gapNum
+                        ? `${row.gapNum < 0 ? "−" : "+"}${formatSection28DisplayValue(Math.abs(row.gapNum))}`
+                        : "—";
+                    return (
+                      <tr key={`cmp-${i}`}>
+                        <td style={px({ ...cell, color: NAVY })}>
+                          <div style={px({ fontWeight: 700 })}>{row.main}</div>
+                          {row.sub ? <div style={px({ color: MUTED, fontWeight: 400, fontSize: 11.5, marginTop: 2 })}>{`· ${row.sub}`}</div> : null}
+                        </td>
+                        <td style={px(numCell)}>{formatSection28DisplayValue(row.before)}</td>
+                        <td style={px(numCell)}>{formatSection28DisplayValue(row.after)}</td>
+                        <td style={px({ ...numCell, color: row.isTotal && row.gapNum ? PINK : MUTED, fontWeight: 700 })}>{gapText}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          ) : null}
+          {hasRetirementSim ? (
+            <div class="rp-avoid" style={px({ background: "#fff", boxShadow: CARD_SOFT, borderRadius: 16, padding: "18px 22px" })}>
+              <div style={px({ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 12, marginBottom: 14 })}>
+                <div style={px({ fontSize: 15.5, fontWeight: 700, color: NAVY })}>סימולציה לגיל פרישה</div>
+                {simMetaParts.length ? <div style={px({ fontSize: 11.5, color: MUTED, direction: "ltr" })}>{simMetaParts.join(" · ")}</div> : null}
+              </div>
+              <div style={px({ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 })}>
+                {simExistingRow ? (
+                  <div style={px({ borderRight: `2px solid ${HAIR2}`, paddingRight: 14 })}>
+                    <div style={px({ fontSize: 12, color: MUTED, marginBottom: 4 })}>חיסכון קיים</div>
+                    <div style={px({ fontSize: 20, fontWeight: 800, color: NAVY, direction: "ltr", textAlign: "right" })}>{formatSection28DisplayValue(simExistingRow.value)}</div>
+                  </div>
+                ) : null}
+                {simPensionRow ? (
+                  <div>
+                    <div style={px({ fontSize: 12, color: MUTED, marginBottom: 4 })}>קצבה מחושבת</div>
+                    <div style={px({ fontSize: 20, fontWeight: 800, color: NAVY, direction: "ltr", textAlign: "right" })}>{formatSection28DisplayValue(simPensionRow.value)}</div>
+                  </div>
+                ) : null}
+              </div>
+              <div style={px({ marginTop: 14, fontSize: 11, color: MUTED, lineHeight: 1.6 })}>
+                הערכה תיאורטית להמחשה בלבד, בהנחת ריבית קבועה — לא מקדם שהתקבל מהגוף המנהל.
+              </div>
+            </div>
           ) : null}
           <Foot n={n} total={total} />
         </section>

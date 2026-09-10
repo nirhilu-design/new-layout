@@ -2122,7 +2122,16 @@ function LoansSection({ scope }) {
 
 
 function normalizeCapitalClassificationSections(input = {}) {
-  const directSections = safeArray(input.capitalClassification)
+  // `capitalClassification` may arrive either as an array of owner sections or as
+  // an object `{ entries: [...] }` (the shape the upload/share flow persists).
+  // Reading only the array form dropped the whole "פירוק נכסים" tab for reports
+  // loaded from a share, where the top-level spouse fund arrays are not present.
+  const raw = input.capitalClassification;
+  const rawSections = Array.isArray(raw)
+    ? raw
+    : safeArray(raw?.entries);
+
+  const directSections = rawSections
     .map((section, index) => ({
       owner: section?.owner || section?.ownerKey || section?.memberType || `capital-${index}`,
       ownerLabel: section?.ownerLabel || getCapitalOwnerLabel(section?.owner || section?.ownerKey || section?.memberType, index),
@@ -2134,18 +2143,19 @@ function normalizeCapitalClassificationSections(input = {}) {
 
   if (directSections.length) return directSections;
 
+  const obj = Array.isArray(raw) ? {} : raw || {};
   return [
     {
       owner: "spouseA",
       ownerLabel: "בן זוג",
-      pensionPolicies: safeArray(input.spouseAPensionFunds),
-      studyFunds: safeArray(input.spouseAStudyFunds),
+      pensionPolicies: safeArray(input.spouseAPensionFunds || obj.spouseA_pension_funds),
+      studyFunds: safeArray(input.spouseAStudyFunds || obj.spouseA_study_funds),
     },
     {
       owner: "spouseB",
       ownerLabel: "בת זוג",
-      pensionPolicies: safeArray(input.spouseBPensionFunds),
-      studyFunds: safeArray(input.spouseBStudyFunds),
+      pensionPolicies: safeArray(input.spouseBPensionFunds || obj.spouseB_pension_funds),
+      studyFunds: safeArray(input.spouseBStudyFunds || obj.spouseB_study_funds),
     },
   ].filter((section) => section.pensionPolicies.length || section.studyFunds.length);
 }

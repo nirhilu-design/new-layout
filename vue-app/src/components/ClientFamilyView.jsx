@@ -955,7 +955,14 @@ const ClientFamilyView = defineComponent({
 
 
 function normalizeClientCapitalClassification(value) {
-  const rawSections = Array.isArray(value) ? value : [];
+  // Accept both the array form and the object `{ entries: [...] }` form the
+  // upload/share flow persists — otherwise the capital classification section
+  // silently disappears for reports loaded from a share.
+  const rawSections = Array.isArray(value)
+    ? value
+    : Array.isArray(value?.entries)
+    ? value.entries
+    : [];
 
   return rawSections
     .map((section, index) => {

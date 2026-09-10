@@ -1983,7 +1983,7 @@ function computeWeightedFees(products) {
     totalDeposit > 0
       ? list.reduce((sum, p) => sum + productFeeInfo(p).feeFromDeposit * Number(p.monthlyDeposit || 0), 0) / totalDeposit
       : 0;
-  return { feeFromBalance, feeFromDeposit, totalBalance };
+  return { feeFromBalance, feeFromDeposit, totalBalance, totalDeposit };
 }
 
 const formatFeePct = (value) => `${Number(value || 0).toFixed(2)}%`;

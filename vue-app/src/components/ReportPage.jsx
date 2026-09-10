@@ -6076,12 +6076,18 @@ export function PrintReportA4({ reportData, conversationSummary = "", actionReco
   })();
 
   // ---------- Management fees (money cost) ----------
+  // Annual cost = accumulation × fee-from-balance% + annual-deposits × fee-from-deposit%.
+  // Use the SAME bases the weighted fee %s were computed from (totalBalance /
+  // totalDeposit), so the money figure exactly equals the sum of per-product fees
+  // (weighted-avg × its own base is an identity). Fall back to the member's total
+  // monthly deposit only when the per-product deposit base is unavailable.
   const mf = managementFees || {};
   const feeCards = Array.isArray(mf.cards) ? mf.cards : [];
   const feeMoney = feeCards.filter((c) => !c.isTotal).map((c) => {
     const member = members.find((m) => (m.name || "") === c.name);
-    const dep = Number(member ? (memberDetail(member, "monthlyDeposits") || member.monthlyDeposits || 0) : 0);
-    const annual = Number(c.totalBalance || 0) * Number(c.feeFromBalance || 0) / 100 + dep * 12 * Number(c.feeFromDeposit || 0) / 100;
+    const memberDep = Number(member ? (memberDetail(member, "monthlyDeposits") || member.monthlyDeposits || 0) : 0);
+    const annualDeposit = (c.totalDeposit != null ? Number(c.totalDeposit) : memberDep) * 12;
+    const annual = Number(c.totalBalance || 0) * Number(c.feeFromBalance || 0) / 100 + annualDeposit * Number(c.feeFromDeposit || 0) / 100;
     return { name: c.name, annual };
   });
   const feeAnnualTotal = feeMoney.reduce((s, x) => s + x.annual, 0);
@@ -6096,8 +6102,21 @@ export function PrintReportA4({ reportData, conversationSummary = "", actionReco
       @page { size: A4 portrait; margin: 0; }
       html, body { margin: 0 !important; padding: 0 !important; background: ${OFFWHITE} !important; }
       .print-report-root { display: block !important; }
-      .rp-section { break-before: page; page-break-before: always; }
+      /* Each sheet is exactly one A4 page and never spills. A4 @96dpi is 1122.52px;
+         pinning the section a hair under that (and dropping the min-height floor)
+         stops every sheet from bleeding a sliver onto a near-empty extra page. */
+      .rp-section {
+        break-before: page; page-break-before: always;
+        break-after: page; page-break-after: always;
+        break-inside: avoid; page-break-inside: avoid;
+        width: 794px !important;
+        min-height: 0 !important;
+        height: 1122px !important;
+        max-height: 1122px !important;
+        overflow: hidden !important;
+      }
       .rp-section:first-child { break-before: avoid; page-break-before: avoid; }
+      .rp-section:last-child { break-after: avoid; page-break-after: avoid; }
       .rp-section table { border-collapse: collapse; width: 100%; }
       .rp-section tr, .rp-avoid { break-inside: avoid; page-break-inside: avoid; }
       .rp-section, .rp-section * { -webkit-print-color-adjust: exact; print-color-adjust: exact; box-sizing: border-box; }
@@ -6665,8 +6684,11 @@ export function PrintReportA4({ reportData, conversationSummary = "", actionReco
     const sumDisab = members.reduce((s, m) => s + Number(m.disabilityValue || 0), 0);
     const pensionRows = Array.isArray(deathBenefit?.pensionRows) ? deathBenefit.pensionRows : [];
     const riskPremium = Number(data?.protections?.riskPremiumMonthly ?? deathBenefit?.riskPremiumMonthly ?? NaN);
-    const primaryDeath = pensionRows.filter((r) => memberRole(r.memberName) === "spouse");
-    const spouseDeath = pensionRows.filter((r) => memberRole(r.memberName) === "primary");
+    // בפטירת בן משפחה — מוצרי הפנסיה שלו-עצמו משלמים את קצבת השאירים לשאיריו.
+    // לכן "בפטירת המבוטח הראשי" מסכם את מוצריו של המבוטח הראשי, ו"בפטירת בן/בת הזוג"
+    // את מוצרי בן/בת הזוג.
+    const primaryDeath = pensionRows.filter((r) => memberRole(r.memberName) === "primary");
+    const spouseDeath = pensionRows.filter((r) => memberRole(r.memberName) === "spouse");
     const sumPension = (rows) => rows.reduce((s, r) => s + Number(r.totalPension || 0), 0);
     const loanCols = "1fr 1fr 1.1fr";
     pages.push((n, total) => (

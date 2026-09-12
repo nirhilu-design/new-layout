@@ -10,6 +10,7 @@ import {
 } from "vue";
 import { px } from "../px";
 import { PrintReportA4 } from "./ReportPage.jsx";
+import { runReportChecks, summarizeChecks } from "../validation/reportChecks.js";
 
 const theme = {
   pageBg: "#F9F7F3",
@@ -923,6 +924,82 @@ function EmptyDashboardState({ onBack }) {
   );
 }
 
+const CONTROL_STATUS = {
+  pass: { label: "תקין", color: "#1B873F", bg: "#E9F7EF", mark: "✔" },
+  warn: { label: "אזהרה", color: "#B7791F", bg: "#FEF6E7", mark: "!" },
+  fail: { label: "שגיאה", color: "#B01235", bg: "#FDECEF", mark: "✕" },
+  info: { label: "מידע", color: "#3C4A6B", bg: "#EEF2F8", mark: "i" },
+};
+const CONTROL_STATUS_ORDER = ["fail", "warn", "info", "pass"];
+
+function ReportControlPanel({ reportData, scope, detailedMembers, specialSections }) {
+  const checks = runReportChecks({ reportData, scope, detailedMembers, specialSections });
+  const summary = summarizeChecks(checks);
+
+  // Group by category, keeping the worst status first within each group.
+  const byCategory = new Map();
+  checks.forEach((c) => {
+    if (!byCategory.has(c.category)) byCategory.set(c.category, []);
+    byCategory.get(c.category).push(c);
+  });
+  const rank = (s) => CONTROL_STATUS_ORDER.indexOf(s);
+  byCategory.forEach((list) => list.sort((a, b) => rank(a.status) - rank(b.status)));
+
+  const Chip = ({ status, count }) => {
+    const s = CONTROL_STATUS[status];
+    return (
+      <div style={px({ display: "flex", alignItems: "center", gap: 8, background: s.bg, color: s.color, borderRadius: 12, padding: "10px 16px", fontWeight: 800, fontSize: 14 })}>
+        <span style={px({ width: 20, height: 20, borderRadius: "50%", background: s.color, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, flex: "none" })}>{s.mark}</span>
+        <span>{count}</span><span style={px({ fontWeight: 700 })}>{s.label}</span>
+      </div>
+    );
+  };
+
+  return (
+    <div>
+      <SectionTitle title="בקרת חישובים" subtitle="בדיקות שפיות והצלבות בין החישובים בדוח למקורות הנתונים — לשימוש פנימי של היועץ לפני הצגה ללקוח." />
+
+      <div style={px({ background: theme.surfaceAlt, border: `1px solid ${theme.border}`, borderRadius: 14, padding: "12px 16px", fontSize: 12.5, color: theme.textSoft, lineHeight: 1.6, marginBottom: 18 })}>
+        הכלי מאיר פערים ואי-התאמות בלבד ואינו מתקן דבר. כל ממצא הוא נקודה לבדיקה מול בעל רישיון, ואינו מהווה ייעוץ, שיווק פנסיוני או המלצה לפעולה.
+      </div>
+
+      <div style={px({ display: "flex", gap: 12, flexWrap: "wrap", marginBottom: 20 })}>
+        {["fail", "warn", "info", "pass"].map((st) => (summary[st] ? <Chip key={st} status={st} count={summary[st]} /> : null))}
+        {!checks.length ? <div style={px({ color: theme.textSoft, fontSize: 14 })}>אין נתונים מספיקים להרצת בדיקות.</div> : null}
+      </div>
+
+      <div style={px({ display: "flex", flexDirection: "column", gap: 20 })}>
+        {Array.from(byCategory.entries()).map(([category, list]) => (
+          <div key={category}>
+            <div style={px({ fontSize: 14, fontWeight: 900, color: theme.navy, marginBottom: 10 })}>{category}</div>
+            <div style={px({ display: "flex", flexDirection: "column", gap: 10 })}>
+              {list.map((c) => {
+                const s = CONTROL_STATUS[c.status];
+                return (
+                  <div key={c.id} style={px({ display: "grid", gridTemplateColumns: "auto 1fr", gap: 12, alignItems: "flex-start", background: theme.surface, border: `1px solid ${theme.border}`, borderInlineStart: `4px solid ${s.color}`, borderRadius: 12, padding: "14px 16px" })}>
+                    <span style={px({ width: 24, height: 24, borderRadius: "50%", background: s.bg, color: s.color, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 900, fontSize: 13, flex: "none", marginTop: 1 })} title={s.label}>{s.mark}</span>
+                    <div style={px({ minWidth: 0 })}>
+                      <div style={px({ fontSize: 14, fontWeight: 800, color: theme.text })}>{c.label}</div>
+                      <div style={px({ fontSize: 12.5, color: theme.textSoft, lineHeight: 1.6, marginTop: 3 })}>{c.detail}</div>
+                      {c.expected != null || c.actual != null ? (
+                        <div style={px({ display: "flex", gap: 18, flexWrap: "wrap", marginTop: 7, fontSize: 12, fontVariantNumeric: "tabular-nums" })}>
+                          {c.expected != null ? <span style={px({ color: theme.textSoft })}>צפוי: <strong style={px({ color: theme.text })}>{c.expected}</strong></span> : null}
+                          {c.actual != null ? <span style={px({ color: theme.textSoft })}>בפועל: <strong style={px({ color: s.color })}>{c.actual}</strong></span> : null}
+                        </div>
+                      ) : null}
+                      {c.source ? <div style={px({ fontSize: 11, color: theme.textSoft, marginTop: 6, fontStyle: "italic" })}>מקור: {c.source}</div> : null}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 const BASE_NAV_ITEMS = [
   { id: "personal", label: "פרטים אישיים", icon: "☷" },
   { id: "pension", label: "סיכום פנסיוני", icon: "▥" },
@@ -933,8 +1010,15 @@ const BASE_NAV_ITEMS = [
   { id: "summary", label: "סיכום שיחה", icon: "✎" },
 ];
 
-function buildNavItems(specialSections) {
-  if (!specialSections?.hasAny) return BASE_NAV_ITEMS;
+// Advisor-only tab: an internal control panel that flags gaps/inconsistencies
+// between the report's calculations and its data sources. Not part of the PDF
+// export and hidden in the client-facing (shared) view.
+const CONTROL_NAV_ITEM = { id: "control", label: "בקרת חישובים", icon: "✔", advisorOnly: true };
+
+function buildNavItems(specialSections, advisorMode = false) {
+  const withControl = (items) => (advisorMode ? [...items, CONTROL_NAV_ITEM] : items);
+
+  if (!specialSections?.hasAny) return withControl(BASE_NAV_ITEMS);
 
   const summaryIndex = BASE_NAV_ITEMS.findIndex((item) => item.id === "summary");
   const specialItems = [
@@ -943,12 +1027,12 @@ function buildNavItems(specialSections) {
     specialSections.hasRecognizedPension ? { id: "recognizedPension", label: "קצבה מוכרת", icon: "₪" } : null,
   ].filter(Boolean);
 
-  if (summaryIndex < 0) return [...BASE_NAV_ITEMS, ...specialItems];
-  return [
+  if (summaryIndex < 0) return withControl([...BASE_NAV_ITEMS, ...specialItems]);
+  return withControl([
     ...BASE_NAV_ITEMS.slice(0, summaryIndex),
     ...specialItems,
     ...BASE_NAV_ITEMS.slice(summaryIndex),
-  ];
+  ]);
 }
 
 const ClientDashboardPage = defineComponent({
@@ -978,7 +1062,7 @@ const ClientDashboardPage = defineComponent({
       buildDetailedMembers(props.reportData, clientModelC.value)
     );
     const specialSectionsC = computed(() => buildSpecialSectionsModel(props.reportData));
-    const navItemsC = computed(() => buildNavItems(specialSectionsC.value));
+    const navItemsC = computed(() => buildNavItems(specialSectionsC.value, !props.isSharedMode));
 
     // Legacy (server-generated) PDF export — available only when a single XML
     // was uploaded. Posts that XML to PensionService.ashx and opens the PDF it
@@ -1180,6 +1264,14 @@ const ClientDashboardPage = defineComponent({
               onUpdateReportData={onUpdateReportData}
             />
           ) : null}
+          {activeSection === "control" && !isSharedMode ? (
+            <ReportControlPanel
+              reportData={reportData}
+              scope={scope}
+              detailedMembers={detailedMembers}
+              specialSections={specialSections}
+            />
+          ) : null}
         </section>
       </main>
 
@@ -1253,7 +1345,7 @@ const PdfExportModal = defineComponent({
     reportData: { type: Object, default: null },
   },
   setup(props) {
-    const selectedRef = ref(new Set(props.navItems.map((item) => item.id)));
+    const selectedRef = ref(new Set(safeArray(props.navItems).filter((item) => !item.advisorOnly).map((item) => item.id)));
     const printingRef = ref(false);
 
     watch(printingRef, (printing, _old, onCleanup) => {
@@ -1268,7 +1360,9 @@ const PdfExportModal = defineComponent({
     });
 
     return () => {
-      const { navItems, onClose, scope, detailedMembers, specialSections, clientModel, reportData } = props;
+      const { onClose, scope, detailedMembers, specialSections, clientModel, reportData } = props;
+      // Advisor-only tabs (e.g. the control panel) are never part of the printed report.
+      const navItems = safeArray(props.navItems).filter((item) => !item.advisorOnly);
       const selected = selectedRef.value;
       const printing = printingRef.value;
       const setSelected = (u) => {

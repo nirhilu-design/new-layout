@@ -516,7 +516,7 @@ export function parsePensionXml(rawXml, fileName = "") {
 
   const birthDate = normalizeDateValue(getText(memberNode, "BirthDate"));
 
-  const rawGender = normalizeText(getText(memberNode, "Gender") || getText(memberNode, "Sex") || "");
+  const rawGender = normalizeText(getText(memberNode, "Gender") || getText(memberNode, "Sex") || "").toLowerCase();
   const gender = rawGender === "2" || rawGender === "נקבה" || rawGender === "female" || rawGender === "f" ? "female" : "male";
 
   const member = {

@@ -6394,7 +6394,17 @@ export function PrintReportA4({ reportData, conversationSummary = "", actionReco
     return `${topShare.toFixed(1)}% ${prefix} ${k} ${unit} — ${names}.`;
   };
 
+  // מגדר בעל המוצר לפי שם (מהמבנה: personalDetails.gender / gender).
+  const memberGenderByName = (name) => {
+    const member = members.find((m) => (m.name || "") === name);
+    return String(member?.personalDetails?.gender || member?.gender || "").toLowerCase();
+  };
+  // הדוח נכתב מנקודת המבוטח הראשי. זיהוי התפקיד לפי מגדר: נקבה = בת הזוג,
+  // זכר = מבוטח ראשי. אם המגדר לא ידוע — נפילה לזיהוי לפי מיקום/שם.
   const memberRole = (name) => {
+    const gender = memberGenderByName(name);
+    if (gender === "female") return "spouse";
+    if (gender === "male") return "primary";
     const idx = members.findIndex((m) => (m.name || "") === name);
     if (idx === 0) return "primary";
     if (idx > 0) return "spouse";
@@ -6484,9 +6494,9 @@ export function PrintReportA4({ reportData, conversationSummary = "", actionReco
             {(members.length ? members : [{ name: "—" }]).slice(0, 4).map((member, i) => (
               <div key={member.id || member.name || i} style={px({ display: "grid", gridTemplateColumns: "1.6fr 1fr .8fr 1fr", gap: 12, padding: "14px 18px", alignItems: "center", borderBottom: `1px solid ${DIV}`, fontVariantNumeric: "tabular-nums" })}>
                 <div style={px({ display: "flex", alignItems: "center", gap: 11 })}>
-                  <PersonMarker role={i === 0 ? "primary" : "spouse"} />
+                  <PersonMarker role={memberRole(member.name)} />
                   <div>
-                    <div style={px({ fontSize: 14.5, fontWeight: 700 })}>{member.name || (i === 0 ? "מבוטח ראשי" : "בן/בת זוג")}</div>
+                    <div style={px({ fontSize: 14.5, fontWeight: 700 })}>{member.name || (memberRole(member.name) === "primary" ? "מבוטח ראשי" : "בן/בת זוג")}</div>
                     <div style={px({ fontSize: 11.5, color: MUTED })}>{memberDetail(member, "lastWorkplace") || "מקום עבודה לא צוין"}</div>
                   </div>
                 </div>
@@ -6690,6 +6700,12 @@ export function PrintReportA4({ reportData, conversationSummary = "", actionReco
     const primaryDeath = pensionRows.filter((r) => memberRole(r.memberName) === "primary");
     const spouseDeath = pensionRows.filter((r) => memberRole(r.memberName) === "spouse");
     const sumPension = (rows) => rows.reduce((s, r) => s + Number(r.totalPension || 0), 0);
+    // כותרת בן/בת הזוג לפי המגדר בפועל של בעלי המוצרים בצד זה.
+    const spouseGenders = new Set(spouseDeath.map((r) => memberGenderByName(r.memberName)).filter(Boolean));
+    const spouseDeathLabel =
+      spouseGenders.size === 1 && spouseGenders.has("female") ? "בפטירת בת הזוג"
+      : spouseGenders.size === 1 && spouseGenders.has("male") ? "בפטירת בן הזוג"
+      : "בפטירת בן/בת הזוג";
     const loanCols = "1fr 1fr 1.1fr";
     pages.push((n, total) => (
       <section class="rp-section" key="insurance-loans" style={px(pageBase)}>
@@ -6706,8 +6722,8 @@ export function PrintReportA4({ reportData, conversationSummary = "", actionReco
                     return (
                       <div key={m.id || m.name || i} style={px({ display: "grid", gridTemplateColumns: "1.15fr 1.1fr 1.55fr", gap: 20, alignItems: "center", padding: i === 0 ? "0 0 16px" : "16px 0", borderBottom: last ? `1px solid ${BORDER}` : `1px solid ${DIV2}`, fontVariantNumeric: "tabular-nums" })}>
                         <div style={px({ display: "flex", alignItems: "center", gap: 10 })}>
-                          <PersonMarker role={i === 0 ? "primary" : "spouse"} size={28} />
-                          <span style={px({ fontSize: 14, fontWeight: 700 })}>{m.name || (i === 0 ? "מבוטח ראשי" : "בן/בת זוג")}</span>
+                          <PersonMarker role={memberRole(m.name)} size={28} />
+                          <span style={px({ fontSize: 14, fontWeight: 700 })}>{m.name || (memberRole(m.name) === "primary" ? "מבוטח ראשי" : "בן/בת זוג")}</span>
                         </div>
                         <div>
                           <div style={px({ fontSize: 11, color: MUTED, marginBottom: 5 })}>הון למוטבים / פטירה</div>
@@ -6761,7 +6777,7 @@ export function PrintReportA4({ reportData, conversationSummary = "", actionReco
                         <div style={px({ fontSize: 10.5, color: MUTED })}>{`${primaryDeath.length} ${primaryDeath.length === 1 ? "מוצר" : "מוצרים"}`}</div>
                       </div>
                       <div>
-                        <div style={px({ fontSize: 11, color: MUTED })}>בפטירת בן/בת הזוג</div>
+                        <div style={px({ fontSize: 11, color: MUTED })}>{spouseDeathLabel}</div>
                         <div style={px({ fontSize: 19, fontWeight: 800 })}>{fmtCurrency(sumPension(spouseDeath))}</div>
                         <div style={px({ fontSize: 10.5, color: MUTED })}>{`${spouseDeath.length} ${spouseDeath.length === 1 ? "מוצר" : "מוצרים"}`}</div>
                       </div>

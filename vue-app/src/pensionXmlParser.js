@@ -516,7 +516,7 @@ export function parsePensionXml(rawXml, fileName = "") {
 
   const birthDate = normalizeDateValue(getText(memberNode, "BirthDate"));
 
-  const rawGender = normalizeText(getText(memberNode, "Gender") || getText(memberNode, "Sex") || "");
+  const rawGender = normalizeText(getText(memberNode, "Gender") || getText(memberNode, "Sex") || "").toLowerCase();
   const gender = rawGender === "2" || rawGender === "נקבה" || rawGender === "female" || rawGender === "f" ? "female" : "male";
 
   const member = {
@@ -720,14 +720,18 @@ function buildMainGroupAllocation(flatPolicies) {
 
       mainGroups.forEach((group) => {
         const rate = Number(group?.rate || 0);
-        if (!group?.name || rate <= 0) return;
+        const name = String(group?.name || "").trim();
+        if (!name || !(rate > 0)) return;
 
         const weightedValue = planWeight * (rate / 100);
-        const key = `${group.id || ""}|${group.name}`;
+        // Merge by the (normalised) channel name so the same channel is never
+        // split into duplicates by an id that is present in one policy and
+        // missing in another — every channel that exists in the data is kept.
+        const key = name.replace(/\s+/g, " ");
 
         const current = grouped.get(key) || {
           id: group.id || "",
-          name: group.name,
+          name,
           value: 0,
         };
 

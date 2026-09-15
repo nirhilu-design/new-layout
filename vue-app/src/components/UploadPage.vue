@@ -1404,49 +1404,28 @@ const getCleanSection28CappingData = () =>
       ownerLabel: getFamilyOwnerLabel(item.owner),
     }));
 
-const loadPdfJs = () =>
-  new Promise((resolve, reject) => {
-    if (window.pdfjsLib) {
-      window.pdfjsLib.GlobalWorkerOptions.workerSrc =
-        window.pdfjsLib.GlobalWorkerOptions.workerSrc ||
-        "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
-      resolve(window.pdfjsLib);
-      return;
-    }
-
-    const existingScript = document.querySelector(
-      'script[data-pdfjs-loader="true"]'
-    );
-
-    if (existingScript) {
-      existingScript.addEventListener("load", () => resolve(window.pdfjsLib));
-      existingScript.addEventListener("error", reject);
-      return;
-    }
-
-    const script = document.createElement("script");
-    script.src =
-      "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js";
-    script.async = true;
-    script.dataset.pdfjsLoader = "true";
-
-    script.onload = () => {
-      if (!window.pdfjsLib) {
-        reject(new Error("ספריית PDF לא נטענה"));
-        return;
-      }
-
-      window.pdfjsLib.GlobalWorkerOptions.workerSrc =
-        "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
-
-      resolve(window.pdfjsLib);
-    };
-
-    script.onerror = () =>
-      reject(new Error("לא ניתן היה לטעון את ספריית קריאת ה־PDF"));
-
-    document.body.appendChild(script);
-  });
+// טוען את ספריית pdf.js המאוגדת בתוך האפליקציה (Vite), ולא מ-CDN חיצוני.
+// טעינה מ-cdnjs נכשלת ברשתות ארגוניות / דפדפנים עם CSP חוסם / מצב לא-מקוון,
+// וגרמה לשגיאה "שגיאה בקריאת קובץ ה־PDF". טעינה עצלה (dynamic import) כדי
+// שהספרייה תיכלל בצ'אנק נפרד ותיטען רק כשמעלים PDF.
+let pdfjsLibPromise = null;
+const loadPdfJs = () => {
+  if (!pdfjsLibPromise) {
+    pdfjsLibPromise = (async () => {
+      const mod = await import("pdfjs-dist/build/pdf.js");
+      const pdfjsLib = mod?.getDocument ? mod : mod?.default || mod;
+      const workerUrl = (
+        await import("pdfjs-dist/build/pdf.worker.min.js?url")
+      ).default;
+      pdfjsLib.GlobalWorkerOptions.workerSrc = workerUrl;
+      return pdfjsLib;
+    })().catch((err) => {
+      pdfjsLibPromise = null; // מאפשר ניסיון חוזר אם הטעינה נכשלה
+      throw err;
+    });
+  }
+  return pdfjsLibPromise;
+};
 
 const normalizeTableText = (value) =>
   String(value || "")

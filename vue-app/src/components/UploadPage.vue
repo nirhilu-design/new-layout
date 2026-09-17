@@ -753,10 +753,42 @@ const loadXlsx = () =>
     document.body.appendChild(script);
   });
 
+// חלק ממערכות הפנסיה הישראליות מייצאות "אקסל" שהוא למעשה טבלת HTML,
+// לעיתים בקידוד UTF-16. קריאה כ-array על קובץ כזה מפענחת ג'יבריש והכותרות
+// (סוג מוצר / תגמולים / פיצויים …) לא מזוהות — ואז "פירוק נכסים" נעלם.
+// לכן מזהים HTML לפי ה-BOM/התוכן ומפענחים כמחרוזת בקידוד הנכון.
+const readExcelWorkbook = (XLSX, buffer, options = {}) => {
+  const bytes = new Uint8Array(buffer);
+  let encoding = null;
+  if (bytes[0] === 0xff && bytes[1] === 0xfe) encoding = "utf-16le";
+  else if (bytes[0] === 0xfe && bytes[1] === 0xff) encoding = "utf-16be";
+  else if (bytes[0] === 0xef && bytes[1] === 0xbb && bytes[2] === 0xbf) encoding = "utf-8";
+
+  let probe = "";
+  try {
+    probe = new TextDecoder(encoding || "utf-8").decode(bytes.slice(0, 4096)).toLowerCase();
+  } catch (err) {
+    probe = "";
+  }
+  const looksLikeHtml = /<table|<html|<tr[\s>]|<td[\s>]|<th[\s>]/.test(probe);
+
+  if (looksLikeHtml) {
+    let html;
+    try {
+      html = new TextDecoder(encoding || "windows-1255").decode(bytes);
+    } catch (err) {
+      html = new TextDecoder("utf-8").decode(bytes);
+    }
+    return XLSX.read(html, { type: "string", ...options });
+  }
+
+  return XLSX.read(bytes, { type: "array", ...options });
+};
+
 const extractSection28CappingFromExcel = async (file) => {
   const XLSX = await loadXlsx();
   const buffer = await file.arrayBuffer();
-  const workbook = XLSX.read(buffer, { type: "array", cellStyles: true, cellDates: true });
+  const workbook = readExcelWorkbook(XLSX, buffer, { cellStyles: true, cellDates: true });
 
   const sheetName = workbook.SheetNames[0];
   const worksheet = workbook.Sheets[sheetName];
@@ -794,8 +826,7 @@ const extractSection28CappingFromExcel = async (file) => {
 const extractCapitalClassificationFromExcel = async (file, owner) => {
   const XLSX = await loadXlsx();
   const buffer = await file.arrayBuffer();
-  const workbook = XLSX.read(buffer, {
-    type: "array",
+  const workbook = readExcelWorkbook(XLSX, buffer, {
     cellStyles: true,
     cellDates: true,
   });

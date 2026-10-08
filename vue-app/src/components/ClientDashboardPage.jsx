@@ -9,6 +9,7 @@ import {
   Fragment,
 } from "vue";
 import { px } from "../px";
+import { matchManagerAlias } from "../pensionXmlParser";
 import { PrintReportA4 } from "./ReportPage.jsx";
 import { runReportChecks, summarizeChecks } from "../validation/reportChecks.js";
 
@@ -3093,15 +3094,11 @@ function normalizeInsuranceName(value) {
     .replace(/\s+/g, " ")
     .trim();
 
-  if (text.includes("כלל")) return "כלל";
-  if (text.includes("מגדל")) return "מגדל";
-  if (text.includes("הראל")) return "הראל";
-  if (text.includes("מנורה")) return "מנורה מבטחים";
-  if (text.includes("הפניקס") || text.includes("פניקס")) return "הפניקס";
-  if (text.includes("איילון")) return "איילון";
-  if (text.includes("הכשרה")) return "הכשרה";
-  if (text.includes("ביטוח ישיר")) return "ביטוח ישיר";
-  return text || "—";
+  // אותה טבלת זיהוי כמו בפאי הגופים המנהלים (התאמת מילה שלמה).
+  const name = matchManagerAlias(text);
+  if (name === "מנורה") return "מנורה מבטחים";
+  if (name === "שלמה") return "שלמה ביטוח";
+  return name || text || "—";
 }
 
 function parseReportNumber(value) {

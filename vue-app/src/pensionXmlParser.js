@@ -94,12 +94,19 @@ const MANAGER_ALIASES = [
   ["AIG", managerWord("aig")],
   ["שירביט", managerWord("שירביט")],
   ["ליברה", managerWord("ליברה")],
-  ["ווישור", managerWord("ווישור|wesure")],
+  ["ווישור", managerWord("ו?וישור|wesure")],
   ["שלמה", managerWord("שלמה")],
+  ["שומרה", managerWord("שומרה")],
   ["גלובלנט", managerWord("גלובל\\s?נט")],
   ["סלייס", managerWord("סלייס")],
   ["קל גמל", managerWord("קל גמל")],
 ];
+
+// מחזיר את שם התצוגה של הגוף המנהל אם זוהה בטקסט, אחרת מחרוזת ריקה.
+export function matchManagerAlias(text) {
+  const match = MANAGER_ALIASES.find(([, pattern]) => pattern.test(String(text || "")));
+  return match ? match[0] : "";
+}
 
 function normalizeManagerName(value) {
   const raw = normalizeText(value);
@@ -116,8 +123,8 @@ function normalizeManagerName(value) {
 
   const lowerText = text.toLowerCase();
 
-  const canonical = MANAGER_ALIASES.find(([, pattern]) => pattern.test(text));
-  if (canonical) return canonical[0];
+  const canonical = matchManagerAlias(text);
+  if (canonical) return canonical;
 
   const looksLikeKnownFinancialEntity =
     lowerText.includes("insurance") ||

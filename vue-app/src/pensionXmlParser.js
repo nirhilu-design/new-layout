@@ -63,6 +63,44 @@ function parseSortableDate(value) {
   return Number(`${match[3]}${match[2]}${match[1]}`);
 }
 
+// גופים מנהלים: [שם תצוגה, תבנית]. כל שם נבדק כמילה שלמה — לא כחלק ממילה —
+// כדי ש"מסלול כללי" לא ייספר ככלל, "למורים" כמור או "מגדלור" כמגדל.
+// הסדר חשוב רק כשבאותו שם מופיעים שני גופים; הגוף שמופיע ראשון ברשימה גובר.
+const MANAGER_WORD_EDGE = "(?:^|[^א-תa-z0-9])";
+const MANAGER_WORD_END = "(?=$|[^א-תa-z0-9])";
+const managerWord = (alternatives, end = MANAGER_WORD_END) =>
+  new RegExp(`${MANAGER_WORD_EDGE}(?:${alternatives})${end}`, "i");
+
+const MANAGER_ALIASES = [
+  ["כלל", managerWord("כלל", "(?=$|[^א-תa-z0-9]|ביט)")],
+  ["הראל", managerWord("הראל")],
+  ["מנורה", managerWord("מנורה")],
+  ["מגדל", managerWord("מגדל")],
+  ["הפניקס", managerWord("ה?פניקס")],
+  ["אקסלנס", managerWord("אקסלנס")],
+  ["מיטב", managerWord("מיטב")],
+  ["אלטשולר שחם", managerWord("אלטשולר")],
+  ["מור", managerWord("מור")],
+  ["ילין לפידות", managerWord("ילין")],
+  ["אנליסט", managerWord("אנליסט")],
+  ["אינפיניטי", managerWord("אינפיניטי")],
+  ["איילון", managerWord("אי?ילון")],
+  ["הכשרה", managerWord("הכשרה")],
+  ["פסגות", managerWord("פסגות")],
+  ["הלמן אלדובי", managerWord("הלמן")],
+  ["אי.בי.אי", managerWord("אי\\.?\\s?בי\\.?\\s?אי|ibi")],
+  ["עמיתים", managerWord("עמיתים")],
+  ["ביטוח ישיר", managerWord("ביטוח ישיר|idi")],
+  ["AIG", managerWord("aig")],
+  ["שירביט", managerWord("שירביט")],
+  ["ליברה", managerWord("ליברה")],
+  ["ווישור", managerWord("ווישור|wesure")],
+  ["שלמה", managerWord("שלמה")],
+  ["גלובלנט", managerWord("גלובל\\s?נט")],
+  ["סלייס", managerWord("סלייס")],
+  ["קל גמל", managerWord("קל גמל")],
+];
+
 function normalizeManagerName(value) {
   const raw = normalizeText(value);
   const text = raw
@@ -78,26 +116,8 @@ function normalizeManagerName(value) {
 
   const lowerText = text.toLowerCase();
 
-  // "כלל" ו"מור" נבדקים כמילה שלמה: אחרת "מסלול כללי" / "פנסיה כללית" של גופים
-  // אחרים (למשל "מור השתלמות כללי") מסווגים בטעות ככלל, ו"מורגן" כמור.
-  if (/(^|[^א-ת])כלל(?=$|[^א-ת]|ביט)/.test(text)) return "כלל";
-  if (text.includes("הראל")) return "הראל";
-  if (text.includes("מגדל")) return "מגדל";
-  if (text.includes("מנורה")) return "מנורה";
-  if (text.includes("הפניקס") || text.includes("פניקס")) return "הפניקס";
-  if (text.includes("מיטב")) return "מיטב";
-  if (text.includes("אלטשולר")) return "אלטשולר שחם";
-  if (/(^|[^א-ת])מור($|[^א-ת])/.test(text)) return "מור";
-  if (text.includes("ילין")) return "ילין לפידות";
-  if (text.includes("אנליסט")) return "אנליסט";
-  if (text.includes("אינפיניטי")) return "אינפיניטי";
-  if (text.includes("איילון")) return "איילון";
-  if (text.includes("הכשרה")) return "הכשרה";
-  if (text.includes("פסגות")) return "פסגות";
-  if (text.includes("עמיתים")) return "עמיתים";
-  if (text.includes("גלובלנט")) return "גלובלנט";
-  if (text.includes("סלייס")) return "סלייס";
-  if (text.includes("קל גמל")) return "קל גמל";
+  const canonical = MANAGER_ALIASES.find(([, pattern]) => pattern.test(text));
+  if (canonical) return canonical[0];
 
   const looksLikeKnownFinancialEntity =
     lowerText.includes("insurance") ||

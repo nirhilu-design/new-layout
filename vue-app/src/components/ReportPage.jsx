@@ -1,5 +1,6 @@
 import { defineComponent, ref, computed, watch } from "vue";
 import { px } from "../px";
+import { matchManagerAlias } from "../pensionXmlParser";
 import { COVER_HERO_IMAGE } from "../coverHero";
 import zviranLogo from "../assets/zviran-logo.png";
 
@@ -4776,20 +4777,12 @@ function normalizeInsuranceName(value) {
     .replace(/\s+/g, " ")
     .trim();
 
-  if (text.includes("כלל")) return "כלל";
-  if (text.includes("מגדל")) return "מגדל";
-  if (text.includes("הראל")) return "הראל";
-  if (text.includes("מנורה")) return "מנורה מבטחים";
-  if (text.includes("הפניקס") || text.includes("פניקס")) return "הפניקס";
-  if (text.includes("איילון")) return "איילון";
-  if (text.includes("הכשרה")) return "הכשרה";
-  if (text.includes("ביטוח ישיר")) return "ביטוח ישיר";
-  if (text.includes("שלמה")) return "שלמה ביטוח";
-  if (text.includes("שומרה")) return "שומרה";
-  if (text.includes("ליברה")) return "ליברה";
-  if (text.includes("ווישור") || text.includes("וישור")) return "ווישור";
-
-  return text;
+  // אותה טבלת זיהוי כמו בפאי הגופים המנהלים (התאמת מילה שלמה), עם שמות התצוגה
+  // המלאים שהיו נהוגים בטבלה זו.
+  const name = matchManagerAlias(text);
+  if (name === "מנורה") return "מנורה מבטחים";
+  if (name === "שלמה") return "שלמה ביטוח";
+  return name || text;
 }
 
 function parseReportNumber(value) {

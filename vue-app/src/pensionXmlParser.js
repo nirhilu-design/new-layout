@@ -63,6 +63,53 @@ function parseSortableDate(value) {
   return Number(`${match[3]}${match[2]}${match[1]}`);
 }
 
+// גופים מנהלים: [שם תצוגה, תבנית]. כל שם נבדק כמילה שלמה — לא כחלק ממילה —
+// כדי ש"מסלול כללי" לא ייספר ככלל, "למורים" כמור או "מגדלור" כמגדל.
+// הסדר חשוב רק כשבאותו שם מופיעים שני גופים; הגוף שמופיע ראשון ברשימה גובר.
+const MANAGER_WORD_EDGE = "(?:^|[^א-תa-z0-9])";
+const MANAGER_WORD_END = "(?=$|[^א-תa-z0-9])";
+const managerWord = (alternatives, end = MANAGER_WORD_END) =>
+  new RegExp(`${MANAGER_WORD_EDGE}(?:${alternatives})${end}`, "i");
+
+const MANAGER_ALIASES = [
+  ["כלל", managerWord("כלל", "(?=$|[^א-תa-z0-9]|ביט)")],
+  ["הראל", managerWord("הראל")],
+  ["מנורה", managerWord("מנורה")],
+  ["מגדל", managerWord("מגדל")],
+  // אקסלנס (נשואה) מוזגה להפניקס.
+  ["הפניקס", managerWord("ה?פניקס|אקסלנס")],
+  ["מיטב", managerWord("מיטב")],
+  // קרנות הפנסיה והגמל של איילון עברו למיטב; איילון חברה לביטוח נשארת גוף נפרד.
+  ["מיטב", managerWord("אי?ילון\\s+(?:פנסיה|גמל|השתלמות|קרן|קופ\\S*)")],
+  ["אלטשולר שחם", managerWord("אלטשולר")],
+  ["מור", managerWord("מור")],
+  ["ילין לפידות", managerWord("ילין")],
+  ["אנליסט", managerWord("אנליסט")],
+  ["אינפיניטי", managerWord("אינפיניטי")],
+  ["איילון", managerWord("אי?ילון")],
+  ["הכשרה", managerWord("הכשרה")],
+  ["פסגות", managerWord("פסגות")],
+  ["הלמן אלדובי", managerWord("הלמן")],
+  ["אי.בי.אי", managerWord("אי\\.?\\s?בי\\.?\\s?אי|ibi")],
+  ["עמיתים", managerWord("עמיתים")],
+  ["ביטוח ישיר", managerWord("ביטוח ישיר|idi")],
+  ["AIG", managerWord("aig")],
+  ["שירביט", managerWord("שירביט")],
+  ["ליברה", managerWord("ליברה")],
+  ["ווישור", managerWord("ו?וישור|wesure")],
+  ["שלמה", managerWord("שלמה")],
+  ["שומרה", managerWord("שומרה")],
+  ["גלובלנט", managerWord("גלובל\\s?נט")],
+  ["סלייס", managerWord("סלייס")],
+  ["קל גמל", managerWord("קל גמל")],
+];
+
+// מחזיר את שם התצוגה של הגוף המנהל אם זוהה בטקסט, אחרת מחרוזת ריקה.
+export function matchManagerAlias(text) {
+  const match = MANAGER_ALIASES.find(([, pattern]) => pattern.test(String(text || "")));
+  return match ? match[0] : "";
+}
+
 function normalizeManagerName(value) {
   const raw = normalizeText(value);
   const text = raw
@@ -78,24 +125,8 @@ function normalizeManagerName(value) {
 
   const lowerText = text.toLowerCase();
 
-  if (text.includes("כלל")) return "כלל";
-  if (text.includes("הראל")) return "הראל";
-  if (text.includes("מגדל")) return "מגדל";
-  if (text.includes("מנורה")) return "מנורה";
-  if (text.includes("הפניקס") || text.includes("פניקס")) return "הפניקס";
-  if (text.includes("מיטב")) return "מיטב";
-  if (text.includes("אלטשולר")) return "אלטשולר שחם";
-  if (text.includes("מור")) return "מור";
-  if (text.includes("ילין")) return "ילין לפידות";
-  if (text.includes("אנליסט")) return "אנליסט";
-  if (text.includes("אינפיניטי")) return "אינפיניטי";
-  if (text.includes("איילון")) return "איילון";
-  if (text.includes("הכשרה")) return "הכשרה";
-  if (text.includes("פסגות")) return "פסגות";
-  if (text.includes("עמיתים")) return "עמיתים";
-  if (text.includes("גלובלנט")) return "גלובלנט";
-  if (text.includes("סלייס")) return "סלייס";
-  if (text.includes("קל גמל")) return "קל גמל";
+  const canonical = matchManagerAlias(text);
+  if (canonical) return canonical;
 
   const looksLikeKnownFinancialEntity =
     lowerText.includes("insurance") ||

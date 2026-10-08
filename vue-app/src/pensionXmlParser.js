@@ -78,14 +78,16 @@ function normalizeManagerName(value) {
 
   const lowerText = text.toLowerCase();
 
-  if (text.includes("כלל")) return "כלל";
+  // "כלל" ו"מור" נבדקים כמילה שלמה: אחרת "מסלול כללי" / "פנסיה כללית" של גופים
+  // אחרים (למשל "מור השתלמות כללי") מסווגים בטעות ככלל, ו"מורגן" כמור.
+  if (/(^|[^א-ת])כלל(?=$|[^א-ת]|ביט)/.test(text)) return "כלל";
   if (text.includes("הראל")) return "הראל";
   if (text.includes("מגדל")) return "מגדל";
   if (text.includes("מנורה")) return "מנורה";
   if (text.includes("הפניקס") || text.includes("פניקס")) return "הפניקס";
   if (text.includes("מיטב")) return "מיטב";
   if (text.includes("אלטשולר")) return "אלטשולר שחם";
-  if (text.includes("מור")) return "מור";
+  if (/(^|[^א-ת])מור($|[^א-ת])/.test(text)) return "מור";
   if (text.includes("ילין")) return "ילין לפידות";
   if (text.includes("אנליסט")) return "אנליסט";
   if (text.includes("אינפיניטי")) return "אינפיניטי";

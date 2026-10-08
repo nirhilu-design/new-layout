@@ -3703,6 +3703,9 @@ function rowMatchesSegment(row, segment, type) {
   }
 
   if (type === "manager") {
+    // שם הגוף המנהל כבר מנורמל בפענוח — השוואה מדויקת, כדי שפרוסת "כלל" לא תאסוף
+    // מוצרים של גופים אחרים ששמם מכיל "כללי".
+    if (row?.managerName) return normalizeForCompare(row.managerName) === wanted;
     return [
       row?.managerName,
       row?.companyName,

@@ -6603,24 +6603,13 @@ export function PrintReportA4({ reportData, conversationSummary = "", actionReco
     const maxGroupTotal = Math.max(...weightedReturns.groups.map((g) => g.total), 1);
     const feeTotalCard = feeCards.find((c) => c.isTotal);
     const rcols = "1.45fr 1.25fr .72fr .72fr .72fr .62fr .58fr";
-    // שורת כיסוי מוצגת רק כשחלק מהמוצרים הוחרגו מהתקופה (אין להם נתון).
-    const coverageNote = (c) =>
-      c && c.partial ? (
-        <div style={px({ fontSize: 9.5, color: MUTED, marginTop: 3, direction: "rtl", fontWeight: 400, whiteSpace: "nowrap" })}>
-          {`${c.count}/${c.total} · ${Math.round((c.coveredWeight / (c.totalWeight || 1)) * 100)}% מהצבירה`}
-        </div>
-      ) : null;
-    const heatCell = (v, col, c) => (
+    const heatCell = (v, col) => (
       <div style={px({ textAlign: "left" })}>
         <span style={px({ background: v === null ? "transparent" : heatColor(v, col), padding: "3px 5px", direction: "ltr", display: "inline-block" })}>{fmtPctOrDash(v)}</span>
-        {coverageNote(c)}
       </div>
     );
-    const plainCell = (text, c, color) => (
-      <div style={px({ textAlign: "left", color })}>
-        <div style={px({ direction: "ltr" })}>{text}</div>
-        {coverageNote(c)}
-      </div>
+    const plainCell = (text, color) => (
+      <div style={px({ textAlign: "left", color, direction: "ltr" })}>{text}</div>
     );
     pages.push((n, total) => (
       <section class="rp-section" key="weighted-fees" style={px(pageBase)}>
@@ -6643,23 +6632,23 @@ export function PrintReportA4({ reportData, conversationSummary = "", actionReco
                     <div key={i} style={px({ display: "grid", gridTemplateColumns: rcols, alignItems: "center", padding: "18px 12px", borderBottom: `1px solid ${DIV2}` })}>
                       <div style={px({ display: "flex", alignItems: "center", gap: 8 })}><span style={px({ width: 8, height: 8, borderRadius: "50%", background: PRODUCT_RAMP[Math.min(i, PRODUCT_RAMP.length - 1)], flex: "none" })} />{g.type} <span style={px({ color: MUTED })}>({g.count})</span></div>
                       <div><div style={px({ height: 5, width: `${Math.max((g.total / maxGroupTotal) * 100, 4)}%`, background: PRODUCT_RAMP[Math.min(i, PRODUCT_RAMP.length - 1)], marginBottom: 3 })} />{fmtCurrency(g.total)}</div>
-                      {heatCell(g.r12, colR12, g.cov.r12)}
-                      {heatCell(g.r36, colR36, g.cov.r36)}
-                      {heatCell(g.r60, colR60, g.cov.r60)}
-                      {plainCell(fmtPctOrDash(g.st), g.cov.st, MUTED)}
-                      {plainCell(fmtNumOrDash(g.sharp), g.cov.sharp, MUTED)}
+                      {heatCell(g.r12, colR12)}
+                      {heatCell(g.r36, colR36)}
+                      {heatCell(g.r60, colR60)}
+                      {plainCell(fmtPctOrDash(g.st), MUTED)}
+                      {plainCell(fmtNumOrDash(g.sharp), MUTED)}
                     </div>
                   ))}
                   <div style={px({ display: "grid", gridTemplateColumns: rcols, alignItems: "center", padding: "19px 12px", background: PAPER, borderTop: `1px solid ${BORDER}`, fontWeight: 700 })}>
                     <div>סה״כ משוקלל</div><div>{fmtCurrency(weightedReturns.allTotal)}</div>
-                    {plainCell(fmtPctOrDash(weightedReturns.totals.r12), weightedReturns.totals.cov.r12)}
-                    {plainCell(fmtPctOrDash(weightedReturns.totals.r36), weightedReturns.totals.cov.r36)}
-                    {plainCell(fmtPctOrDash(weightedReturns.totals.r60), weightedReturns.totals.cov.r60)}
-                    {plainCell(fmtPctOrDash(weightedReturns.totals.st), weightedReturns.totals.cov.st, INK2)}
-                    {plainCell(fmtNumOrDash(weightedReturns.totals.sharp), weightedReturns.totals.cov.sharp, INK2)}
+                    {plainCell(fmtPctOrDash(weightedReturns.totals.r12))}
+                    {plainCell(fmtPctOrDash(weightedReturns.totals.r36))}
+                    {plainCell(fmtPctOrDash(weightedReturns.totals.r60))}
+                    {plainCell(fmtPctOrDash(weightedReturns.totals.st), INK2)}
+                    {plainCell(fmtNumOrDash(weightedReturns.totals.sharp), INK2)}
                   </div>
                   <div style={px({ marginTop: 12, display: "flex", alignItems: "center", gap: 10, fontSize: 11.5, color: MUTED })}>
-                    <span>תשואה מצטברת לתקופה, משוקללת לפי צבירה · מוצר ללא נתון לתקופה אינו נכלל בה (מסומן בכיסוי) · עוצמת גוון = תשואה גבוהה יותר בטור</span>
+                    <span>תשואה מצטברת לתקופה, משוקללת לפי צבירה · מוצר ללא נתון לתקופה אינו נכלל בה · עוצמת גוון = תשואה גבוהה יותר בטור</span>
                     <span style={px({ display: "flex", gap: 2 })}>{["#F0F3F8", "#DCE3EE", "#C6D1E4", "#9FB0CC"].map((c, i) => <span key={i} style={px({ width: 16, height: 9, background: c })} />)}</span>
                   </div>
                 </div>

@@ -3,6 +3,7 @@ import { px } from "../px";
 import { matchManagerAlias } from "../pensionXmlParser";
 import { COVER_HERO_IMAGE } from "../coverHero";
 import zviranLogo from "../assets/zviran-logo.png";
+import { rateOrNull, weightedWithCoverage } from "../returnsMath.js";
 
 const STORAGE_CLIENT_MODEL_KEY = "familyPensionClientModel";
 const STORAGE_REPORT_DATA_KEY = "familyPensionReportData";
@@ -5988,6 +5989,8 @@ export function PrintReportA4({ reportData, conversationSummary = "", actionReco
     return str;
   };
   const fmtPct2 = (v) => `${Number(v || 0).toFixed(2)}%`;
+  const fmtPctOrDash = (v) => (v === null || v === undefined ? "—" : fmtPct2(v));
+  const fmtNumOrDash = (v) => (v === null || v === undefined ? "—" : fmtNum2(v));
   const fmtNum2 = (v) => `${Number(v || 0).toFixed(2)}`;
   const capMoney = (v) => `₪${Math.round(Number(v || 0)).toLocaleString("en-US")}`;
 
@@ -6043,29 +6046,35 @@ export function PrintReportA4({ reportData, conversationSummary = "", actionReco
     .filter(Boolean);
 
   // ---------- Weighted returns (grouped by product group) ----------
+  // תשואה מצטברת לכל מוצר, משוקללת לפי צבירה. מוצר ללא נתון לתקופה אינו נספר
+  // כ-0% — הוא מוחרג מאותה תקופה בלבד והמשקל מתחלק בין המוצרים שיש להם נתון.
+  // `cov` שומר את הכיסוי (כמה מוצרים / איזה חלק מהצבירה נכלל) לתצוגה.
   const weightedReturns = (() => {
     const funds = (Array.isArray(productFunds) ? productFunds : [])
       .map((f) => ({
         productType: f.productType || "אחר", value: Number(f.value || 0),
-        return12: Number(f.return12 || 0), return36: Number(f.return36 || 0), return60: Number(f.return60 || 0),
-        st36: Number(f.st36 || 0), sharp36: Number(f.sharp36 || 0),
+        return12: rateOrNull(f.return12), return36: rateOrNull(f.return36), return60: rateOrNull(f.return60),
+        st36: rateOrNull(f.st36), sharp36: rateOrNull(f.sharp36),
       }))
       .filter((f) => f.value > 0);
+    const metrics = { r12: "return12", r36: "return36", r60: "return60", st: "st36", sharp: "sharp36" };
+    const summarize = (list) => {
+      const cov = Object.fromEntries(Object.entries(metrics).map(([k, key]) => [k, weightedWithCoverage(list, key)]));
+      return { cov, ...Object.fromEntries(Object.keys(metrics).map((k) => [k, cov[k].value])) };
+    };
     const order = ["פנסיה מקיפה", "פנסיה חדשה מקיפה", "פנסיה כללית", "ביטוח מנהלים", "קרן השתלמות", "קופת גמל", "גמל להשקעה"];
     const map = new Map();
     funds.forEach((f) => { if (!map.has(f.productType)) map.set(f.productType, []); map.get(f.productType).push(f); });
-    const wavg = (list, key) => { const tv = list.reduce((s, x) => s + x.value, 0) || 1; return list.reduce((s, x) => s + x.value * x[key], 0) / tv; };
     const groups = Array.from(map.entries()).map(([type, list]) => ({
       type, count: list.length, total: list.reduce((s, x) => s + x.value, 0),
-      r12: wavg(list, "return12"), r36: wavg(list, "return36"), r60: wavg(list, "return60"), st: wavg(list, "st36"), sharp: wavg(list, "sharp36"),
+      ...summarize(list),
     })).sort((a, b) => {
       const ai = order.findIndex((o) => a.type.includes(o));
       const bi = order.findIndex((o) => b.type.includes(o));
       return (ai < 0 ? 99 : ai) - (bi < 0 ? 99 : bi) || b.total - a.total;
     });
     const allTotal = funds.reduce((s, x) => s + x.value, 0);
-    const tw = (key) => (allTotal ? funds.reduce((s, x) => s + x.value * x[key], 0) / allTotal : 0);
-    return { groups, funds, allTotal, totals: { count: funds.length, r12: tw("return12"), r36: tw("return36"), r60: tw("return60"), st: tw("st36"), sharp: tw("sharp36") } };
+    return { groups, funds, allTotal, totals: { count: funds.length, ...summarize(funds) } };
   })();
 
   // ---------- Management fees (money cost) ----------
@@ -6594,9 +6603,23 @@ export function PrintReportA4({ reportData, conversationSummary = "", actionReco
     const maxGroupTotal = Math.max(...weightedReturns.groups.map((g) => g.total), 1);
     const feeTotalCard = feeCards.find((c) => c.isTotal);
     const rcols = "1.45fr 1.25fr .72fr .72fr .72fr .62fr .58fr";
-    const heatCell = (v, col) => (
+    // שורת כיסוי מוצגת רק כשחלק מהמוצרים הוחרגו מהתקופה (אין להם נתון).
+    const coverageNote = (c) =>
+      c && c.partial ? (
+        <div style={px({ fontSize: 9.5, color: MUTED, marginTop: 3, direction: "rtl", fontWeight: 400, whiteSpace: "nowrap" })}>
+          {`${c.count}/${c.total} · ${Math.round((c.coveredWeight / (c.totalWeight || 1)) * 100)}% מהצבירה`}
+        </div>
+      ) : null;
+    const heatCell = (v, col, c) => (
       <div style={px({ textAlign: "left" })}>
-        <span style={px({ background: heatColor(v, col), padding: "3px 5px", direction: "ltr", display: "inline-block" })}>{fmtPct2(v)}</span>
+        <span style={px({ background: v === null ? "transparent" : heatColor(v, col), padding: "3px 5px", direction: "ltr", display: "inline-block" })}>{fmtPctOrDash(v)}</span>
+        {coverageNote(c)}
+      </div>
+    );
+    const plainCell = (text, c, color) => (
+      <div style={px({ textAlign: "left", color })}>
+        <div style={px({ direction: "ltr" })}>{text}</div>
+        {coverageNote(c)}
       </div>
     );
     pages.push((n, total) => (
@@ -6604,15 +6627,15 @@ export function PrintReportA4({ reportData, conversationSummary = "", actionReco
         <ChapterHeader num={String(n - 1).padStart(2, "0")} title={mergedTitle} subtitle={mergedSub} Icon={ReturnsIcon} />
         {hasWeighted ? (
           <>
-            <Lead text="התשואות ומדדי הסיכון מוצגים ברמת קבוצת מוצר, משוקללים לפי הצבירה בכל קבוצה — מבט ניהולי על התיק, ללא פירוט לפי פוליסה." />
-            <Card title="תשואה משוקללת לפי קבוצת מוצר" meta={`${weightedReturns.totals.count} מוצרים · ${weightedReturns.groups.length} קבוצות`} mt={20} pad="20px 22px 18px">
+            <Lead text="התשואות המצטברות ומדדי הסיכון מוצגים ברמת קבוצת מוצר, משוקללים לפי הצבירה בכל קבוצה — מבט ניהולי על התיק, ללא פירוט לפי פוליסה." />
+            <Card title="תשואה מצטברת משוקללת לפי קבוצת מוצר" meta={`${weightedReturns.totals.count} מוצרים · ${weightedReturns.groups.length} קבוצות`} mt={20} pad="20px 22px 18px">
               {weightedReturns.groups.length ? (
                 <div style={px({ fontVariantNumeric: "tabular-nums", fontSize: 12.5 })}>
                   <div style={px({ display: "grid", gridTemplateColumns: rcols, background: NAVY, color: PAPER, padding: "10px 12px", fontSize: 11.5 })}>
                     <div>קבוצת מוצר</div><div>סך צבירה</div>
-                    <div style={px({ textAlign: "left", lineHeight: 1.25 })}>ח׳12<br /><span style={px({ fontSize: 9.5, opacity: 0.78 })}>משוקללת</span></div>
-                    <div style={px({ textAlign: "left", lineHeight: 1.25 })}>ח׳36<br /><span style={px({ fontSize: 9.5, opacity: 0.78 })}>משוקללת</span></div>
-                    <div style={px({ textAlign: "left", lineHeight: 1.25 })}>ח׳60<br /><span style={px({ fontSize: 9.5, opacity: 0.78 })}>משוקללת</span></div>
+                    <div style={px({ textAlign: "left", lineHeight: 1.25 })}>12 ח׳<br /><span style={px({ fontSize: 9.5, opacity: 0.78 })}>מצטברת</span></div>
+                    <div style={px({ textAlign: "left", lineHeight: 1.25 })}>36 ח׳<br /><span style={px({ fontSize: 9.5, opacity: 0.78 })}>מצטברת</span></div>
+                    <div style={px({ textAlign: "left", lineHeight: 1.25 })}>60 ח׳<br /><span style={px({ fontSize: 9.5, opacity: 0.78 })}>מצטברת</span></div>
                     <div style={px({ textAlign: "left", opacity: 0.72 })}>ס״ת משוקללת</div>
                     <div style={px({ textAlign: "left", opacity: 0.72 })}>שארפ משוקלל</div>
                   </div>
@@ -6620,23 +6643,23 @@ export function PrintReportA4({ reportData, conversationSummary = "", actionReco
                     <div key={i} style={px({ display: "grid", gridTemplateColumns: rcols, alignItems: "center", padding: "18px 12px", borderBottom: `1px solid ${DIV2}` })}>
                       <div style={px({ display: "flex", alignItems: "center", gap: 8 })}><span style={px({ width: 8, height: 8, borderRadius: "50%", background: PRODUCT_RAMP[Math.min(i, PRODUCT_RAMP.length - 1)], flex: "none" })} />{g.type} <span style={px({ color: MUTED })}>({g.count})</span></div>
                       <div><div style={px({ height: 5, width: `${Math.max((g.total / maxGroupTotal) * 100, 4)}%`, background: PRODUCT_RAMP[Math.min(i, PRODUCT_RAMP.length - 1)], marginBottom: 3 })} />{fmtCurrency(g.total)}</div>
-                      {heatCell(g.r12, colR12)}
-                      {heatCell(g.r36, colR36)}
-                      {heatCell(g.r60, colR60)}
-                      <div style={px({ textAlign: "left", color: MUTED, direction: "ltr" })}>{fmtPct2(g.st)}</div>
-                      <div style={px({ textAlign: "left", color: MUTED, direction: "ltr" })}>{fmtNum2(g.sharp)}</div>
+                      {heatCell(g.r12, colR12, g.cov.r12)}
+                      {heatCell(g.r36, colR36, g.cov.r36)}
+                      {heatCell(g.r60, colR60, g.cov.r60)}
+                      {plainCell(fmtPctOrDash(g.st), g.cov.st, MUTED)}
+                      {plainCell(fmtNumOrDash(g.sharp), g.cov.sharp, MUTED)}
                     </div>
                   ))}
                   <div style={px({ display: "grid", gridTemplateColumns: rcols, alignItems: "center", padding: "19px 12px", background: PAPER, borderTop: `1px solid ${BORDER}`, fontWeight: 700 })}>
                     <div>סה״כ משוקלל</div><div>{fmtCurrency(weightedReturns.allTotal)}</div>
-                    <div style={px({ textAlign: "left", direction: "ltr" })}>{fmtPct2(weightedReturns.totals.r12)}</div>
-                    <div style={px({ textAlign: "left", direction: "ltr" })}>{fmtPct2(weightedReturns.totals.r36)}</div>
-                    <div style={px({ textAlign: "left", direction: "ltr" })}>{fmtPct2(weightedReturns.totals.r60)}</div>
-                    <div style={px({ textAlign: "left", color: INK2, direction: "ltr" })}>{fmtPct2(weightedReturns.totals.st)}</div>
-                    <div style={px({ textAlign: "left", color: INK2, direction: "ltr" })}>{fmtNum2(weightedReturns.totals.sharp)}</div>
+                    {plainCell(fmtPctOrDash(weightedReturns.totals.r12), weightedReturns.totals.cov.r12)}
+                    {plainCell(fmtPctOrDash(weightedReturns.totals.r36), weightedReturns.totals.cov.r36)}
+                    {plainCell(fmtPctOrDash(weightedReturns.totals.r60), weightedReturns.totals.cov.r60)}
+                    {plainCell(fmtPctOrDash(weightedReturns.totals.st), weightedReturns.totals.cov.st, INK2)}
+                    {plainCell(fmtNumOrDash(weightedReturns.totals.sharp), weightedReturns.totals.cov.sharp, INK2)}
                   </div>
                   <div style={px({ marginTop: 12, display: "flex", alignItems: "center", gap: 10, fontSize: 11.5, color: MUTED })}>
-                    <span>עוצמת גוון = תשואה משוקללת גבוהה יותר בטור</span>
+                    <span>תשואה מצטברת לתקופה, משוקללת לפי צבירה · מוצר ללא נתון לתקופה אינו נכלל בה (מסומן בכיסוי) · עוצמת גוון = תשואה גבוהה יותר בטור</span>
                     <span style={px({ display: "flex", gap: 2 })}>{["#F0F3F8", "#DCE3EE", "#C6D1E4", "#9FB0CC"].map((c, i) => <span key={i} style={px({ width: 16, height: 9, background: c })} />)}</span>
                   </div>
                 </div>

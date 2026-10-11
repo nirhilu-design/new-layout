@@ -9,6 +9,8 @@
  *   { id, category, label, status: 'pass'|'warn'|'fail'|'info', detail, expected, actual, source }
  */
 
+import { productReturnsFromRoutes, weightedWithCoverage } from "../returnsMath.js";
+
 const num = (v) => {
   if (typeof v === "number") return Number.isFinite(v) ? v : 0;
   const clean = String(v ?? "").replace(/[₪,\s%]/g, "").replace(/[^\d.-]/g, "");
@@ -30,28 +32,27 @@ const relStatus = (diff, base, warnAt = 0.005, failAt = 0.02) => {
 // ---- גזירת תשואות משוקללות לפי קבוצת מוצר (זהה ללוגיקת הדוח) ----
 function buildProductFunds(scope) {
   return arr(scope?.products)
-    .map((p) => {
-      const routes = arr(p.investmentRoutes);
-      const avg = (k) => (routes.length ? routes.reduce((s, r) => s + num(r?.[k]), 0) / routes.length : 0);
-      return {
-        productType: p.productType || "אחר",
-        value: num(p.currentValue),
-        return12: avg("return12"), return36: avg("return36"), return60: avg("return60"),
-        feeFromBalance: num(p.managementFeeFromBalance),
-        feeFromDeposit: num(p.managementFeeFromDeposit),
-      };
-    })
+    .map((p) => ({
+      productType: p.productType || "אחר",
+      value: num(p.currentValue),
+      ...productReturnsFromRoutes(p.investmentRoutes),
+      feeFromBalance: num(p.managementFeeFromBalance),
+      feeFromDeposit: num(p.managementFeeFromDeposit),
+    }))
     .filter((f) => f.value > 0);
 }
 
 function weightedGroups(funds) {
   const map = new Map();
   funds.forEach((f) => { if (!map.has(f.productType)) map.set(f.productType, []); map.get(f.productType).push(f); });
-  const wavg = (list, key) => { const tv = list.reduce((s, x) => s + x.value, 0) || 1; return list.reduce((s, x) => s + x.value * x[key], 0) / tv; };
-  return Array.from(map.entries()).map(([type, list]) => ({
-    type, list,
-    r12: wavg(list, "return12"), r36: wavg(list, "return36"), r60: wavg(list, "return60"),
-  }));
+  return Array.from(map.entries()).map(([type, list]) => {
+    const cov = {
+      r12: weightedWithCoverage(list, "return12"),
+      r36: weightedWithCoverage(list, "return36"),
+      r60: weightedWithCoverage(list, "return60"),
+    };
+    return { type, list, cov, r12: cov.r12.value, r36: cov.r36.value, r60: cov.r60.value };
+  });
 }
 
 export function runReportChecks(ctx = {}) {
@@ -142,8 +143,8 @@ export function runReportChecks(ctx = {}) {
     groups.forEach((g) => {
       ["return12", "return36", "return60"].forEach((k, i) => {
         const key = ["r12", "r36", "r60"][i];
-        const vals = g.list.map((f) => f[k]).filter((v) => Number.isFinite(v));
-        if (!vals.length) return;
+        const vals = g.list.map((f) => f[k]).filter((v) => v !== null && Number.isFinite(v));
+        if (!vals.length || g[key] === null) return;
         const min = Math.min(...vals), max = Math.max(...vals), w = g[key];
         if (w < min - 0.05 || w > max + 0.05) {
           offenders.push(`${g.type} · ${["12ח׳", "36ח׳", "60ח׳"][i]}: משוקלל ${pct(w, 2)} מחוץ לתחום [${pct(min, 2)}, ${pct(max, 2)}]`);
@@ -156,6 +157,22 @@ export function runReportChecks(ctx = {}) {
       detail: offenders.length
         ? `נמצאו ${offenders.length} תשואות משוקללות מחוץ לתחום רכיביהן — ממוצע משוקלל אמור תמיד ליפול בין המינימום למקסימום. ${offenders.join(" ; ")}.`
         : `כל התשואות המשוקללות (${groups.length} קבוצות) נמצאות בתוך תחום התשואות של המוצרים בכל קבוצה.`,
+    });
+
+    // כיסוי: מוצרים ללא נתון תשואה לתקופה מוחרגים מהשקלול של אותה תקופה (לא נספרים כ-0%).
+    const gaps = [];
+    groups.forEach((g) => {
+      ["r12", "r36", "r60"].forEach((key, i) => {
+        const c = g.cov[key];
+        if (c.count < c.total) gaps.push(`${g.type} · ${["12ח׳", "36ח׳", "60ח׳"][i]}: ${c.count}/${c.total} מוצרים עם נתון`);
+      });
+    });
+    add({
+      id: "weighted-return-coverage", category: "תשואה משוקללת", label: "כיסוי נתוני התשואה המצטברת",
+      status: gaps.length ? "info" : "pass",
+      detail: gaps.length
+        ? `לחלק מהמוצרים אין נתון תשואה מצטברת לתקופה (למשל מסלול ללא היסטוריה מספקת). הם מוחרגים מהשקלול של אותה תקופה בלבד: ${gaps.join(" ; ")}.`
+        : "לכל המוצרים יש נתון תשואה מצטברת לכל התקופות.",
     });
   }
 

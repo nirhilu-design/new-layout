@@ -12,6 +12,7 @@ import { px } from "../px";
 import { matchManagerAlias } from "../pensionXmlParser";
 import { PrintReportA4 } from "./ReportPage.jsx";
 import { runReportChecks, summarizeChecks } from "../validation/reportChecks.js";
+import { rateOrNull, productReturnsFromRoutes } from "../returnsMath.js";
 
 const theme = {
   pageBg: "#F9F7F3",
@@ -46,21 +47,24 @@ function formatPercent(value) {
 }
 
 function formatSignedPercent(value, decimals = 2) {
+  if (value === null || value === undefined) return "—";
   const number = Number(value || 0);
   if (!Number.isFinite(number)) return "—";
   return `${number.toLocaleString("he-IL", { minimumFractionDigits: decimals, maximumFractionDigits: decimals })}%`;
 }
 
 function formatDecimal(value, decimals = 2) {
+  if (value === null || value === undefined) return "—";
   const number = Number(value || 0);
   if (!Number.isFinite(number)) return "—";
   return number.toLocaleString("he-IL", { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
 }
 
 function weightedAverage(items, valueKey, weightKey = "allocatedValue") {
-  const rows = safeArray(items).filter((item) => Number(item?.[weightKey] || 0) > 0 && Number.isFinite(Number(item?.[valueKey])));
+  // ערך חסר (null) אינו נספר כ-0 — המשקל מתחלק בין הפריטים שיש להם נתון.
+  const rows = safeArray(items).filter((item) => Number(item?.[weightKey] || 0) > 0 && rateOrNull(item?.[valueKey]) !== null);
   const totalWeight = rows.reduce((sum, item) => sum + Number(item[weightKey] || 0), 0);
-  if (totalWeight <= 0) return 0;
+  if (totalWeight <= 0) return null;
   return rows.reduce((sum, item) => sum + Number(item[valueKey] || 0) * Number(item[weightKey] || 0), 0) / totalWeight;
 }
 
@@ -554,11 +558,12 @@ function buildMemberProductsFromRawFile(rawFile) {
         id: plan?.mofid || `${policy?.policyNo || index}-${planIndex}`,
         mofid: plan?.mofid || "",
         assetName: plan?.trackName || plan?.planName || policy?.planName || policy?.productType || "מסלול ללא שם",
-        return12: Number(plan?.totalRate12 ?? plan?.avgRate12 ?? 0),
-        return36: Number(plan?.totalRate36 ?? plan?.avgRate36 ?? 0),
-        return60: Number(plan?.totalRate60 ?? plan?.avgRate60 ?? 0),
-        st36: Number(plan?.standardDeviation36 ?? 0),
-        sharp36: Number(plan?.sharp ?? 0),
+        // תשואה מצטברת בלבד (RateTotal). שדה חסר נשאר null ולא הופך ל-0%.
+        return12: rateOrNull(plan?.totalRate12),
+        return36: rateOrNull(plan?.totalRate36),
+        return60: rateOrNull(plan?.totalRate60),
+        st36: rateOrNull(plan?.standardDeviation36),
+        sharp36: rateOrNull(plan?.sharp),
         equityExposure: Number(plan?.equityExposure || 0),
         foreignExposure: Number(plan?.foreignExposure || 0),
       })),
@@ -646,11 +651,11 @@ function buildProductAssetTables(products) {
           id: product?.id || product?.policyNo || productName,
           mofid: "—",
           assetName: product?.planName || productName,
-          return12: 0,
-          return36: 0,
-          return60: 0,
-          st36: 0,
-          sharp36: 0,
+          return12: null,
+          return36: null,
+          return60: null,
+          st36: null,
+          sharp36: null,
           equityExposure: Number(product?.equityExposure || 0),
           foreignExposure: Number(product?.foreignExposure || 0),
         }];
@@ -676,20 +681,18 @@ function buildProductAssetTables(products) {
         mofid: route?.mofid || "—",
         assetName: route?.assetName || "מסלול ללא שם",
         allocatedValue: 0,
-        weightedReturn12: 0,
-        weightedReturn36: 0,
-        weightedReturn60: 0,
-        weightedSt36: 0,
-        weightedSharp36: 0,
+        metricSums: {},
+        metricWeights: {},
         weightedEquityExposure: 0,
       };
 
       current.allocatedValue += routeWeight;
-      current.weightedReturn12 += Number(route?.return12 || 0) * routeWeight;
-      current.weightedReturn36 += Number(route?.return36 || 0) * routeWeight;
-      current.weightedReturn60 += Number(route?.return60 || 0) * routeWeight;
-      current.weightedSt36 += Number(route?.st36 || 0) * routeWeight;
-      current.weightedSharp36 += Number(route?.sharp36 || 0) * routeWeight;
+      ["return12", "return36", "return60", "st36", "sharp36"].forEach((k) => {
+        const v = rateOrNull(route?.[k]);
+        if (v === null) return;
+        current.metricSums[k] = (current.metricSums[k] || 0) + v * routeWeight;
+        current.metricWeights[k] = (current.metricWeights[k] || 0) + routeWeight;
+      });
       current.weightedEquityExposure += Number(route?.equityExposure || 0) * routeWeight;
       group.routeMap.set(key, current);
     });
@@ -716,16 +719,17 @@ function buildProductAssetTables(products) {
       const rows = Array.from(group.routeMap.values())
         .map((row) => {
           const weight = Number(row.allocatedValue || 0);
+          const metric = (k) => (row.metricWeights[k] > 0 ? row.metricSums[k] / row.metricWeights[k] : null);
           return {
             id: row.id,
             mofid: row.mofid,
             assetName: row.assetName,
             allocatedValue: weight,
-            return12: weight > 0 ? row.weightedReturn12 / weight : 0,
-            return36: weight > 0 ? row.weightedReturn36 / weight : 0,
-            return60: weight > 0 ? row.weightedReturn60 / weight : 0,
-            st36: weight > 0 ? row.weightedSt36 / weight : 0,
-            sharp36: weight > 0 ? row.weightedSharp36 / weight : 0,
+            return12: metric("return12"),
+            return36: metric("return36"),
+            return60: metric("return60"),
+            st36: metric("st36"),
+            sharp36: metric("sharp36"),
             equityExposure: weight > 0 ? row.weightedEquityExposure / weight : 0,
           };
         })
@@ -741,7 +745,7 @@ function buildProductAssetTables(products) {
         weightedReturn60: weightedAverage(rows, "return60"),
         weightedSt36: weightedAverage(rows, "st36"),
         weightedSharp36: weightedAverage(rows, "sharp36"),
-        weightedEquityExposure: weightedAverage(rows, "equityExposure"),
+        weightedEquityExposure: weightedAverage(rows, "equityExposure") ?? 0,
         rows,
       };
     })
@@ -1391,18 +1395,14 @@ const PdfExportModal = defineComponent({
 
   // Individual policies with weighted returns, for the new-design "נכסים ברמת מוצר" page.
   const productFunds = safeArray(scope?.products)
-    .map((p) => {
-      const routes = safeArray(p.investmentRoutes);
-      const avg = (k) => (routes.length ? routes.reduce((s, r) => s + Number(r?.[k] || 0), 0) / routes.length : 0);
-      return {
-        name: p.planName || p.productType || "מוצר",
-        policyNo: p.policyNo || "",
-        productType: p.productType || "אחר",
-        value: Number(p.currentValue || 0),
-        return12: avg("return12"), return36: avg("return36"), return60: avg("return60"),
-        st36: avg("st36"), sharp36: avg("sharp36"),
-      };
-    })
+    .map((p) => ({
+      name: p.planName || p.productType || "מוצר",
+      policyNo: p.policyNo || "",
+      productType: p.productType || "אחר",
+      value: Number(p.currentValue || 0),
+      // ממוצע המסלולים שיש להם נתון; null אם לאף מסלול אין נתון לתקופה.
+      ...productReturnsFromRoutes(p.investmentRoutes),
+    }))
     .filter((f) => f.value > 0);
 
   // Monthly pension death-benefit rows (widow/orphan) — same source as the WEB table.
@@ -1852,9 +1852,9 @@ function AssetProductRoutesTable({ rows }) {
             <th>מספר באוצר</th>
             <th>שם נכס / מסלול</th>
             <th>סך צבירה</th>
-            <th>תשואה 12 חודשים</th>
-            <th>תשואה 36 חודשים</th>
-            <th>תשואה 60 חודשים</th>
+            <th>תשואה מצטברת 12 ח׳</th>
+            <th>תשואה מצטברת 36 ח׳</th>
+            <th>תשואה מצטברת 60 ח׳</th>
             <th>סטיית תקן 36</th>
             <th>שארפ 36</th>
           </tr>

@@ -2110,6 +2110,11 @@ function ManagementFeesSection({ scope, detailedMembers }) {
   const tableProducts = safeArray(scope?.products).filter(
     (p) => Number(p.currentValue || 0) > 0 || Number(p.managementFeeFromBalance || 0) > 0
   );
+  // Each product's weight in the weighted average is its share of the scope's total assets.
+  const tableTotalBalance = safeArray(scope?.products).reduce((sum, p) => sum + Number(p.currentValue || 0), 0);
+  const annualFeeCost = (product, fee) =>
+    (Number(product.currentValue || 0) * fee.feeFromBalance) / 100 +
+    (Number(product.monthlyDeposit || 0) * 12 * fee.feeFromDeposit) / 100;
 
   return (
     <div>
@@ -2170,8 +2175,10 @@ function ManagementFeesSection({ scope, detailedMembers }) {
                   <th>ייחוס</th>
                   <th>מספר פוליסה</th>
                   <th>צבירה</th>
+                  <th>חלק מסך הנכסים</th>
                   <th>דמי ניהול מצבירה</th>
                   <th>דמי ניהול מהפקדה</th>
+                  <th>עלות שנתית ₪</th>
                   <th>מרווח ריאלי</th>
                   <th>מבטיחת תשואה</th>
                 </tr>
@@ -2185,8 +2192,10 @@ function ManagementFeesSection({ scope, detailedMembers }) {
                       <td>{attributionLabel(product)}</td>
                       <td>{product.policyNo || "—"}</td>
                       <td>{formatCurrency(product.currentValue)}</td>
+                      <td>{tableTotalBalance > 0 ? formatFeePct((Number(product.currentValue || 0) / tableTotalBalance) * 100) : "—"}</td>
                       <td>{fee.guaranteed ? "—" : formatFeePct(fee.feeFromBalance)}</td>
                       <td>{fee.feeFromDeposit > 0 ? formatFeePct(fee.feeFromDeposit) : "—"}</td>
+                      <td>{fee.guaranteed ? "—" : formatCurrency(annualFeeCost(product, fee))}</td>
                       <td>{fee.realSpread ? `${fee.realSpread}%` : "—"}</td>
                       <td>{fee.guaranteed ? (fee.guaranteedYield > 0 ? formatFeePct(fee.guaranteedYield) : "כן") : "—"}</td>
                     </tr>

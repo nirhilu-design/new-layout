@@ -2042,12 +2042,19 @@ function parsePolicyYear(joinDate) {
 }
 
 function isManagerInsurance(product) {
+  // Clearing-house XML labels manager-insurance policies with the bare product type "ביטוח".
+  if (String(product?.productType || "").trim() === "ביטוח") return true;
   const text = `${product?.productType || ""} ${product?.planName || ""}`;
   return /מנהלים|משתתפת|עדיף|קלאסי|מעורב|מניב/.test(text);
 }
 
+// Equivalent annual fee the clearing-house file reports for a 0.6% + 15% real-spread policy.
+const PROFIT_SHARING_EQUIVALENT_FEE = 1.1;
+const PROFIT_SHARING_FIXED_FEE = 0.6;
+
 // Fees per policy by establishment date (business rules for manager insurance):
-//  - 1991–2004: 0.6% from balance + 15% real spread.
+//  - 1991–2004: 0.6% from balance + 15% real spread. Calculations use the equivalent fee the
+//    file reports (≈1.1%); if the file only carries the fixed 0.6% (or nothing), 1.1% is used.
 //  - before 1991: no management fee — a guaranteed-return ("מבטיחת תשואה") policy.
 //  - otherwise: the fees exactly as parsed from the file.
 function productFeeInfo(product) {
@@ -2061,7 +2068,8 @@ function productFeeInfo(product) {
     return { feeFromBalance: 0, feeFromDeposit: 0, realSpread: null, guaranteed: true, guaranteedYield };
   }
   if (manager && year !== null && year >= 1991 && year <= 2004) {
-    return { feeFromBalance: dataFeeBalance > 0 ? dataFeeBalance : 0.6, feeFromDeposit: dataFeeDeposit, realSpread: 15, guaranteed: false, guaranteedYield };
+    const feeFromBalance = dataFeeBalance > PROFIT_SHARING_FIXED_FEE ? dataFeeBalance : PROFIT_SHARING_EQUIVALENT_FEE;
+    return { feeFromBalance, feeFromDeposit: dataFeeDeposit, realSpread: 15, guaranteed: false, guaranteedYield };
   }
   return { feeFromBalance: dataFeeBalance, feeFromDeposit: dataFeeDeposit, realSpread: null, guaranteed: false, guaranteedYield };
 }
@@ -2151,7 +2159,7 @@ function ManagementFeesSection({ scope, detailedMembers }) {
       <div class="client-panel client-margin-top">
         <h3>דמי ניהול לפי מוצר</h3>
         <p class="client-panel-subtitle">
-          פוליסות מנהלים לפי תאריך הקמה: 1991–2004 → 0.6% מצבירה + 15% ריאלי; לפני 1991 → ללא דמי ניהול (מבטיחת תשואה).
+          פוליסות מנהלים לפי תאריך הקמה: 1991–2004 → 0.6% מצבירה + 15% מהתשואה הריאלית, מחושב לפי דמי ניהול מקבילים כפי שמדווחים בקובץ (כ-1.1%); לפני 1991 → ללא דמי ניהול (מבטיחת תשואה).
         </p>
         {tableProducts.length ? (
           <div class="client-table-wrap">
